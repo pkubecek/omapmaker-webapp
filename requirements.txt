@@ -22,4 +22,4 @@ pandas>=2.1.0
 pysheds==0.4
 
 # SVG symbol parsing
-svgpath2mpl==1.0.1
+svgpath2mpl==1.0.0
