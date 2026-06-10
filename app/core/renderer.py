@@ -320,7 +320,7 @@ def render_map(
         )
 
     # Uložení PNG
-    _cb("Ukládám PNG (1000 DPI)...")
+    _cb("Ukládám PNG (300 DPI)...")
     plt.subplots_adjust(left=0, right=1, top=1, bottom=0)
     transparent = paper_format == "Data Extent"
     plt.savefig(output_png_path, dpi=1000, bbox_inches="tight",
