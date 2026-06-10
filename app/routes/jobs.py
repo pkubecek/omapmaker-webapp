@@ -1,30 +1,44 @@
 """
 routes/jobs.py — FastAPI endpointy pro správu jobů.
-POST /api/jobs         — spustit job
-GET  /api/jobs/{id}    — stav jobu
-GET  /api/jobs/{id}/png  — stáhnout PNG
-GET  /api/jobs/{id}/gpkg — stáhnout GPKG
+Joby se ukládají na disk (JSON) aby přežily restart kontejneru.
 """
 import os
 import uuid
 import json
 import threading
 import shutil
-from typing import Optional
 
-from fastapi import APIRouter, UploadFile, File, Form, HTTPException, BackgroundTasks
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi import APIRouter, UploadFile, File, Form, HTTPException
+from fastapi.responses import FileResponse
 
 from ..core.pipeline import run_pipeline
 
 router = APIRouter()
 
-# In-memory job store  { job_id: { status, progress, step, error, png_path, gpkg_path } }
-JOBS: dict = {}
-
-# Výstupní složka pro joby
 JOBS_DIR = os.environ.get("OMAPMAKER_JOBS_DIR", "./jobs")
 os.makedirs(JOBS_DIR, exist_ok=True)
+
+
+def _job_path(job_id: str) -> str:
+    return os.path.join(JOBS_DIR, job_id, "job.json")
+
+
+def _read_job(job_id: str) -> dict | None:
+    path = _job_path(job_id)
+    if not os.path.exists(path):
+        return None
+    try:
+        with open(path) as f:
+            return json.load(f)
+    except Exception:
+        return None
+
+
+def _write_job(job_id: str, data: dict):
+    path = _job_path(job_id)
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w") as f:
+        json.dump(data, f)
 
 
 def _save_file(upload: UploadFile, dest_dir: str) -> str:
@@ -36,19 +50,16 @@ def _save_file(upload: UploadFile, dest_dir: str) -> str:
 
 @router.post("/jobs")
 async def create_job(
-    background_tasks: BackgroundTasks,
     dtm: UploadFile = File(...),
     dsm: UploadFile = File(...),
     zabaged: list[UploadFile] = File(default=[]),
     isom: list[UploadFile] = File(default=[]),
     params: str = Form(...),
 ):
-    """Přijme soubory + parametry, spustí analýzu na pozadí, vrátí job_id."""
     job_id = str(uuid.uuid4())[:8]
     job_dir = os.path.join(JOBS_DIR, job_id)
     os.makedirs(job_dir, exist_ok=True)
 
-    # Ulož nahrané soubory
     dtm_path = _save_file(dtm, job_dir)
     dsm_path = _save_file(dsm, job_dir)
     zabaged_paths = [_save_file(f, job_dir) for f in zabaged if f.filename]
@@ -59,19 +70,21 @@ async def create_job(
     except Exception:
         params_dict = {}
 
-    JOBS[job_id] = {
+    _write_job(job_id, {
         "status": "queued",
         "progress": 0,
         "step": "Ve frontě...",
         "error": None,
         "png_path": None,
         "gpkg_path": None,
-    }
+    })
 
     def _progress_cb(pct: int, msg: str):
-        JOBS[job_id]["progress"] = pct
-        JOBS[job_id]["step"] = msg
-        JOBS[job_id]["status"] = "running"
+        job = _read_job(job_id) or {}
+        job["status"] = "running"
+        job["progress"] = pct
+        job["step"] = msg
+        _write_job(job_id, job)
 
     def _run():
         try:
@@ -87,71 +100,60 @@ async def create_job(
                 output_dir=job_dir,
                 progress_cb=_progress_cb,
             )
-            JOBS[job_id]["status"] = "done"
-            JOBS[job_id]["progress"] = 100
-            JOBS[job_id]["step"] = "Hotovo!"
-            JOBS[job_id]["png_path"] = result.get("png_path")
-            JOBS[job_id]["gpkg_path"] = result.get("gpkg_path")
+            _write_job(job_id, {
+                "status": "done",
+                "progress": 100,
+                "step": "Hotovo!",
+                "error": None,
+                "png_path": result.get("png_path"),
+                "gpkg_path": result.get("gpkg_path"),
+            })
         except Exception as e:
             import traceback
             traceback.print_exc()
-            JOBS[job_id]["status"] = "error"
-            JOBS[job_id]["error"] = str(e)
-            JOBS[job_id]["step"] = f"Chyba: {e}"
+            _write_job(job_id, {
+                "status": "error",
+                "progress": 0,
+                "step": f"Chyba: {e}",
+                "error": str(e),
+                "png_path": None,
+                "gpkg_path": None,
+            })
 
-    # Spusť v background threadu (pro produkci použij Celery nebo ProcessPoolExecutor)
-    t = threading.Thread(target=_run, daemon=True)
-    t.start()
-
+    threading.Thread(target=_run, daemon=True).start()
     return {"job_id": job_id}
 
 
 @router.get("/jobs/{job_id}")
 async def get_job(job_id: str):
-    """Vrátí aktuální stav jobu."""
-    job = JOBS.get(job_id)
+    job = _read_job(job_id)
     if job is None:
         raise HTTPException(status_code=404, detail="Job nenalezen.")
-    return {
-        "job_id": job_id,
-        "status": job["status"],
-        "progress": job["progress"],
-        "step": job["step"],
-        "error": job.get("error"),
-    }
+    return {"job_id": job_id, **job}
 
 
 @router.get("/jobs/{job_id}/png")
 async def get_png(job_id: str):
-    """Vrátí vygenerovanou PNG mapu."""
-    job = JOBS.get(job_id)
+    job = _read_job(job_id)
     if job is None:
         raise HTTPException(status_code=404, detail="Job nenalezen.")
     if job["status"] != "done":
         raise HTTPException(status_code=425, detail="Job ještě není hotový.")
     png_path = job.get("png_path")
     if not png_path or not os.path.exists(png_path):
-        raise HTTPException(status_code=404, detail="PNG soubor nenalezen.")
-    return FileResponse(
-        png_path,
-        media_type="image/png",
-        filename=f"OMap_{job_id}.png",
-    )
+        raise HTTPException(status_code=404, detail="PNG nenalezeno.")
+    return FileResponse(png_path, media_type="image/png", filename=f"OMap_{job_id}.png")
 
 
 @router.get("/jobs/{job_id}/gpkg")
 async def get_gpkg(job_id: str):
-    """Vrátí GPKG export pro OpenOrienteering Mapper."""
-    job = JOBS.get(job_id)
+    job = _read_job(job_id)
     if job is None:
         raise HTTPException(status_code=404, detail="Job nenalezen.")
     if job["status"] != "done":
         raise HTTPException(status_code=425, detail="Job ještě není hotový.")
     gpkg_path = job.get("gpkg_path")
     if not gpkg_path or not os.path.exists(gpkg_path):
-        raise HTTPException(status_code=404, detail="GPKG soubor nenalezen.")
-    return FileResponse(
-        gpkg_path,
-        media_type="application/geopackage+sqlite3",
-        filename=f"OOM_{job_id}.gpkg",
-    )
+        raise HTTPException(status_code=404, detail="GPKG nenalezeno.")
+    return FileResponse(gpkg_path, media_type="application/geopackage+sqlite3",
+                        filename=f"OOM_{job_id}.gpkg")
