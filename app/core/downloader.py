@@ -2,8 +2,13 @@
 downloader.py — stahování LiDAR dlaždic z ČÚZK ATOM feedu a merge do jednoho LAZ souboru.
 Přepsáno z OMapMaker_v7.py bez tkinter závislostí.
 """
-import os
 import ssl
+
+# Windows obcas nema CA certifikat pro CUZK
+_SSL_CTX = ssl.create_default_context()
+_SSL_CTX.check_hostname = False
+_SSL_CTX.verify_mode = ssl.CERT_NONE
+import os
 import zipfile
 import urllib.request
 import urllib.error
@@ -12,9 +17,7 @@ import numpy as np
 import laspy
 from pyproj import CRS, Transformer
 
-_SSL_CTX = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-_SSL_CTX.check_hostname = False
-_SSL_CTX.verify_mode = ssl.CERT_NONE
+
 CUZK_ATOM_DMR5G = "https://atom.cuzk.gov.cz/DMR5G-SJTSK/DMR5G-SJTSK.xml"
 CUZK_ATOM_DMP1G = "https://atom.cuzk.gov.cz/DMP1G-SJTSK/DMP1G-SJTSK.xml"
 CUZK_ATOM_DMPOK = "https://atom.cuzk.gov.cz/DMPOK-SJTSK-LAZ/DMPOK-SJTSK-LAZ.xml"
@@ -103,9 +106,12 @@ def _download_tile(tile_id: str, sub_url: str, dest_dir: str, file_list: list,
 def merge_laz_files(input_paths: list, output_path: str,
                     clip_bbox_wgs84: tuple | None = None) -> bool:
     """
-    Sloučí více LAZ/LAS souborů do jednoho. Volitelně ořízne na WGS84 bbox.
+    Sloučí více LAZ/LAS souborů do jednoho streamováním po chunkách.
+    Nepotřebuje načíst všechny body do RAM — konstantní spotřeba paměti.
     clip_bbox_wgs84: (min_lat, min_lon, max_lat, max_lon)
     """
+    import gc
+
     if not input_paths:
         return False
 
@@ -138,59 +144,75 @@ def merge_laz_files(input_paths: list, output_path: str,
         shutil.copy2(input_paths[0], output_path)
         return True
 
+    # Streaming merge — chunk po chunku přímo do výstupního souboru
     try:
-        all_x, all_y, all_z, all_cls = [], [], [], []
-        header_ref = None
+        # Načti header z prvního souboru
+        with laspy.open(input_paths[0]) as fh_tmp:
+            header_ref = fh_tmp.header
+
+        out_header = laspy.LasHeader(
+            point_format=header_ref.point_format,
+            version=header_ref.version,
+        )
+        # Offsets a scales nastavíme konzervativně
+        out_header.scales = np.array([0.01, 0.01, 0.01])
+        # Zjisti globální min pro offset z prvního průchodu (jen min/max, ne body)
+        global_min_x, global_min_y, global_min_z = np.inf, np.inf, np.inf
         for path in input_paths:
             with laspy.open(path) as fh:
-                if header_ref is None:
-                    header_ref = fh.header
-                for chunk in fh.chunk_iterator(500_000):
-                    cx = np.array(chunk.x)
-                    cy = np.array(chunk.y)
-                    cz = np.array(chunk.z)
-                    cc = np.array(chunk.classification)
-                    if clip_bounds_native is not None:
-                        bx0, bx1, by0, by1 = clip_bounds_native
-                        m = (cx >= bx0) & (cx <= bx1) & (cy >= by0) & (cy <= by1)
-                        cx, cy, cz, cc = cx[m], cy[m], cz[m], cc[m]
-                    if len(cx):
-                        all_x.append(cx)
-                        all_y.append(cy)
-                        all_z.append(cz)
-                        all_cls.append(cc)
+                hdr = fh.header
+                global_min_x = min(global_min_x, float(hdr.x_min))
+                global_min_y = min(global_min_y, float(hdr.y_min))
+                global_min_z = min(global_min_z, float(hdr.z_min))
+        if clip_bounds_native is not None:
+            bx0, bx1, by0, by1 = clip_bounds_native
+            global_min_x = max(global_min_x, bx0)
+            global_min_y = max(global_min_y, by0)
+        out_header.offsets = np.array([global_min_x, global_min_y, global_min_z])
 
-        if not all_x:
+        total_written = 0
+        CHUNK_SIZE = 200_000  # menší chunky = méně RAM
+
+        with laspy.open(output_path, mode="w", header=out_header) as out_fh:
+            for path in input_paths:
+                print(f"[downloader] Mergování: {os.path.basename(path)}")
+                with laspy.open(path) as fh:
+                    for chunk in fh.chunk_iterator(CHUNK_SIZE):
+                        cx = np.array(chunk.x)
+                        cy = np.array(chunk.y)
+                        cz = np.array(chunk.z)
+                        cc = np.array(chunk.classification)
+
+                        if clip_bounds_native is not None:
+                            bx0, bx1, by0, by1 = clip_bounds_native
+                            m = (cx >= bx0) & (cx <= bx1) & (cy >= by0) & (cy <= by1)
+                            if not np.any(m):
+                                continue
+                            cx, cy, cz, cc = cx[m], cy[m], cz[m], cc[m]
+
+                        out_chunk = laspy.ScaleAwarePointRecord.zeros(
+                            len(cx), header=out_header
+                        )
+                        out_chunk.x = cx
+                        out_chunk.y = cy
+                        out_chunk.z = cz
+                        out_chunk.classification = cc
+                        out_fh.write_points(out_chunk)
+                        total_written += len(cx)
+
+                        del cx, cy, cz, cc, out_chunk
+                gc.collect()
+
+        if total_written == 0:
             print("[downloader] Varování: po ořezu nezůstaly žádné body!")
             return False
 
-        x = np.concatenate(all_x)
-        y = np.concatenate(all_y)
-        z = np.concatenate(all_z)
-        cls = np.concatenate(all_cls)
-
-        las_out = laspy.LasData(
-            header=laspy.LasHeader(
-                point_format=header_ref.point_format,
-                version=header_ref.version,
-            )
-        )
-        las_out.header.offsets = np.array([x.min(), y.min(), z.min()])
-        las_out.header.scales = np.array([0.01, 0.01, 0.01])
-        try:
-            if header_ref.parse_crs() is not None:
-                las_out.header.set_crs(header_ref.parse_crs())
-        except Exception:
-            pass
-        las_out.x = x
-        las_out.y = y
-        las_out.z = z
-        las_out.classification = cls
-        las_out.write(output_path)
-        print(f"[downloader] Merge hotov: {len(x):,} bodů → {os.path.basename(output_path)}")
+        print(f"[downloader] Merge hotov: {total_written:,} bodů → {os.path.basename(output_path)}")
         return True
+
     except Exception as e:
         print(f"[downloader] Chyba při merge: {e}")
+        import traceback; traceback.print_exc()
         return False
 
 
