@@ -91,9 +91,7 @@ class SymbolLibrary:
                             center_y = (ext.ymin + ext.ymax) / 2
                             path_obj.vertices[:, 0] -= center_x
                             path_obj.vertices[:, 1] -= center_y
-                            # SVG má Y dolů, matplotlib má Y nahoru
-                            # Invertujeme Y ale zachováme sweep flags pro arc
-                            path_obj.vertices[:, 1] *= -1
+                            # Y inverzi NEDĚLÁME zde - dělá ji Affine2D při vykreslení
                         except Exception as e:
                             print(f"[symbols] Path parse chyba {sid}: {e}")
                             path_obj = None
@@ -142,43 +140,25 @@ def plot_symbol(ax, sym_key: str, gdf: gpd.GeoDataFrame,
     # Bodové symboly (SVG path)
     if sym_type == "point" and sym_path is not None:
         _strip_custom_keys(sym_props)
-        # SVG souřadnice jsou v pt (body), potřebujeme převést na display units
-        # Používáme ax.transData + scale faktor přes display transformation
-        try:
-            # Zjisti scale: 1 pt v SVG = kolik pixelů v display space
-            # Pro mapu 1:10000 při 300 DPI: 1pt = 0.353mm = 3.53m v mapě
-            # Ale jednodušší: použijeme Affine2D se scale
-            # Symboly v XML jsou v mm * scale_factor
-            # scale=1 znamená surové SVG jednotky jako display pts
-            import matplotlib.transforms as mtransforms
-            fig = ax.get_figure()
-            dpi = fig.dpi
-            # 1 pt = 1/72 inch = dpi/72 pixels
-            pt_to_display = dpi / 72.0
-            display_to_data = ax.transData.inverted()
-            origin_display = ax.transData.transform([0, 0])
-            one_pt_display = origin_display + np.array([pt_to_display, pt_to_display])
-            one_pt_data = display_to_data.transform(one_pt_display) - display_to_data.transform(origin_display)
-            sx = abs(one_pt_data[0])
-            sy = abs(one_pt_data[1])
-        except Exception:
-            sx, sy = 1.0, 1.0
+        # Symboly v XML jsou v mm na papíře při měřítku 1:10000
+        # 1 mm na papíře = 10 m v terénu (při 1:10000)
+        # Převod: pt (SVG) → mm → metry v mapě
+        # 1 pt = 0.3528 mm, 1 mm papíru = 10 m terénu (1:10000)
+        # Ale SVG souřadnice jsou v "mapových bodech" kde ~1 jednotka = 0.1 mm papíru
+        # Empiricky: factor ~0.35 mm/pt * 10 m/mm = 3.5 m/pt
+        PT_TO_M = 0.3528 * 10.0  # ~3.528 m za 1 SVG jednotku
 
-        import copy
         for geom in gdf.geometry:
-            pts = []
+            pts_list = []
             if geom is None or geom.is_empty:
                 continue
             if geom.geom_type == "Point":
-                pts.append((geom.x, geom.y))
+                pts_list.append((geom.x, geom.y))
             elif geom.geom_type == "MultiPoint":
-                pts.extend([(p.x, p.y) for p in geom.geoms])
-            for x, y in pts:
-                scaled_path = copy.deepcopy(sym_path)
-                scaled_path.vertices[:, 0] = scaled_path.vertices[:, 0] * sx + x
-                scaled_path.vertices[:, 1] = scaled_path.vertices[:, 1] * sy + y
-                patch = PathPatch(scaled_path, transform=ax.transData,
-                                  zorder=zorder, **sym_props)
+                pts_list.extend([(p.x, p.y) for p in geom.geoms])
+            for x, y in pts_list:
+                t = Affine2D().scale(PT_TO_M, -PT_TO_M).translate(x, y) + ax.transData
+                patch = PathPatch(sym_path, transform=t, zorder=zorder, **sym_props)
                 ax.add_patch(patch)
         return
 
