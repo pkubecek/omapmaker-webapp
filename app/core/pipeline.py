@@ -79,6 +79,8 @@ def _process_tile(
     SIGMA = params["sigma"]
     SLOPE_THRESHOLD = params["slope_threshold"]
     BINS = params["bins"]
+    DEP = params.get("depressions", {})
+    KNO = params.get("knolls", {})
     FIXED_PIXEL_SIZE = 0.5
 
     def tcb(msg):
@@ -186,10 +188,20 @@ def _process_tile(
             contour_layers[k] = gdf_c.set_crs(CURRENT_CRS, allow_override=True)
 
     tcb("Mikrotvary...")
-    depressions = find_depressions(grid_x, grid_y, dmr_grid_linear_viz,
-                                    pixel_size=FIXED_PIXEL_SIZE, current_crs=CURRENT_CRS)
-    knolls = find_knolls(grid_x, grid_y, dmr_grid_linear_viz,
-                          pixel_size=FIXED_PIXEL_SIZE, current_crs=CURRENT_CRS)
+    depressions = find_depressions(
+        grid_x, grid_y, dmr_grid_linear_viz,
+        pixel_size=FIXED_PIXEL_SIZE, current_crs=CURRENT_CRS,
+        min_diameter=params.get("dep_min_diameter", 2),
+        max_diameter=params.get("dep_max_diameter", 5),
+        min_depth=params.get("dep_min_depth", 0.7),
+    )
+    knolls = find_knolls(
+        grid_x, grid_y, dmr_grid_linear_viz,
+        pixel_size=FIXED_PIXEL_SIZE, current_crs=CURRENT_CRS,
+        min_diameter=params.get("kno_min_diameter", 1.5),
+        max_diameter=params.get("kno_max_diameter", 10),
+        min_height=params.get("kno_min_height", 0.5),
+    )
 
     # Ořez na core bbox (bez překryvu) — aby se prvky neduplikovaly
     core_box = box(core_x0, core_y0, core_x1, core_y1)
@@ -300,9 +312,23 @@ def run_pipeline(job_id: str, params: dict, file_paths: dict,
         "man_made": True, "magnetic_lines": False,
     })
 
+    dep_params = params.get("depressions", {})
+    DEP_MIN_DIAM = float(dep_params.get("min_diameter", 2))
+    DEP_MAX_DIAM = float(dep_params.get("max_diameter", 5))
+    DEP_MIN_DEPTH = float(dep_params.get("min_depth", 0.7))
+
+    kno_params = params.get("knolls", {})
+    KNO_MIN_DIAM = float(kno_params.get("min_diameter", 1.5))
+    KNO_MAX_DIAM = float(kno_params.get("max_diameter", 10))
+    KNO_MIN_HEIGHT = float(kno_params.get("min_height", 0.5))
+
     tile_params = {
         "crs": CURRENT_CRS, "sigma": SIGMA,
         "slope_threshold": SLOPE_THRESHOLD, "bins": BINS,
+        "dep_min_diameter": DEP_MIN_DIAM, "dep_max_diameter": DEP_MAX_DIAM,
+        "dep_min_depth": DEP_MIN_DEPTH,
+        "kno_min_diameter": KNO_MIN_DIAM, "kno_max_diameter": KNO_MAX_DIAM,
+        "kno_min_height": KNO_MIN_HEIGHT,
     }
 
     # Symbols
