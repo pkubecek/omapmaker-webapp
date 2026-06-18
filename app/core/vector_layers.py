@@ -511,23 +511,19 @@ def add_vector_layers(
     # ROADS
     # ----------------------------------------------------------------
     if visibility.get("roads", True):
-        # 501 Zpevněná plocha
+        # 501 Parkoviště / zpevněná plocha
         cgdf = isom("501")
         if cgdf is not None:
-            pm("sym501", 44, None, cgdf, to_mask=False)
+            pm("sym501", 49, None, cgdf, to_mask=False)
         elif zab("Parkoviste") is not None:
-            pm("sym501", 44, None, zab("Parkoviste"), to_mask=False)
+            pm("sym501", 49, None, zab("Parkoviste"), to_mask=False)
         else:
-            pm("sym501", 44,
-               (c("highway").isin(["pedestrian"]) & (c("area") == "yes")) |
-               c("amenity").isin(["parking"]) |
-               c("landuse").isin(["garages"]),
-               gdf_polys)
+            mask_parking = ((c("amenity") == "parking") & ~c("parking").isin(["garage", "underground"])) |                            (c("place") == "square") |                            c("highway").isin(["service", "pedestrian", "footway"]) |                            (c("man_made") == "bunker_silo")
+            pm("sym501", 49, mask_parking, gdf_polys)
 
         # 502D Dálnice
-        mask_motorway = c("highway").isin(["motorway", "trunk"]) & \
-                        ~c("tunnel").isin(["yes"]) & (c("bridge") != "yes")
         cgdf = isom("502D")
+        mask_road_double = c("highway").isin(["motorway", "trunk"]) &                            ~c("tunnel").isin(["yes", "avalanche_protector", "building_passage"]) &                            (c("bridge") != "yes") & (c("access") != "private")
         for sym, zo in [("sym502Da", 45), ("sym502Db", 47), ("sym502Dc", 48)]:
             if cgdf is not None:
                 pm(sym, zo, None, cgdf, to_mask=False)
@@ -535,105 +531,140 @@ def add_vector_layers(
                 mask = _get_col(zab("SilniceDalnice"), "typsil_k").isin(["D1", "D2", "M"])
                 pm(sym, zo, mask, zab("SilniceDalnice"))
             else:
-                pm(sym, zo, mask_motorway, gdf_lines)
+                pm(sym, zo, mask_road_double, gdf_lines)
 
-        # 502 Silnice
-        mask_road = c("highway").isin(["primary", "secondary", "residential", "tertiary"]) & \
-                    ~c("tunnel").isin(["yes"]) & (c("bridge") != "yes")
+        # 502 Široká silnice
         cgdf = isom("502")
+        mask_road_major = c("highway").isin(["highway_link", "trunk_link", "primary", "primary_link",
+                                              "secondary", "secondary_link", "residential", "tertiary",
+                                              "living_street"]) &                           ~c("tunnel").isin(["yes", "avalanche_protector", "building_passage"]) &                           (c("bridge") != "yes") & (c("access") != "private")
         for sym, zo in [("sym502a", 45), ("sym502b", 47)]:
             if cgdf is not None:
                 pm(sym, zo, None, cgdf, to_mask=False)
             elif zab("SilniceDalnice") is not None:
                 mask = ~_get_col(zab("SilniceDalnice"), "typsil_k").isin(["D1", "D2", "M"])
                 pm(sym, zo, mask, zab("SilniceDalnice"))
+                if zab("Ulice") is not None:
+                    mask_u = _get_col(zab("Ulice"), "typulice_k").isin(["026", "926"])
+                    pm(sym, zo, mask_u, zab("Ulice"))
             else:
-                pm(sym, zo, mask_road, gdf_lines)
+                pm(sym, zo, mask_road_major, gdf_lines)
 
-        # 503 Vozová cesta
+        # 503 Silnice (vozová zpevněná)
         cgdf = isom("503")
+        mask_road_minor = (c("highway").isin(["tertiary_link", "service"]) |
+                           (c("highway").isin(["track", "road", "cycleway", "unclassified"]) &
+                            (c("surface").isin(["concrete", "asphalt"]) | (c("tracktype") == "grade1")))) &                           ~c("tunnel").isin(["yes", "avalanche_protector", "building_passage"]) &                           (c("bridge") != "yes") & (c("access") != "private")
         if cgdf is not None:
             pm("sym503", 45, None, cgdf, to_mask=False)
         elif zab("Cesta") is not None:
             mask = _get_col(zab("Cesta"), "povrch_p").isin(
-                ["zpevněný (asfalt, beton)", "zpevněný (panel, dlažba)"])
+                ["zpevněný (panel, dlažba)", "zpevněný (asfalt, beton)"]) &                    _get_col(zab("Cesta"), "typcesty_p").isin(["cesta udržovaná"])
             pm("sym503", 45, mask, zab("Cesta"))
         else:
-            pm("sym503", 45,
-               c("highway").isin(["service", "tertiary_link"]) & ~c("tunnel").isin(["yes"]),
-               gdf_lines)
+            pm("sym503", 45, mask_road_minor, gdf_lines)
 
-        # 504 Cesta
+        # 504 Vozová cesta (nezpevněná udržovaná)
         cgdf = isom("504")
+        mask_track_major = (c("highway").isin(["cycleway", "unclassified"]) &
+                            ~c("surface").isin(["concrete", "asphalt"]) &
+                            (c("tracktype") != "grade1")) &                            ~c("tunnel").isin(["yes", "avalanche_protector", "building_passage"]) &                            (c("bridge") != "yes") & (c("access") != "private")
         if cgdf is not None:
             pm("sym504", 45, None, cgdf, to_mask=False)
         elif zab("Cesta") is not None:
-            mask = _get_col(zab("Cesta"), "typcesty_p").isin(["cesta udržovaná"])
+            mask = _get_col(zab("Cesta"), "povrch_p").isin([
+                "zpevněný (nosný terén, štěrk, kalený povrch)",
+                "nedostatečně zpevněný (tráva, hlína, písek, kamení)", "neurčeno", "NULL"]) &                    _get_col(zab("Cesta"), "typcesty_p").isin(["cesta udržovaná"])
             pm("sym504", 45, mask, zab("Cesta"))
         else:
-            pm("sym504", 45,
-               c("highway").isin(["track", "unclassified"]) & ~c("tunnel").isin(["yes"]),
-               gdf_lines)
+            pm("sym504", 45, mask_track_major, gdf_lines)
 
-        # 505 Pěší cesta
+        # 505 Pěší cesta / neudržovaná cesta
         cgdf = isom("505")
+        mask_track_minor = (c("highway").isin(["pedestrian", "road", "footway", "track", "bridleway"]) |
+                            ((c("highway") == "cycleway") & ~c("surface").isin(["concrete", "asphalt"]) &
+                             (c("tracktype") != "grade1"))) &                            ~c("tunnel").isin(["yes", "avalanche_protector", "building_passage"]) &                            (c("bridge") != "yes") & (c("access") != "private")
         if cgdf is not None:
             pm("sym505", 45, None, cgdf, to_mask=False)
+        elif zab("Cesta") is not None:
+            mask = _get_col(zab("Cesta"), "typcesty_p").isin(["cesta neudržovaná"])
+            pm("sym505", 45, mask, zab("Cesta"))
+            if zab("Ulice") is not None:
+                mask_u = ~_get_col(zab("Ulice"), "typulice_k").isin(["925", "025"])
+                pm("sym505", 45, mask_u, zab("Ulice"))
         else:
-            pm("sym505", 45,
-               c("highway").isin(["footway", "pedestrian", "bridleway"]) & (c("bridge") != "yes"),
-               gdf_lines)
+            pm("sym505", 45, mask_track_minor, gdf_lines)
 
         # 506 Pěšina
         cgdf = isom("506")
+        mask_path_major = (c("highway") == "path") &                           ~c("trail_visibility").isin(["low", "poor", "bad", "very_bad", "horrible", "no"]) &                           (c("bridge") != "yes") & (c("access") != "private")
         if cgdf is not None:
             pm("sym506", 45, None, cgdf, to_mask=False)
         elif zab("Pesina") is not None:
             pm("sym506", 45, None, zab("Pesina"), to_mask=False)
         else:
-            pm("sym506", 45, c("highway") == "path", gdf_lines)
+            pm("sym506", 45, mask_path_major, gdf_lines)
 
-        # 507 Méně zřetelná stezka
+        # 507 Nezřetelná pěšina
         cgdf = isom("507")
         if cgdf is not None:
             pm("sym507", 45, None, cgdf, to_mask=False)
         else:
-            pm("sym507", 45,
-               c("highway").isin(["path", "footway"]) & c("trail_visibility").isin(["bad", "horrible"]),
-               gdf_lines)
+            mask_path_minor = (c("highway") == "path") &                               c("trail_visibility").isin(["low", "poor", "bad", "very_bad", "horrible"]) &                               (c("bridge") != "yes") & (c("access") != "private")
+            pm("sym507", 45, mask_path_minor, gdf_lines)
 
         # 508 Průsek
         cgdf = isom("508")
         if cgdf is not None:
-            pm("sym508", 45, None, cgdf, to_mask=False)
+            pm("sym508", 38, None, cgdf, to_mask=False)
         elif zab("Proseka") is not None:
-            pm("sym508", 45, None, zab("Proseka"), to_mask=False)
+            pm("sym508", 38, None, zab("Proseka"), to_mask=False)
         else:
-            pm("sym508", 45,
-               c("man_made").isin(["cutline"]) | (c("highway") == "track") & (c("operator") == "forestry"),
-               gdf_lines)
+            pm("sym508", 38, c("man_made") == "cutline", gdf_lines)
 
         # 509 Železnice
-        mask_rail = c("railway").isin(["rail", "narrow_gauge"]) & ~c("tunnel").isin(["yes"])
         cgdf = isom("509")
+        mask_railway = c("railway").isin(["rail", "disused", "funicular", "light_rail", "narrow_gauge"]) &                        ~c("tunnel").isin(["yes", "avalanche_protector", "building_passage"]) &                        ~c("bridge").isin(["yes"])
         for sym, zo in [("sym509a", 40), ("sym509b", 41)]:
             if cgdf is not None:
                 pm(sym, zo, None, cgdf, to_mask=False)
             elif zab("ZeleznicniTrat") is not None:
                 pm(sym, zo, None, zab("ZeleznicniTrat"), to_mask=False)
             else:
-                pm(sym, zo, mask_rail, gdf_lines)
+                pm(sym, zo, mask_railway, gdf_lines)
+
+        # Mosty - dálnice
+        mask_bridge_double = c("highway").isin(["motorway", "trunk"]) &                              ~c("tunnel").isin(["yes", "avalanche_protector", "building_passage"]) &                              (c("bridge") == "yes") & (c("access") != "private")
+        for sym, zo in [("sym502DBa", 65), ("sym502DBb", 66), ("sym502Da", 67), ("sym502Db", 68), ("sym502Dc", 69)]:
+            pm(sym, zo, mask_bridge_double, gdf_lines)
+
+        # Mosty - hlavní silnice
+        mask_bridge_major = c("highway").isin(["highway_link", "trunk_link", "primary", "primary_link",
+                                               "secondary", "secondary_link", "residential", "tertiary",
+                                               "living_street"]) &                             ~c("tunnel").isin(["yes", "avalanche_protector", "building_passage"]) &                             (c("bridge") == "yes") & (c("access") != "private")
+        for sym, zo in [("sym502Ba", 65), ("sym502Bb", 66), ("sym502a", 67), ("sym502b", 68)]:
+            pm(sym, zo, mask_bridge_major, gdf_lines)
+
+        # Mosty - vedlejší silnice
+        mask_bridge_minor = c("highway").isin(["tertiary_link", "service", "track", "road", "unclassified"]) &                             ~c("tunnel").isin(["yes", "avalanche_protector", "building_passage"]) &                             (c("bridge") == "yes") & (c("access") != "private")
+        for sym, zo in [("sym503Ba", 65), ("sym503Bb", 66), ("sym503", 67)]:
+            pm(sym, zo, mask_bridge_minor, gdf_lines)
+
+        # Lávka / most pro pěší
+        mask_bridge_path = c("highway").isin(["path", "cycleway", "footway", "bridleway"]) &                            ~c("tunnel").isin(["yes", "avalanche_protector", "building_passage"]) &                            (c("bridge") == "yes") & (c("access") != "private")
+        if zab("Lavka") is not None:
+            pm("sym503", 40, None, zab("Lavka"), to_mask=False)
+        else:
+            pm("sym503", 67, mask_bridge_path, gdf_lines)
 
         # 511 Stožár el. vedení
         cgdf = isom("511")
         if cgdf is not None:
             pm("sym511P", 71, None, cgdf, to_mask=False)
         else:
-            pm("sym511P", 71,
-               c("power").isin(["tower", "pole"]),
-               gdf_pts)
+            pm("sym511P", 71, c("power").isin(["tower", "pole"]), gdf_pts)
 
-        # 512 Most / tunel
+        # 512 Most
         cgdf = isom("512")
         if cgdf is not None:
             pm("sym512", 46, None, cgdf, to_mask=False)
@@ -706,7 +737,6 @@ def add_vector_layers(
             pm("sym519", 56,
                c("barrier").isin(["gate", "kissing_gate", "stile", "lift_gate"]),
                gdf_pts)
-
     # ----------------------------------------------------------------
     # MAN MADE
     # ----------------------------------------------------------------
