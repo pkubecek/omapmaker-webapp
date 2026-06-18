@@ -610,13 +610,37 @@ def add_vector_layers(
         else:
             pm("sym508", 38, c("man_made") == "cutline", gdf_lines)
 
+        # Mosty - dálnice
+        mask_bridge_double = (c("highway").isin(["motorway", "trunk"]) &
+                              ~c("tunnel").isin(["yes", "avalanche_protector", "building_passage"]) &
+                              (c("bridge") == "yes") & (c("access") != "private"))
+        for sym, z in zip(["sym502DBa", "sym502DBb", "sym502Da", "sym502Db", "sym502Dc"],
+                          [65, 66, 67, 68, 69]):
+            pm(sym, z, mask_bridge_double, gdf_lines)
+
+        # Mosty - hlavní silnice
+        mask_bridge_major = (c("highway").isin(["highway_link", "trunk_link", "primary", "primary_link",
+                                                 "secondary", "secondary_link", "residential", "tertiary",
+                                                 "living_street"]) &
+                             ~c("tunnel").isin(["yes", "avalanche_protector", "building_passage"]) &
+                             (c("bridge") == "yes") & (c("access") != "private"))
+        for sym, z in zip(["sym502Ba", "sym502Bb", "sym502a", "sym502b"], [65, 66, 67, 68]):
+            pm(sym, z, mask_bridge_major, gdf_lines)
+
+        # Mosty - vedlejší silnice
+        mask_bridge_minor = (c("highway").isin(["tertiary_link", "service", "track", "road", "unclassified"]) &
+                             ~c("tunnel").isin(["yes", "avalanche_protector", "building_passage"]) &
+                             (c("bridge") == "yes") & (c("access") != "private"))
+        for sym, z in zip(["sym503Ba", "sym503Bb", "sym503"], [65, 66, 67]):
+            pm(sym, z, mask_bridge_minor, gdf_lines)
+
         # Lávka
         if zab("Lavka") is not None:
             pm("sym503", 40, None, zab("Lavka"), to_mask=False)
         else:
             pm("sym503", 67,
                c("highway").isin(["path", "cycleway", "footway", "bridleway"]) &
-               (c("bridge") == "yes"),
+               (c("bridge") == "yes") & (c("access") != "private"),
                gdf_lines)
 
         # 509 - Železnice
@@ -633,6 +657,13 @@ def add_vector_layers(
                         pm(sym, z, None, zab(zk), to_mask=False)
             else:
                 pm(sym, z, mask_railway, gdf_lines)
+
+        # Železniční most
+        mask_bridge_railway = (c("railway").isin(["rail", "disused", "funicular", "narrow_gauge"]) &
+                               ~c("tunnel").isin(["yes", "avalanche_protector", "building_passage"]) &
+                               (c("bridge") == "yes"))
+        for sym, z in zip(["sym509Ba", "sym509Bb", "sym509a", "sym509b"], [60, 61, 62, 63]):
+            pm(sym, z, mask_bridge_railway, gdf_lines)
 
     # ----------------------------------------------------------------
     # MAN MADE
