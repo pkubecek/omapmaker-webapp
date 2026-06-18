@@ -36,6 +36,7 @@ from .processor import (
 from .renderer import generate_contour_layers, setup_map_figure
 from .symbols import SymbolLibrary
 from .exporter import OomCollector
+from .zabaged_wfs import download_zabaged_wfs
 
 # Max velikost dlaždice v metrech. 1500×1500m při 0.5m pixelu = 9M pixelů = ~700 MB
 TILE_SIZE_M = 1500
@@ -410,6 +411,24 @@ def run_pipeline(job_id: str, params: dict, file_paths: dict,
     cb(9, "Načítám ZABAGED® soubory...")
     zabaged_gdfs = {}
     target_bbox_geom = box(global_minx, global_miny, global_maxx, global_maxy)
+
+    # Automatické stažení přes ArcGIS REST API pokud uživatel nenahrál vlastní soubory
+    if not file_paths.get("zabaged"):
+        cb(9, "Stahuji ZABAGED® data z ČÚZK REST API...")
+        try:
+            to_wgs = Transformer.from_crs(CURRENT_CRS, "EPSG:4326", always_xy=True)
+            zab_minx, zab_miny = to_wgs.transform(global_minx, global_miny)
+            zab_maxx, zab_maxy = to_wgs.transform(global_maxx, global_maxy)
+            bbox_wgs84 = (zab_minx, zab_miny, zab_maxx, zab_maxy)
+            zabaged_gdfs = download_zabaged_wfs(
+                bbox_wgs84=bbox_wgs84,
+                target_crs=CURRENT_CRS,
+                progress_cb=lambda msg: cb(9, msg),
+            )
+            cb(9, f"ZABAGED staženo: {len(zabaged_gdfs)} vrstev")
+        except Exception as e:
+            cb(9, f"Varování ZABAGED REST: {e}")
+
     for path in file_paths.get("zabaged", []):
         fname = os.path.basename(path)
         try:
