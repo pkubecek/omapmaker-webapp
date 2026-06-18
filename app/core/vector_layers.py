@@ -30,9 +30,21 @@ def add_vector_layers(
 ):
     """Vykreslí OSM + ZABAGED + ISOM vrstvy na ax podle visibility."""
 
+    print(f"[vector_layers] extent={extent}")
+    print(f"[vector_layers] ZABAGED klíče: {list(zabaged_gdfs.keys())}")
+    for k, v in zabaged_gdfs.items():
+        if v is not None:
+            print(f"[vector_layers]   {k}: {len(v)} prvků, CRS={v.crs}, bounds={v.total_bounds}")
+        else:
+            print(f"[vector_layers]   {k}: None")
+    print(f"[vector_layers] visibility={visibility}")
+
     gdf = _clip(gdf, extent)
     for k in list(zabaged_gdfs.keys()):
+        before = len(zabaged_gdfs[k]) if zabaged_gdfs[k] is not None else 0
         zabaged_gdfs[k] = _clip(zabaged_gdfs[k], extent)
+        after = len(zabaged_gdfs[k]) if zabaged_gdfs[k] is not None and not zabaged_gdfs[k].empty else 0
+        print(f"[vector_layers]   clip {k}: {before} → {after} prvků")
 
     if (gdf is None or gdf.empty) and not zabaged_gdfs and not isom_gdfs:
         return
