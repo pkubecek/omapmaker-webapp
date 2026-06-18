@@ -776,7 +776,7 @@ def add_vector_layers(
                         break
                 else:
                     pm("sym520", 1.5,
-                       c("landuse").isin(["residential", "industrial", "commercial",
+                       c("landuse").isin(["residential", "industrial", "commercial", "allotments",
                                           "cemetery", "military", "quarry"]),
                        gdf_polys)
 
