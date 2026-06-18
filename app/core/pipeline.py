@@ -302,7 +302,7 @@ def run_pipeline(job_id: str, params: dict, file_paths: dict,
     CURRENT_CRS = params.get("crs", "EPSG:5514")
     SCALE = int(params.get("scale", 10000))
     PAPER_FORMAT = params.get("paper_format", "A4 (Landscape)")
-    SIGMA = float(params.get("sigma", 6.5))
+    SIGMA = float(params.get("sigma", 4))
     SLOPE_THRESHOLD = float(params.get("slope_threshold", 45.0))
     NORTH_ROTATION = float(params.get("north_rotation", 5.0))
     BINS = [float(b) for b in params.get("bins", [1, 2, 6, 12])]

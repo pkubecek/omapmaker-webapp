@@ -28,7 +28,7 @@ from pyproj import CRS, Transformer
 # ---------------------------------------------------------------------------
 
 def load_dmr_grid(dmr_path: str, target_crs_code: str,
-                  pixel_size: float = 0.5, sigma_smooth: float = 6.5,
+                  pixel_size: float = 0.5, sigma_smooth: float = 4,
                   bbox_clip: tuple | None = None,
                   progress_cb=None) -> tuple:
     """
