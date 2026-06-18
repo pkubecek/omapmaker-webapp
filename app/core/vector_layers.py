@@ -92,12 +92,10 @@ def add_vector_layers(
         gdf_pts = gdf_lines = gdf_polys = gdf_centroids = gpd.GeoDataFrame()
 
     def zab(key):
-    print(f"[DEBUG zab] key={key}")
-    gdf = zabaged_gdfs.get(key)
-    print(f"[DEBUG zab] result type={type(gdf)}")
-    if gdf is None or gdf.empty:
-        return None
-    return gdf
+        gdf = zabaged_gdfs.get(key)
+        if gdf is None or gdf.empty:
+            return None
+        return gdf
 
     def isom(key):
         gdf = isom_gdfs.get(key)
