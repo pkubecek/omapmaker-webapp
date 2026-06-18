@@ -416,9 +416,9 @@ def run_pipeline(job_id: str, params: dict, file_paths: dict,
     if not file_paths.get("zabaged"):
         cb(9, "Stahuji ZABAGED® data z ČÚZK REST API...")
         try:
-            to_wgs = Transformer.from_crs(CURRENT_CRS, "EPSG:4326", always_xy=True)
-            zab_minx, zab_miny = to_wgs.transform(global_minx, global_miny)
-            zab_maxx, zab_maxy = to_wgs.transform(global_maxx, global_maxy)
+            to_wgs2 = Transformer.from_crs(CURRENT_CRS, "EPSG:4326", always_xy=True)
+            zab_minx, zab_miny = to_wgs2.transform(global_minx, global_miny)
+            zab_maxx, zab_maxy = to_wgs2.transform(global_maxx, global_maxy)
             bbox_wgs84 = (zab_minx, zab_miny, zab_maxx, zab_maxy)
             zabaged_gdfs = download_zabaged_wfs(
                 bbox_wgs84=bbox_wgs84,
