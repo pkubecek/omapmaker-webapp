@@ -447,8 +447,12 @@ def run_pipeline(job_id: str, params: dict, file_paths: dict,
             # vector_layers.py mohl najít vrstvu bez ohledu na přesný název souboru.
             key = fname.rsplit(".", 1)[0]
             zabaged_gdfs[key] = gdf_z
+            cb(9, f"ZABAGED OK: {key} — {len(gdf_z)} prvků, CRS={gdf_z.crs}")
         except Exception as e:
-            print(f"[pipeline] ZABAGED {fname}: {e}")
+            cb(9, f"ZABAGED chyba {fname}: {e}")
+
+    cb(9, f"ZABAGED celkem klíče: {list(zabaged_gdfs.keys())}")
+    cb(9, f"ZABAGED file_paths: {file_paths.get('zabaged', [])}")
 
     # ISOM
     isom_gdfs = {}
