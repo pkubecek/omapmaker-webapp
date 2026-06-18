@@ -143,7 +143,7 @@ def add_vector_layers(
         cgdf = isom("113")
         if cgdf is not None:
             pm("sym113", 18, None, cgdf, to_mask=False)
-        elif zab("NasupisteHraze"):
+        elif zab("NasupisteHraze") is not None:
             pm("sym113", 18, None, zab("NasupisteHraze"), to_mask=False)
 
         # 114 Velmi nerovný terén
@@ -164,7 +164,7 @@ def add_vector_layers(
         cgdf = isom("201")
         if cgdf is not None:
             pm("sym201", 57, None, cgdf, to_mask=False)
-        elif zab("SkalniSraz"):
+        elif zab("SkalniSraz") is not None:
             pm("sym201", 57, None, zab("SkalniSraz"), to_mask=False)
         else:
             pm("sym201", 57,
@@ -175,7 +175,7 @@ def add_vector_layers(
         cgdf = isom("202")
         if cgdf is not None:
             pm("sym202", 56, None, cgdf, to_mask=False)
-        elif zab("Lom"):
+        elif zab("Lom") is not None:
             pm("sym202", 56, None, zab("Lom"), to_mask=False)
         else:
             pm("sym202", 56,
@@ -204,7 +204,7 @@ def add_vector_layers(
         cgdf = isom("206")
         if cgdf is not None:
             pm("sym206", 56, None, cgdf, to_mask=False)
-        elif zab("OsamelyBalvanSkalaSkalniSuk"):
+        elif zab("OsamelyBalvanSkalaSkalniSuk") is not None:
             mask = _get_col(zab("OsamelyBalvanSkalaSkalniSuk"), "vyska_p") > 5
             if mask.any():
                 pm("sym206", 56, mask, zab("OsamelyBalvanSkalaSkalniSuk"))
@@ -227,7 +227,7 @@ def add_vector_layers(
         cgdf = isom("214")
         if cgdf is not None:
             pm("sym214", 18, None, cgdf, to_mask=False)
-        elif zab("SkalniUtvar"):
+        elif zab("SkalniUtvar") is not None:
             pm("sym214", 18, None, zab("SkalniUtvar"), to_mask=False)
         else:
             pm("sym214", 18, c("natural") == "bare_rock", gdf_polys)
@@ -245,7 +245,7 @@ def add_vector_layers(
         cgdf = isom("301")
         if cgdf is not None:
             pm("sym301", 27, None, cgdf, to_mask=False)
-        elif zab("VodniPlocha"):
+        elif zab("VodniPlocha") is not None:
             pm("sym301", 27, None, zab("VodniPlocha"), to_mask=False)
         else:
             pm("sym301", 27,
@@ -256,7 +256,7 @@ def add_vector_layers(
         cgdf = isom("304")
         if cgdf is not None:
             pm("sym304", 26, None, cgdf, to_mask=False)
-        elif zab("VodniTok"):
+        elif zab("VodniTok") is not None:
             mask = _get_col(zab("VodniTok"), "typtoku_p").isin(["povrchový splavný"]) & \
                    _get_col(zab("VodniTok"), "vydattok_p").isin(["stálý"])
             pm("sym304", 26, mask, zab("VodniTok"))
@@ -269,7 +269,7 @@ def add_vector_layers(
         cgdf = isom("305")
         if cgdf is not None:
             pm("sym305", 26, None, cgdf, to_mask=False)
-        elif zab("VodniTok"):
+        elif zab("VodniTok") is not None:
             mask = _get_col(zab("VodniTok"), "typtoku_p").isin(["povrchový nesplavný"]) & \
                    _get_col(zab("VodniTok"), "vydattok_p").isin(["stálý"])
             pm("sym305", 26, mask, zab("VodniTok"))
@@ -298,7 +298,7 @@ def add_vector_layers(
         cgdf = isom("312")
         if cgdf is not None:
             pm("sym312", 52, None, cgdf, to_mask=False)
-        elif zab("ZdrojPodzemnichVod"):
+        elif zab("ZdrojPodzemnichVod") is not None:
             pm("sym312", 52, None, zab("ZdrojPodzemnichVod"), to_mask=False)
         else:
             pm("sym312", 52, (c("natural") == "spring") & (c("covered") != "yes"), gdf_centroids)
@@ -326,7 +326,7 @@ def add_vector_layers(
         cgdf = isom("306")
         if cgdf is not None:
             pm("sym306", 26, None, cgdf, to_mask=False)
-        elif zab("VodniTok"):
+        elif zab("VodniTok") is not None:
             mask = _get_col(zab("VodniTok"), "vydattok_p").isin(["přerušovaný"])
             pm("sym306", 26, mask, zab("VodniTok"))
         else:
@@ -338,7 +338,7 @@ def add_vector_layers(
         cgdf = isom("309")
         if cgdf is not None:
             pm("sym309", 25, None, cgdf, to_mask=False)
-        elif zab("UzkaBazina"):
+        elif zab("UzkaBazina") is not None:
             pm("sym309", 25, None, zab("UzkaBazina"), to_mask=False)
         else:
             pm("sym309", 25,
@@ -349,7 +349,7 @@ def add_vector_layers(
         cgdf = isom("310")
         if cgdf is not None:
             pm("sym310", 24, None, cgdf, to_mask=False)
-        elif zab("NezvazitelnaVlhkaPuda"):
+        elif zab("NezvazitelnaVlhkaPuda") is not None:
             pm("sym310", 24, None, zab("NezvazitelnaVlhkaPuda"), to_mask=False)
         else:
             pm("sym310", 24,
@@ -360,7 +360,7 @@ def add_vector_layers(
         cgdf = isom("311")
         if cgdf is not None:
             pm("sym311", 52, None, cgdf, to_mask=False)
-        elif zab("StudnaZdroj"):
+        elif zab("StudnaZdroj") is not None:
             pm("sym311", 52, None, zab("StudnaZdroj"), to_mask=False)
         else:
             pm("sym311", 52,
@@ -447,7 +447,7 @@ def add_vector_layers(
         cgdf = isom("403")
         if cgdf is not None:
             pm("sym403", 1.0, None, cgdf, to_mask=False)
-        elif zab("TrvalyTravniPorostDrsny"):
+        elif zab("TrvalyTravniPorostDrsny") is not None:
             pm("sym403", 1.0, None, zab("TrvalyTravniPorostDrsny"), to_mask=False)
         else:
             pm("sym403", 1.0,
@@ -467,7 +467,7 @@ def add_vector_layers(
         cgdf = isom("405")
         if cgdf is not None:
             pm("sym405", 1.1, None, cgdf, to_mask=False)
-        elif zab("LesniPozemek"):
+        elif zab("LesniPozemek") is not None:
             mask = _get_col(zab("LesniPozemek"), "druhporost_p").isin(["jehličnatý", "listnatý", "smíšený"])
             pm("sym405", 1.1, mask, zab("LesniPozemek"))
         else:
@@ -504,7 +504,7 @@ def add_vector_layers(
         cgdf = isom("411")
         if cgdf is not None:
             pm("sym411", 1.8, None, cgdf, to_mask=False)
-        elif zab("HustyPorost"):
+        elif zab("HustyPorost") is not None:
             pm("sym411", 1.8, None, zab("HustyPorost"), to_mask=False)
 
     # ----------------------------------------------------------------
@@ -515,7 +515,7 @@ def add_vector_layers(
         cgdf = isom("501")
         if cgdf is not None:
             pm("sym501", 44, None, cgdf, to_mask=False)
-        elif zab("Parkoviste"):
+        elif zab("Parkoviste") is not None:
             pm("sym501", 44, None, zab("Parkoviste"), to_mask=False)
         else:
             pm("sym501", 44,
@@ -531,7 +531,7 @@ def add_vector_layers(
         for sym, zo in [("sym502Da", 45), ("sym502Db", 47), ("sym502Dc", 48)]:
             if cgdf is not None:
                 pm(sym, zo, None, cgdf, to_mask=False)
-            elif zab("SilniceDalnice"):
+            elif zab("SilniceDalnice") is not None:
                 mask = _get_col(zab("SilniceDalnice"), "typsil_k").isin(["D1", "D2", "M"])
                 pm(sym, zo, mask, zab("SilniceDalnice"))
             else:
@@ -544,7 +544,7 @@ def add_vector_layers(
         for sym, zo in [("sym502a", 45), ("sym502b", 47)]:
             if cgdf is not None:
                 pm(sym, zo, None, cgdf, to_mask=False)
-            elif zab("SilniceDalnice"):
+            elif zab("SilniceDalnice") is not None:
                 mask = ~_get_col(zab("SilniceDalnice"), "typsil_k").isin(["D1", "D2", "M"])
                 pm(sym, zo, mask, zab("SilniceDalnice"))
             else:
@@ -554,7 +554,7 @@ def add_vector_layers(
         cgdf = isom("503")
         if cgdf is not None:
             pm("sym503", 45, None, cgdf, to_mask=False)
-        elif zab("Cesta"):
+        elif zab("Cesta") is not None:
             mask = _get_col(zab("Cesta"), "povrch_p").isin(
                 ["zpevněný (asfalt, beton)", "zpevněný (panel, dlažba)"])
             pm("sym503", 45, mask, zab("Cesta"))
@@ -567,7 +567,7 @@ def add_vector_layers(
         cgdf = isom("504")
         if cgdf is not None:
             pm("sym504", 45, None, cgdf, to_mask=False)
-        elif zab("Cesta"):
+        elif zab("Cesta") is not None:
             mask = _get_col(zab("Cesta"), "typcesty_p").isin(["cesta udržovaná"])
             pm("sym504", 45, mask, zab("Cesta"))
         else:
@@ -588,7 +588,7 @@ def add_vector_layers(
         cgdf = isom("506")
         if cgdf is not None:
             pm("sym506", 45, None, cgdf, to_mask=False)
-        elif zab("Pesina"):
+        elif zab("Pesina") is not None:
             pm("sym506", 45, None, zab("Pesina"), to_mask=False)
         else:
             pm("sym506", 45, c("highway") == "path", gdf_lines)
@@ -606,7 +606,7 @@ def add_vector_layers(
         cgdf = isom("508")
         if cgdf is not None:
             pm("sym508", 45, None, cgdf, to_mask=False)
-        elif zab("Proseka"):
+        elif zab("Proseka") is not None:
             pm("sym508", 45, None, zab("Proseka"), to_mask=False)
         else:
             pm("sym508", 45,
@@ -619,7 +619,7 @@ def add_vector_layers(
         for sym, zo in [("sym509a", 40), ("sym509b", 41)]:
             if cgdf is not None:
                 pm(sym, zo, None, cgdf, to_mask=False)
-            elif zab("ZeleznicniTrat"):
+            elif zab("ZeleznicniTrat") is not None:
                 pm(sym, zo, None, zab("ZeleznicniTrat"), to_mask=False)
             else:
                 pm(sym, zo, mask_rail, gdf_lines)
@@ -637,7 +637,7 @@ def add_vector_layers(
         cgdf = isom("512")
         if cgdf is not None:
             pm("sym512", 46, None, cgdf, to_mask=False)
-        elif zab("Most"):
+        elif zab("Most") is not None:
             pm("sym512", 46, None, zab("Most"), to_mask=False)
         else:
             pm("sym512", 46,
@@ -648,7 +648,7 @@ def add_vector_layers(
         cgdf = isom("514")
         if cgdf is not None:
             pm("sym514", 30, None, cgdf, to_mask=False)
-        elif zab("ZbytkyZdi"):
+        elif zab("ZbytkyZdi") is not None:
             pm("sym514", 30, None, zab("ZbytkyZdi"), to_mask=False)
         else:
             pm("sym514", 30,
@@ -660,7 +660,7 @@ def add_vector_layers(
         if cgdf is not None:
             for s in ["sym515a", "sym515b"]:
                 pm(s, 30, None, cgdf, to_mask=False)
-        elif zab("NeprekZed"):
+        elif zab("NeprekZed") is not None:
             for s in ["sym515a", "sym515b"]:
                 pm(s, 30, None, zab("NeprekZed"), to_mask=False)
         else:
@@ -672,7 +672,7 @@ def add_vector_layers(
         cgdf = isom("516")
         if cgdf is not None:
             pm("sym516", 30, None, cgdf, to_mask=False)
-        elif zab("Ohrada"):
+        elif zab("Ohrada") is not None:
             pm("sym516", 30, None, zab("Ohrada"), to_mask=False)
         else:
             pm("sym516", 30,
@@ -715,7 +715,7 @@ def add_vector_layers(
         cgdf = isom("510")
         if cgdf is not None:
             pm("sym510", 70, None, cgdf, to_mask=False)
-        elif zab("ElektrickeVedeni"):
+        elif zab("ElektrickeVedeni") is not None:
             pm("sym510", 70, None, zab("ElektrickeVedeni"), to_mask=False)
         else:
             pm("sym510", 70, c("power").isin(["line", "minor_line"]), gdf_lines)
@@ -725,7 +725,7 @@ def add_vector_layers(
         if cgdf is not None:
             for s in ["sym513-1a", "sym513-1b"]:
                 pm(s, 30, None, cgdf, to_mask=False)
-        elif zab("Zed"):
+        elif zab("Zed") is not None:
             for s in ["sym513-1a", "sym513-1b"]:
                 pm(s, 30, None, zab("Zed"), to_mask=False)
         else:
@@ -736,7 +736,7 @@ def add_vector_layers(
             cgdf = isom("521")
             if cgdf is not None:
                 pm("sym521", 50, None, cgdf, to_mask=False)
-            elif zab("BudovaJednotlivaNeboBlokBudov"):
+            elif zab("BudovaJednotlivaNeboBlokBudov") is not None:
                 pm("sym521", 50, None, zab("BudovaJednotlivaNeboBlokBudov"), to_mask=False)
             else:
                 pm("sym521", 50,
@@ -775,7 +775,7 @@ def add_vector_layers(
         if cgdf is not None:
             for s in ["sym526a", "sym526b"]:
                 pm(s, 56, None, cgdf, to_mask=False)
-        elif zab("MohylaPomnikNahrobek"):
+        elif zab("MohylaPomnikNahrobek") is not None:
             for s in ["sym526a", "sym526b"]:
                 pm(s, 56, None, zab("MohylaPomnikNahrobek"), to_mask=False)
         else:
@@ -796,7 +796,7 @@ def add_vector_layers(
         cgdf = isom("523")
         if cgdf is not None:
             pm("sym523", 50, None, cgdf, to_mask=False)
-        elif zab("ZbytkyBudovy"):
+        elif zab("ZbytkyBudovy") is not None:
             pm("sym523", 50, None, zab("ZbytkyBudovy"), to_mask=False)
         else:
             pm("sym523", 50,
@@ -818,7 +818,7 @@ def add_vector_layers(
         cgdf = isom("527")
         if cgdf is not None:
             pm("sym527", 56, None, cgdf, to_mask=False)
-        elif zab("Krmitko"):
+        elif zab("Krmitko") is not None:
             pm("sym527", 56, None, zab("Krmitko"), to_mask=False)
         else:
             pm("sym527", 56,
@@ -850,7 +850,7 @@ def add_vector_layers(
         if cgdf is not None:
             for s in ["sym532a", "sym532b", "sym532c"]:
                 pm(s, 46, None, cgdf, to_mask=False)
-        elif zab("Schody"):
+        elif zab("Schody") is not None:
             for s in ["sym532a", "sym532b", "sym532c"]:
                 pm(s, 46, None, zab("Schody"), to_mask=False)
         else:
