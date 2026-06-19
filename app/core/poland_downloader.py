@@ -99,28 +99,123 @@ def _wfs_get_feature(wfs_url: str, type_name: str,
 
     _DL_EXTS = (".laz", ".las", ".zip", ".tif", ".tiff", ".asc", ".xyz")
 
-    def _parse_tiles(raw: bytes) -> list[dict]:
+    # Skutečný clip bbox bez bufferu pro filtrování GML features
+    try:
+        clip_x0, clip_y0, clip_x1, clip_y1 = _bbox_wgs84_to_2180(bbox_wgs84)
+    except Exception:
+        clip_x0, clip_y0, clip_x1, clip_y1 = bx0, by0, bx1, by1
+
+    def _bbox_from_gml_coords(coords_text: str):
+        """Parsuj souřadnice z gml:coordinates nebo gml:posList, vrať (x0,y0,x1,y1)."""
+        try:
+            # gml:coordinates: "x1,y1 x2,y2 ..." nebo "x1,y1,z1 x2,y2,z2 ..."
+            pairs = coords_text.strip().split()
+            xs, ys = [], []
+            for p in pairs:
+                parts = p.split(",")
+                if len(parts) >= 2:
+                    xs.append(float(parts[0]))
+                    ys.append(float(parts[1]))
+            if xs and ys:
+                return min(xs), min(ys), max(xs), max(ys)
+        except Exception:
+            pass
+        try:
+            # gml:posList: "x1 y1 x2 y2 ..." (WFS 2.0 GML 3.2)
+            nums = list(map(float, coords_text.strip().split()))
+            xs = nums[0::2]
+            ys = nums[1::2]
+            if xs and ys:
+                return min(xs), min(ys), max(xs), max(ys)
+        except Exception:
+            pass
+        return None
+
+    def _feature_overlaps_bbox(feature_el) -> bool:
+        """Zkontroluj jestli GML feature překrývá clip bbox."""
+        # Hledej gml:coordinates nebo gml:posList
+        for tag in [
+            "{http://www.opengis.net/gml}coordinates",
+            "{http://www.opengis.net/gml/3.2}coordinates",
+            "{http://www.opengis.net/gml}posList",
+            "{http://www.opengis.net/gml/3.2}posList",
+            "{http://www.opengis.net/gml}lowerCorner",  # Envelope
+        ]:
+            els = feature_el.findall(f".//{tag}")
+            for el in els:
+                if not el.text:
+                    continue
+                bbox = _bbox_from_gml_coords(el.text)
+                if bbox is None:
+                    continue
+                fx0, fy0, fx1, fy1 = bbox
+                # Překryv test
+                if fx1 >= clip_x0 and fx0 <= clip_x1 and fy1 >= clip_y0 and fy0 <= clip_y1:
+                    return True
+                else:
+                    return False  # geometrie nalezena ale mimo bbox
+        return True  # bez geometrie — nefiltruj
+
+    def _parse_tiles(raw: bytes, apply_bbox_filter: bool = True) -> list[dict]:
         raw_str = raw.decode("utf-8", errors="replace")
-        print(f"[pl_downloader] WFS odpověď ({type_name}): {raw_str[:800]}")
+        print(f"[pl_downloader] WFS odpověď ({type_name}): {raw_str[:600]}")
         try:
             root = ET.fromstring(raw)
         except ET.ParseError as e:
             print(f"[pl_downloader] XML parse chyba: {e}")
             return []
+
         tiles = []
-        # Hledej URL v textu elementů
-        for el in root.iter():
-            text = (el.text or "").strip()
-            if text.startswith("http") and any(text.lower().endswith(ext) for ext in _DL_EXTS):
-                tiles.append({"url": text, "name": os.path.basename(text)})
-                print(f"[pl_downloader]   dlaždice: {os.path.basename(text)}")
-        # Fallback: hledej xlink:href atributy
-        if not tiles:
+        skipped = 0
+
+        # Najdi feature members — každý obsahuje geometrii + URL
+        _MEMBER_TAGS = [
+            "{http://www.opengis.net/wfs}featureMember",
+            "{http://www.opengis.net/wfs/2.0}member",
+            "featureMember", "member",
+        ]
+        members = []
+        for tag in _MEMBER_TAGS:
+            members = root.findall(f".//{tag}")
+            if members:
+                break
+
+        if members:
+            for member in members:
+                if apply_bbox_filter and not _feature_overlaps_bbox(member):
+                    skipped += 1
+                    continue
+                # Hledej URL
+                url = None
+                for el in member.iter():
+                    text = (el.text or "").strip()
+                    if text.startswith("http") and any(text.lower().endswith(ext) for ext in _DL_EXTS):
+                        url = text
+                        break
+                if not url:
+                    for el in member.iter():
+                        href = el.get("{http://www.w3.org/1999/xlink}href", "") or el.get("href", "")
+                        if href.startswith("http") and any(href.lower().endswith(ext) for ext in _DL_EXTS):
+                            url = href
+                            break
+                if url:
+                    name = os.path.basename(url)
+                    tiles.append({"url": url, "name": name})
+                    print(f"[pl_downloader]   dlaždice: {name}")
+        else:
+            # Fallback bez member struktury
             for el in root.iter():
-                href = el.get("{http://www.w3.org/1999/xlink}href", "") or el.get("href", "")
-                if href.startswith("http") and any(href.lower().endswith(ext) for ext in _DL_EXTS):
-                    tiles.append({"url": href, "name": os.path.basename(href)})
-                    print(f"[pl_downloader]   dlaždice (href): {os.path.basename(href)}")
+                text = (el.text or "").strip()
+                if text.startswith("http") and any(text.lower().endswith(ext) for ext in _DL_EXTS):
+                    tiles.append({"url": text, "name": os.path.basename(text)})
+            if not tiles:
+                for el in root.iter():
+                    href = el.get("{http://www.w3.org/1999/xlink}href", "") or el.get("href", "")
+                    if href.startswith("http") and any(href.lower().endswith(ext) for ext in _DL_EXTS):
+                        tiles.append({"url": href, "name": os.path.basename(href)})
+
+        if skipped:
+            print(f"[pl_downloader]   přeskočeno mimo bbox: {skipped} dlaždic")
         return tiles
 
     # Pokus 1: WFS 2.0.0 s EPSG:2180 bbox
@@ -136,7 +231,7 @@ def _wfs_get_feature(wfs_url: str, type_name: str,
         req = urllib.request.Request(url_v2, headers=_HEADERS)
         with urllib.request.urlopen(req, timeout=60, context=_SSL_CTX) as resp:
             raw = resp.read()
-        tiles = _parse_tiles(raw)
+        tiles = _parse_tiles(raw, apply_bbox_filter=False)  # WFS 2.0 filtruje sám
         if tiles:
             return tiles
     except urllib.error.HTTPError as e:
@@ -145,7 +240,7 @@ def _wfs_get_feature(wfs_url: str, type_name: str,
         print(f"[pl_downloader] WFS 2.0 chyba ({type_name}): {e}")
         return []
 
-    # Pokus 2: WFS 1.1.0 s EPSG:2180 bbox (jiné pořadí os)
+    # Pokus 2: WFS 1.1.0 s EPSG:2180 bbox
     bbox_str_v11 = f"{bx0:.2f},{by0:.2f},{bx1:.2f},{by1:.2f},EPSG:2180"
     url_v11 = (
         f"{wfs_url}?SERVICE=WFS&REQUEST=GetFeature&VERSION=1.1.0"
@@ -158,13 +253,13 @@ def _wfs_get_feature(wfs_url: str, type_name: str,
         req = urllib.request.Request(url_v11, headers=_HEADERS)
         with urllib.request.urlopen(req, timeout=60, context=_SSL_CTX) as resp:
             raw = resp.read()
-        tiles = _parse_tiles(raw)
+        tiles = _parse_tiles(raw, apply_bbox_filter=False)
         if tiles:
             return tiles
     except Exception as e:
         print(f"[pl_downloader] WFS 1.1 chyba ({type_name}): {e}")
 
-    # Pokus 3: WFS 1.0.0
+    # Pokus 3: WFS 1.0.0 — nefiltruje bbox, použijeme post-processing filtr
     url_v10 = (
         f"{wfs_url}?SERVICE=WFS&REQUEST=GetFeature&VERSION=1.0.0"
         f"&TYPENAME={type_name}"
@@ -176,7 +271,7 @@ def _wfs_get_feature(wfs_url: str, type_name: str,
         req = urllib.request.Request(url_v10, headers=_HEADERS)
         with urllib.request.urlopen(req, timeout=60, context=_SSL_CTX) as resp:
             raw = resp.read()
-        return _parse_tiles(raw)
+        return _parse_tiles(raw, apply_bbox_filter=True)  # filtruj GML geometrie
     except Exception as e:
         print(f"[pl_downloader] WFS 1.0 chyba ({type_name}): {e}")
 
