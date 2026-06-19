@@ -105,27 +105,32 @@ def _wfs_get_feature(wfs_url: str, type_name: str,
     except Exception:
         clip_x0, clip_y0, clip_x1, clip_y1 = bx0, by0, bx1, by1
 
-    def _bbox_from_gml_coords(coords_text: str):
+    def _bbox_from_gml_coords(coords_text: str, swap_xy: bool = False):
         """Parsuj souřadnice z gml:coordinates nebo gml:posList, vrať (x0,y0,x1,y1)."""
         try:
-            # gml:coordinates: "x1,y1 x2,y2 ..." nebo "x1,y1,z1 x2,y2,z2 ..."
+            # gml:coordinates: "x,y x,y ..." nebo "x,y z x,y z ..."
             pairs = coords_text.strip().split()
             xs, ys = [], []
             for p in pairs:
                 parts = p.split(",")
                 if len(parts) >= 2:
-                    xs.append(float(parts[0]))
-                    ys.append(float(parts[1]))
+                    a, b = float(parts[0]), float(parts[1])
+                    if swap_xy:
+                        xs.append(b); ys.append(a)
+                    else:
+                        xs.append(a); ys.append(b)
             if xs and ys:
                 return min(xs), min(ys), max(xs), max(ys)
         except Exception:
             pass
         try:
-            # gml:posList: "x1 y1 x2 y2 ..." (WFS 2.0 GML 3.2)
+            # gml:posList: "x y x y ..." (párové hodnoty)
             nums = list(map(float, coords_text.strip().split()))
-            xs = nums[0::2]
-            ys = nums[1::2]
-            if xs and ys:
+            if len(nums) >= 4 and len(nums) % 2 == 0:
+                if swap_xy:
+                    ys = nums[0::2]; xs = nums[1::2]
+                else:
+                    xs = nums[0::2]; ys = nums[1::2]
                 return min(xs), min(ys), max(xs), max(ys)
         except Exception:
             pass
@@ -133,32 +138,67 @@ def _wfs_get_feature(wfs_url: str, type_name: str,
 
     def _feature_overlaps_bbox(feature_el) -> bool:
         """Zkontroluj jestli GML feature překrývá clip bbox."""
-        # Hledej gml:coordinates nebo gml:posList
-        for tag in [
-            "{http://www.opengis.net/gml}coordinates",
-            "{http://www.opengis.net/gml/3.2}coordinates",
-            "{http://www.opengis.net/gml}posList",
-            "{http://www.opengis.net/gml/3.2}posList",
-            "{http://www.opengis.net/gml}lowerCorner",  # Envelope
-        ]:
-            els = feature_el.findall(f".//{tag}")
-            for el in els:
+        GML = "http://www.opengis.net/gml"
+        GML32 = "http://www.opengis.net/gml/3.2"
+
+        for ns in [GML, GML32]:
+            # Zkus posList (GML 3.x polygon)
+            for el in feature_el.findall(f".//{{{ns}}}posList"):
                 if not el.text:
                     continue
-                bbox = _bbox_from_gml_coords(el.text)
-                if bbox is None:
+                # EPSG:2180 je projected — pořadí x,y (easting, northing)
+                bbox = _bbox_from_gml_coords(el.text, swap_xy=False)
+                if bbox:
+                    fx0, fy0, fx1, fy1 = bbox
+                    # Sanity check: EPSG:2180 x ~ 140000-900000, y ~ 100000-800000
+                    if fx0 > 50000 and fy0 > 50000:
+                        return (fx1 >= clip_x0 and fx0 <= clip_x1 and
+                                fy1 >= clip_y0 and fy0 <= clip_y1)
+                    # Zkus swap (y,x pořadí)
+                    bbox2 = _bbox_from_gml_coords(el.text, swap_xy=True)
+                    if bbox2:
+                        fx0, fy0, fx1, fy1 = bbox2
+                        if fx0 > 50000:
+                            return (fx1 >= clip_x0 and fx0 <= clip_x1 and
+                                    fy1 >= clip_y0 and fy0 <= clip_y1)
+
+            # Zkus coordinates (GML 2/3.1)
+            for el in feature_el.findall(f".//{{{ns}}}coordinates"):
+                if not el.text:
                     continue
-                fx0, fy0, fx1, fy1 = bbox
-                # Překryv test
-                if fx1 >= clip_x0 and fx0 <= clip_x1 and fy1 >= clip_y0 and fy0 <= clip_y1:
-                    return True
-                else:
-                    return False  # geometrie nalezena ale mimo bbox
-        return True  # bez geometrie — nefiltruj
+                bbox = _bbox_from_gml_coords(el.text, swap_xy=False)
+                if bbox:
+                    fx0, fy0, fx1, fy1 = bbox
+                    if fx0 > 50000:
+                        return (fx1 >= clip_x0 and fx0 <= clip_x1 and
+                                fy1 >= clip_y0 and fy0 <= clip_y1)
+
+            # Zkus Envelope (lowerCorner/upperCorner)
+            lc = feature_el.find(f".//{{{ns}}}lowerCorner")
+            uc = feature_el.find(f".//{{{ns}}}upperCorner")
+            if lc is not None and uc is not None and lc.text and uc.text:
+                try:
+                    lp = list(map(float, lc.text.split()))
+                    up = list(map(float, uc.text.split()))
+                    fx0, fy0 = lp[0], lp[1]
+                    fx1, fy1 = up[0], up[1]
+                    if fx0 > 50000:
+                        return (fx1 >= clip_x0 and fx0 <= clip_x1 and
+                                fy1 >= clip_y0 and fy0 <= clip_y1)
+                    # swap
+                    fx0, fy0 = lp[1], lp[0]
+                    fx1, fy1 = up[1], up[0]
+                    if fx0 > 50000:
+                        return (fx1 >= clip_x0 and fx0 <= clip_x1 and
+                                fy1 >= clip_y0 and fy0 <= clip_y1)
+                except Exception:
+                    pass
+
+        return True  # geometrie nenalezena — nefiltruj
 
     def _parse_tiles(raw: bytes, apply_bbox_filter: bool = True) -> list[dict]:
         raw_str = raw.decode("utf-8", errors="replace")
-        print(f"[pl_downloader] WFS odpověď ({type_name}): {raw_str[:600]}")
+        print(f"[pl_downloader] WFS odpověď ({type_name}): {raw_str[:300]}")
         try:
             root = ET.fromstring(raw)
         except ET.ParseError as e:
@@ -179,6 +219,12 @@ def _wfs_get_feature(wfs_url: str, type_name: str,
             members = root.findall(f".//{tag}")
             if members:
                 break
+
+        # Debug: vypiš první feature jako XML
+        if members:
+            import xml.etree.ElementTree as ET2
+            first_xml = ET2.tostring(members[0], encoding="unicode")
+            print(f"[pl_downloader] První feature XML: {first_xml[:800]}")
 
         if members:
             for member in members:
@@ -231,7 +277,7 @@ def _wfs_get_feature(wfs_url: str, type_name: str,
         req = urllib.request.Request(url_v2, headers=_HEADERS)
         with urllib.request.urlopen(req, timeout=60, context=_SSL_CTX) as resp:
             raw = resp.read()
-        tiles = _parse_tiles(raw, apply_bbox_filter=False)  # WFS 2.0 filtruje sám
+        tiles = _parse_tiles(raw, apply_bbox_filter=True)  # vždy filtruj
         if tiles:
             return tiles
     except urllib.error.HTTPError as e:
@@ -253,7 +299,7 @@ def _wfs_get_feature(wfs_url: str, type_name: str,
         req = urllib.request.Request(url_v11, headers=_HEADERS)
         with urllib.request.urlopen(req, timeout=60, context=_SSL_CTX) as resp:
             raw = resp.read()
-        tiles = _parse_tiles(raw, apply_bbox_filter=False)
+        tiles = _parse_tiles(raw, apply_bbox_filter=True)
         if tiles:
             return tiles
     except Exception as e:
