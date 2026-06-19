@@ -141,60 +141,59 @@ def _wfs_get_feature(wfs_url: str, type_name: str,
         GML = "http://www.opengis.net/gml"
         GML32 = "http://www.opengis.net/gml/3.2"
 
+        def _test_bbox(fx0, fy0, fx1, fy1) -> bool | None:
+            """Vrátí True/False pokud souřadnice vypadají jako EPSG:2180, jinak None."""
+            if fx0 > 50000 and fy0 > 50000:
+                return (fx1 >= clip_x0 and fx0 <= clip_x1 and
+                        fy1 >= clip_y0 and fy0 <= clip_y1)
+            return None
+
         for ns in [GML, GML32]:
-            # Zkus posList (GML 3.x polygon)
+            # posList (GML 3.x)
             for el in feature_el.findall(f".//{{{ns}}}posList"):
-                if not el.text:
-                    continue
-                # EPSG:2180 je projected — pořadí x,y (easting, northing)
-                bbox = _bbox_from_gml_coords(el.text, swap_xy=False)
-                if bbox:
-                    fx0, fy0, fx1, fy1 = bbox
-                    # Sanity check: EPSG:2180 x ~ 140000-900000, y ~ 100000-800000
-                    if fx0 > 50000 and fy0 > 50000:
-                        return (fx1 >= clip_x0 and fx0 <= clip_x1 and
-                                fy1 >= clip_y0 and fy0 <= clip_y1)
-                    # Zkus swap (y,x pořadí)
-                    bbox2 = _bbox_from_gml_coords(el.text, swap_xy=True)
-                    if bbox2:
-                        fx0, fy0, fx1, fy1 = bbox2
-                        if fx0 > 50000:
-                            return (fx1 >= clip_x0 and fx0 <= clip_x1 and
-                                    fy1 >= clip_y0 and fy0 <= clip_y1)
+                if not el.text: continue
+                for swap in [False, True]:
+                    b = _bbox_from_gml_coords(el.text, swap_xy=swap)
+                    if b:
+                        r = _test_bbox(*b)
+                        if r is not None: return r
 
-            # Zkus coordinates (GML 2/3.1)
+            # coordinates (GML 2/3.1)
             for el in feature_el.findall(f".//{{{ns}}}coordinates"):
-                if not el.text:
-                    continue
-                bbox = _bbox_from_gml_coords(el.text, swap_xy=False)
-                if bbox:
-                    fx0, fy0, fx1, fy1 = bbox
-                    if fx0 > 50000:
-                        return (fx1 >= clip_x0 and fx0 <= clip_x1 and
-                                fy1 >= clip_y0 and fy0 <= clip_y1)
+                if not el.text: continue
+                b = _bbox_from_gml_coords(el.text, swap_xy=False)
+                if b:
+                    r = _test_bbox(*b)
+                    if r is not None: return r
 
-            # Zkus Envelope (lowerCorner/upperCorner)
+            # Envelope lowerCorner/upperCorner
             lc = feature_el.find(f".//{{{ns}}}lowerCorner")
             uc = feature_el.find(f".//{{{ns}}}upperCorner")
             if lc is not None and uc is not None and lc.text and uc.text:
                 try:
                     lp = list(map(float, lc.text.split()))
                     up = list(map(float, uc.text.split()))
-                    fx0, fy0 = lp[0], lp[1]
-                    fx1, fy1 = up[0], up[1]
-                    if fx0 > 50000:
-                        return (fx1 >= clip_x0 and fx0 <= clip_x1 and
-                                fy1 >= clip_y0 and fy0 <= clip_y1)
-                    # swap
-                    fx0, fy0 = lp[1], lp[0]
-                    fx1, fy1 = up[1], up[0]
-                    if fx0 > 50000:
-                        return (fx1 >= clip_x0 and fx0 <= clip_x1 and
-                                fy1 >= clip_y0 and fy0 <= clip_y1)
+                    for fx0, fy0, fx1, fy1 in [
+                        (lp[0], lp[1], up[0], up[1]),
+                        (lp[1], lp[0], up[1], up[0]),  # swap
+                    ]:
+                        r = _test_bbox(fx0, fy0, fx1, fy1)
+                        if r is not None: return r
                 except Exception:
                     pass
 
-        return True  # geometrie nenalezena — nefiltruj
+        # Zkus i bez namespace (WFS 1.0 někdy vrací holé tagy)
+        for tag in ["coordinates", "posList"]:
+            for el in feature_el.findall(f".//{tag}"):
+                if not el.text: continue
+                b = _bbox_from_gml_coords(el.text, swap_xy=False)
+                if b:
+                    r = _test_bbox(*b)
+                    if r is not None: return r
+
+        # Geometrie nenalezena — vyřaď (safe default: raději přeskočit než stáhnout 30 souborů)
+        print(f"[pl_downloader]   WARNING: geometrie nenalezena v feature, přeskakuji")
+        return False
 
     def _parse_tiles(raw: bytes, apply_bbox_filter: bool = True) -> list[dict]:
         raw_str = raw.decode("utf-8", errors="replace")
