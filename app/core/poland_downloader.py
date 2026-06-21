@@ -93,8 +93,8 @@ def _wfs_get_feature(wfs_url: str, type_name: str,
         print(f"[pl_downloader] Transformace bbox selhala: {e}, zkouším WGS84")
         bx0, by0, bx1, by1 = mn_lon, mn_lat, mx_lon, mx_lat
 
-    # Přidej buffer 5 km pro jistotu
-    BUFFER = 5000
+    # Malý buffer 200m pro edge dlaždice
+    BUFFER = 200
     bx0 -= BUFFER; by0 -= BUFFER; bx1 += BUFFER; by1 += BUFFER
 
     _DL_EXTS = (".laz", ".las", ".zip", ".tif", ".tiff", ".asc", ".xyz")
@@ -143,7 +143,11 @@ def _wfs_get_feature(wfs_url: str, type_name: str,
 
         def _test_bbox(fx0, fy0, fx1, fy1) -> bool | None:
             """Vrátí True/False pokud souřadnice vypadají jako EPSG:2180, jinak None."""
-            if fx0 > 50000 and fy0 > 50000:
+            # EPSG:2180: X (easting) 150000–950000, Y (northing) 100000–850000
+            # Obě souřadnice musí být v realistickém rozsahu pro Polsko
+            x_ok = 100000 < fx0 < 1000000 and 100000 < fx1 < 1000000
+            y_ok = 50000 < fy0 < 900000 and 50000 < fy1 < 900000
+            if x_ok and y_ok:
                 return (fx1 >= clip_x0 and fx0 <= clip_x1 and
                         fy1 >= clip_y0 and fy0 <= clip_y1)
             return None
@@ -226,9 +230,12 @@ def _wfs_get_feature(wfs_url: str, type_name: str,
             print(f"[pl_downloader] První feature XML: {first_xml[:800]}")
 
         if members:
-            for member in members:
-                if apply_bbox_filter and not _feature_overlaps_bbox(member):
+            for i, member in enumerate(members):
+                overlaps = _feature_overlaps_bbox(member)
+                if apply_bbox_filter and not overlaps:
                     skipped += 1
+                    if i < 3:
+                        print(f"[pl_downloader]   feature {i} přeskočena (overlaps={overlaps})")
                     continue
                 # Hledej URL
                 url = None
@@ -356,38 +363,16 @@ def _query_tiles(wfs_url: str, years: list[int],
 
 
 def _download_file(url: str, dest_path: str, progress_cb=None) -> bool:
-    """Stáhne jeden soubor streamovaně s měřením rychlosti."""
-    import time
+    """Stáhne jeden soubor. Vrátí True při úspěchu."""
     try:
         req = urllib.request.Request(url, headers=_HEADERS)
-        with urllib.request.urlopen(req, timeout=300, context=_SSL_CTX) as r:
-            total = int(r.headers.get("Content-Length", 0))
-            downloaded = 0
-            t0 = time.time()
-            chunk_size = 256 * 1024  # 256 KB
-            with open(dest_path, "wb") as f:
-                while True:
-                    chunk = r.read(chunk_size)
-                    if not chunk:
-                        break
-                    f.write(chunk)
-                    downloaded += len(chunk)
-                    if progress_cb and total > 0:
-                        elapsed = time.time() - t0
-                        speed = downloaded / elapsed / 1024 / 1024 if elapsed > 0.5 else 0
-                        pct = downloaded * 100 // total
-                        name = os.path.basename(url)
-                        if speed > 0:
-                            progress_cb(f"  ↓ {name}: {pct}% ({speed:.1f} MB/s)")
-        elapsed = time.time() - t0
-        mb = downloaded / 1024 / 1024
-        speed = mb / elapsed if elapsed > 0 else 0
-        print(f"[pl_downloader] Staženo {os.path.basename(url)}: {mb:.1f} MB za {elapsed:.1f}s ({speed:.1f} MB/s)")
+        with urllib.request.urlopen(req, timeout=300, context=_SSL_CTX) as r, \
+             open(dest_path, "wb") as f:
+            f.write(r.read())
         return True
     except Exception as e:
         if progress_cb:
             progress_cb(f"  Chyba stahování {os.path.basename(url)}: {e}")
-        print(f"[pl_downloader] Chyba stahování {url}: {e}")
         return False
 
 
@@ -781,7 +766,6 @@ def download_poland(
     # -------------------------------------------------------------------------
     dmp_merged = ""
 
-    cb(f"DSM: dtm_files={dtm_files}, use_lidar={use_lidar_point_cloud}")
     if dtm_files and use_lidar_point_cloud:
         cb("Vytvářím DSM z LiDAR non-ground bodů...")
         dmp_laz = os.path.join(out_dir, "PL_LiDAR_DSM_merged.laz")
