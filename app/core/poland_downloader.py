@@ -170,6 +170,16 @@ def _wfs_get_feature(wfs_url: str, type_name: str,
                     r = _test_bbox(*b)
                     if r is not None: return r
 
+            # gml:Box (WFS 1.0/1.1 bounding box)
+            box_el = feature_el.find(f".//{{{ns}}}Box")
+            if box_el is not None:
+                coords_el = box_el.find(f"{{{ns}}}coordinates")
+                if coords_el is not None and coords_el.text:
+                    b = _bbox_from_gml_coords(coords_el.text, swap_xy=False)
+                    if b:
+                        r = _test_bbox(*b)
+                        if r is not None: return r
+
             # Envelope lowerCorner/upperCorner
             lc = feature_el.find(f".//{{{ns}}}lowerCorner")
             uc = feature_el.find(f".//{{{ns}}}upperCorner")
@@ -213,8 +223,10 @@ def _wfs_get_feature(wfs_url: str, type_name: str,
 
         # Najdi feature members — každý obsahuje geometrii + URL
         _MEMBER_TAGS = [
-            "{http://www.opengis.net/wfs}featureMember",
             "{http://www.opengis.net/wfs/2.0}member",
+            "{http://www.opengis.net/wfs}featureMember",
+            "{http://www.opengis.net/gml}featureMember",   # WFS 1.1 používá GML ns
+            "{http://www.opengis.net/gml/3.2}featureMember",
             "featureMember", "member",
         ]
         members = []
