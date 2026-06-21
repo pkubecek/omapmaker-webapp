@@ -504,19 +504,6 @@ def _merge_laz_epsg2180(input_paths: list, output_path: str,
     if progress_cb:
         progress_cb(f"  Clip bbox EPSG:2180: {bx0:.0f},{by0:.0f} .. {bx1:.0f},{by1:.0f}")
 
-    # Debug: zjisti skutečné souřadnice prvního souboru
-    import laspy as _laspy
-    with _laspy.open(input_paths[0]) as _fh:
-        _hdr = _fh.header
-        print(f"[pl_downloader] LAZ header: x={_hdr.x_min:.0f}..{_hdr.x_max:.0f}, "
-              f"y={_hdr.y_min:.0f}..{_hdr.y_max:.0f}, "
-              f"offsets={_hdr.offsets}, scales={_hdr.scales}")
-        try:
-            _crs = _hdr.parse_crs()
-            print(f"[pl_downloader] LAZ CRS: {_crs}")
-        except Exception as _e:
-            print(f"[pl_downloader] LAZ CRS: nelze přečíst ({_e})")
-
     try:
         with laspy.open(input_paths[0]) as fh_tmp:
             header_ref = fh_tmp.header
