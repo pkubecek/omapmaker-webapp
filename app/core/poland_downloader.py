@@ -94,7 +94,7 @@ def _wfs_get_feature(wfs_url: str, type_name: str,
         bx0, by0, bx1, by1 = mn_lon, mn_lat, mx_lon, mx_lat
 
     # Malý buffer 200m pro edge dlaždice
-    BUFFER = 50
+    BUFFER = 200
     bx0 -= BUFFER; by0 -= BUFFER; bx1 += BUFFER; by1 += BUFFER
 
     _DL_EXTS = (".laz", ".las", ".zip", ".tif", ".tiff", ".asc", ".xyz")
@@ -227,7 +227,11 @@ def _wfs_get_feature(wfs_url: str, type_name: str,
         if members:
             import xml.etree.ElementTree as ET2
             first_xml = ET2.tostring(members[0], encoding="unicode")
-            print(f"[pl_downloader] První feature XML: {first_xml[:800]}")
+            print(f"[pl_downloader] members={len(members)}, první feature XML: {first_xml[:600]}")
+        else:
+            # Vypiš všechny tagy v root pro diagnostiku
+            all_tags = set(el.tag for el in root.iter())
+            print(f"[pl_downloader] Žádné members! Tagy v XML: {list(all_tags)[:20]}")
 
         if members:
             for i, member in enumerate(members):
