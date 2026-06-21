@@ -481,13 +481,14 @@ def _merge_laz_epsg2180(input_paths: list, output_path: str,
     t = Transformer.from_crs("EPSG:4326", "EPSG:2180", always_xy=True)
     xs, ys = t.transform([mn_lon, mx_lon, mn_lon, mx_lon],
                           [mn_lat, mn_lat, mx_lat, mx_lat])
-    bx0, bx1 = min(xs), max(xs)
-    by0, by1 = min(ys), max(ys)
-    # Malý buffer 100m pro jistotu
-    bx0 -= 100; by0 -= 100; bx1 += 100; by1 += 100
+    # always_xy=True: xs=easting, ys=northing
+    # GUGiK LAZ: chunk.x = northing, chunk.y = easting (osa order EPSG:2180)
+    # Proto clip_cx (northing) porovnáváme s ys, clip_cy (easting) s xs
+    cn0, cn1 = min(ys) - 100, max(ys) + 100  # northing rozsah pro chunk.x
+    ce0, ce1 = min(xs) - 100, max(xs) + 100  # easting rozsah pro chunk.y
 
     if progress_cb:
-        progress_cb(f"  Clip bbox EPSG:2180: {bx0:.0f},{by0:.0f} .. {bx1:.0f},{by1:.0f}")
+        progress_cb(f"  Clip bbox EPSG:2180: E={ce0:.0f}..{ce1:.0f}, N={cn0:.0f}..{cn1:.0f}")
 
     try:
         with laspy.open(input_paths[0]) as fh_tmp:
@@ -521,7 +522,7 @@ def _merge_laz_epsg2180(input_paths: list, output_path: str,
                         cy = np.array(chunk.y)
                         cz = np.array(chunk.z)
                         cc = np.array(chunk.classification)
-                        m = (cx >= bx0) & (cx <= bx1) & (cy >= by0) & (cy <= by1)
+                        m = (cx >= cn0) & (cx <= cn1) & (cy >= ce0) & (cy <= ce1)
                         if not np.any(m):
                             continue
                         cx, cy, cz, cc = cx[m], cy[m], cz[m], cc[m]
@@ -584,8 +585,9 @@ def _merge_laz_dsm_epsg2180(input_paths: list, output_path: str,
     t = Transformer.from_crs("EPSG:4326", "EPSG:2180", always_xy=True)
     xs, ys = t.transform([mn_lon, mx_lon, mn_lon, mx_lon],
                           [mn_lat, mn_lat, mx_lat, mx_lat])
-    bx0, bx1 = min(xs) - 100, max(xs) + 100
-    by0, by1 = min(ys) - 100, max(ys) + 100
+    # GUGiK LAZ: chunk.x = northing, chunk.y = easting
+    cn0, cn1 = min(ys) - 100, max(ys) + 100  # northing pro chunk.x
+    ce0, ce1 = min(xs) - 100, max(xs) + 100  # easting pro chunk.y
 
     try:
         with laspy.open(input_paths[0]) as fh_tmp:
@@ -619,8 +621,13 @@ def _merge_laz_dsm_epsg2180(input_paths: list, output_path: str,
                         cy = np.array(chunk.y)
                         cz = np.array(chunk.z)
                         cc = np.array(chunk.classification)
+                        # Debug první chunk
+                        if total_written == 0 and len(cx) > 0:
+                            print(f"[pl_downloader] DSM debug: cx={cx[0]:.0f}..{cx[-1]:.0f}, cy={cy[0]:.0f}..{cy[-1]:.0f}")
+                            print(f"[pl_downloader] DSM debug: cn0={cn0:.0f},cn1={cn1:.0f}, ce0={ce0:.0f},ce1={ce1:.0f}")
+                            print(f"[pl_downloader] DSM debug: classifications unique={np.unique(cc)}")
                         # bbox filter
-                        m = (cx >= bx0) & (cx <= bx1) & (cy >= by0) & (cy <= by1)
+                        m = (cx >= cn0) & (cx <= cn1) & (cy >= ce0) & (cy <= ce1)
                         # DSM: vše kromě noise (7) a unclassified který je pod zemí
                         # Ponecháme: 1 (unclass), 3 (low veg), 4 (med veg), 5 (high veg),
                         #             6 (building), 9 (water), 2 (ground) jako podádní body
