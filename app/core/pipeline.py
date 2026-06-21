@@ -351,11 +351,31 @@ def run_pipeline(job_id: str, params: dict, file_paths: dict,
     with laspy.open(dmr_path) as fh:
         hdr = fh.header
         try:
-            src_crs = hdr.parse_crs() or CRS.from_epsg(5514)
+            src_crs = hdr.parse_crs()
+            if src_crs is None:
+                raise ValueError("No CRS in header")
         except Exception:
             src_crs = CRS.from_epsg(5514)
         raw_minx, raw_maxx = float(hdr.x_min), float(hdr.x_max)
         raw_miny, raw_maxy = float(hdr.y_min), float(hdr.y_max)
+
+    # Pokud pipeline dostala EPSG:5514 (default ČR) ale data jsou v jiném CRS
+    # (např. polská EPSG:2180), použij CRS z LAZ headeru jako CURRENT_CRS
+    params_crs = CRS.from_string(CURRENT_CRS)
+    if src_crs is not None and not src_crs.equals(params_crs):
+        detected_epsg = src_crs.to_epsg()
+        cb(3, f"Detekován CRS dat: EPSG:{detected_epsg} (params měly {CURRENT_CRS}) — přepínám")
+        CURRENT_CRS = f"EPSG:{detected_epsg}"
+        tile_params["crs"] = CURRENT_CRS
+    elif src_crs is None or src_crs.equals(CRS.from_epsg(5514)):
+        # Fallback: detekce CRS podle rozsahu souřadnic
+        # EPSG:5514 (S-JTSK): x ~ -920000..-400000, y ~ -1250000..-900000
+        # EPSG:2180 (PL-1992): x ~ 140000..900000,  y ~ 100000..800000
+        if raw_minx > 0 and raw_miny > 0 and raw_minx < 950000:
+            cb(3, f"Souřadnice ({raw_minx:.0f}, {raw_miny:.0f}) odpovídají EPSG:2180 (Polsko) — přepínám")
+            CURRENT_CRS = "EPSG:2180"
+            src_crs = CRS.from_epsg(2180)
+            tile_params["crs"] = CURRENT_CRS
 
     try:
         dst_crs = CRS.from_string(CURRENT_CRS)
