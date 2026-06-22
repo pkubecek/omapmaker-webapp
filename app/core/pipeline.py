@@ -384,11 +384,6 @@ def run_pipeline(job_id: str, params: dict, file_paths: dict,
             xs, ys = t.transform([raw_minx, raw_maxx], [raw_miny, raw_maxy])
             global_minx, global_maxx = min(xs), max(xs)
             global_miny, global_maxy = min(ys), max(ys)
-        elif CURRENT_CRS == "EPSG:2180" and raw_minx > raw_miny:
-            # GUGiK LAZ: hdr.x=northing (~400-800k), hdr.y=easting (~140-900k)
-            # Pro správný extent: minx=easting=raw_miny, miny=northing=raw_minx
-            global_minx, global_maxx = float(hdr.y_min), float(hdr.y_max)  # easting
-            global_miny, global_maxy = float(hdr.x_min), float(hdr.x_max)  # northing
         else:
             global_minx, global_maxx = raw_minx, raw_maxx
             global_miny, global_maxy = raw_miny, raw_maxy
