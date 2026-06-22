@@ -508,13 +508,7 @@ def _merge_laz_epsg2180(input_paths: list, output_path: str,
     if progress_cb:
         progress_cb(f"  Clip bbox EPSG:2180: E={ce0:.0f}..{ce1:.0f}, N={cn0:.0f}..{cn1:.0f}")
 
-    # Debug: prvních 5 bodů z prvního souboru
-    import laspy as _lp
-    with _lp.open(input_paths[0]) as _fh:
-        _chunk = next(_fh.chunk_iterator(5))
-        _xs = [f"{v:.0f}" for v in _chunk.x[:3]]
-        _ys = [f"{v:.0f}" for v in _chunk.y[:3]]
-        print(f"[pl_downloader] DEBUG prvních 3 bodů: x={_xs}, y={_ys}")
+
 
     try:
         with laspy.open(input_paths[0]) as fh_tmp:
@@ -548,9 +542,9 @@ def _merge_laz_epsg2180(input_paths: list, output_path: str,
                         cy = np.array(chunk.y)
                         cz = np.array(chunk.z)
                         cc = np.array(chunk.classification)
-                        # GUGiK LAZ: cx=easting, cy=northing
-                        # ce0/ce1 = easting clip, cn0/cn1 = northing clip
-                        m = (cx >= ce0) & (cx <= ce1) & (cy >= cn0) & (cy <= cn1)
+                        # GUGiK LAZ: chunk.x=northing, chunk.y=easting
+                        # cn0/cn1 = northing clip (pro cx), ce0/ce1 = easting clip (pro cy)
+                        m = (cx >= cn0) & (cx <= cn1) & (cy >= ce0) & (cy <= ce1)
                         if not np.any(m):
                             continue
                         cx, cy, cz, cc = cx[m], cy[m], cz[m], cc[m]
@@ -649,9 +643,9 @@ def _merge_laz_dsm_epsg2180(input_paths: list, output_path: str,
                         cy = np.array(chunk.y)
                         cz = np.array(chunk.z)
                         cc = np.array(chunk.classification)
-                        # GUGiK LAZ: cx=easting, cy=northing
-                        # ce0/ce1 = easting clip, cn0/cn1 = northing clip
-                        m = (cx >= ce0) & (cx <= ce1) & (cy >= cn0) & (cy <= cn1)
+                        # GUGiK LAZ: chunk.x=northing, chunk.y=easting
+                        # cn0/cn1 = northing clip (pro cx), ce0/ce1 = easting clip (pro cy)
+                        m = (cx >= cn0) & (cx <= cn1) & (cy >= ce0) & (cy <= ce1)
                         # DSM: vše kromě noise (7) a unclassified který je pod zemí
                         # Ponecháme: 1 (unclass), 3 (low veg), 4 (med veg), 5 (high veg),
                         #             6 (building), 9 (water), 2 (ground) jako podádní body
