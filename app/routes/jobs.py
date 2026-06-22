@@ -50,8 +50,10 @@ def _save_file(upload: UploadFile, dest_dir: str) -> str:
 
 @router.post("/jobs")
 async def create_job(
-    dtm: UploadFile = File(...),
-    dsm: UploadFile = File(...),
+    dtm: UploadFile = File(default=None),
+    dsm: UploadFile = File(default=None),
+    dtm_server_path: str = Form(default=None),
+    dsm_server_path: str = Form(default=None),
     zabaged: list[UploadFile] = File(default=[]),
     zabaged_sidecar: list[UploadFile] = File(default=[]),
     isom: list[UploadFile] = File(default=[]),
@@ -62,8 +64,21 @@ async def create_job(
     job_dir = os.path.join(JOBS_DIR, job_id)
     os.makedirs(job_dir, exist_ok=True)
 
-    dtm_path = _save_file(dtm, job_dir)
-    dsm_path = _save_file(dsm, job_dir)
+    # DTM — buď serverová cesta nebo upload
+    if dtm_server_path and os.path.exists(dtm_server_path):
+        dtm_path = dtm_server_path
+    elif dtm and dtm.filename:
+        dtm_path = _save_file(dtm, job_dir)
+    else:
+        raise HTTPException(status_code=422, detail="Chybí DTM soubor nebo cesta.")
+
+    # DSM — buď serverová cesta nebo upload (volitelný)
+    if dsm_server_path and os.path.exists(dsm_server_path):
+        dsm_path = dsm_server_path
+    elif dsm and dsm.filename:
+        dsm_path = _save_file(dsm, job_dir)
+    else:
+        dsm_path = dtm_path  # fallback: pipeline zvládne i bez DSM
 
     # Sidecar soubory (.dbf, .shx, .prj) ulož do stejné složky jako .shp
     # aby je geopandas/fiona při read_file() automaticky našlo podle názvu
