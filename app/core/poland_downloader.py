@@ -531,8 +531,8 @@ def _merge_laz_epsg2180(input_paths: list, output_path: str,
 
         total_written = 0
         CHUNK_SIZE = 200_000
+        _cx_is_easting = None  # detekujeme z prvního chunku
 
-        _debug_done = False
         with laspy.open(output_path, mode="w", header=out_header) as out_fh:
             for path in input_paths:
                 if progress_cb:
@@ -543,12 +543,16 @@ def _merge_laz_epsg2180(input_paths: list, output_path: str,
                         cy = np.array(chunk.y)
                         cz = np.array(chunk.z)
                         cc = np.array(chunk.classification)
-                        if not _debug_done:
-                            print(f"[pl_downloader] CLIP DEBUG: cx[0]={cx[0]:.0f}, cy[0]={cy[0]:.0f}, cn0={cn0:.0f}, cn1={cn1:.0f}, ce0={ce0:.0f}, ce1={ce1:.0f}")
-                            _debug_done = True
-                        # GUGiK LAZ: chunk.x=northing, chunk.y=easting
-                        # cn0/cn1 = northing clip (pro cx), ce0/ce1 = easting clip (pro cy)
-                        m = (cx >= cn0) & (cx <= cn1) & (cy >= ce0) & (cy <= ce1)
+                        # Automatická detekce os z prvního chunku
+                        if _cx_is_easting is None and len(cx) > 0:
+                            e_mid = (ce0 + ce1) / 2
+                            n_mid = (cn0 + cn1) / 2
+                            _cx_is_easting = abs(cx[0] - e_mid) < abs(cx[0] - n_mid)
+                            print(f"[pl_downloader] Detekce os: cx[0]={cx[0]:.0f}, cy[0]={cy[0]:.0f} → cx={'easting' if _cx_is_easting else 'northing'}")
+                        if _cx_is_easting:
+                            m = (cx >= ce0) & (cx <= ce1) & (cy >= cn0) & (cy <= cn1)
+                        else:
+                            m = (cx >= cn0) & (cx <= cn1) & (cy >= ce0) & (cy <= ce1)
                         if not np.any(m):
                             continue
                         cx, cy, cz, cc = cx[m], cy[m], cz[m], cc[m]
@@ -636,6 +640,7 @@ def _merge_laz_dsm_epsg2180(input_paths: list, output_path: str,
 
         total_written = 0
         CHUNK_SIZE = 200_000
+        _cx_is_easting = None
 
         with laspy.open(output_path, mode="w", header=out_header) as out_fh:
             for path in input_paths:
@@ -647,9 +652,14 @@ def _merge_laz_dsm_epsg2180(input_paths: list, output_path: str,
                         cy = np.array(chunk.y)
                         cz = np.array(chunk.z)
                         cc = np.array(chunk.classification)
-                        # GUGiK LAZ: chunk.x=northing, chunk.y=easting
-                        # cn0/cn1 = northing clip (pro cx), ce0/ce1 = easting clip (pro cy)
-                        m = (cx >= cn0) & (cx <= cn1) & (cy >= ce0) & (cy <= ce1)
+                        if _cx_is_easting is None and len(cx) > 0:
+                            e_mid = (ce0 + ce1) / 2
+                            n_mid = (cn0 + cn1) / 2
+                            _cx_is_easting = abs(cx[0] - e_mid) < abs(cx[0] - n_mid)
+                        if _cx_is_easting:
+                            m = (cx >= ce0) & (cx <= ce1) & (cy >= cn0) & (cy <= cn1)
+                        else:
+                            m = (cx >= cn0) & (cx <= cn1) & (cy >= ce0) & (cy <= ce1)
                         # DSM: vše kromě noise (7) a unclassified který je pod zemí
                         # Ponecháme: 1 (unclass), 3 (low veg), 4 (med veg), 5 (high veg),
                         #             6 (building), 9 (water), 2 (ground) jako podádní body
