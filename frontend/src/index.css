@@ -1,0 +1,85 @@
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --ink: #1a1f2e;
+  --ink-light: #2d3448;
+  --paper: #f0ead6;
+  --paper-dark: #e4ddc8;
+  --forest: #4a6a38;
+  --forest-mid: #6a9a52;
+  --forest-light: #c8ddb8;
+  --rock: #c96a3a;
+  --rock-light: #f0d0be;
+  --water: #5a9ab5;
+  --water-light: #c8e0ec;
+  --panel-bg: #ffffff;
+  --panel-border: #e2ddd3;
+  --text-primary: #1a1f2e;
+  --text-secondary: #6b7280;
+  --text-muted: #9ca3af;
+  --mono: 'IBM Plex Mono', monospace;
+  --sans: 'Inter', sans-serif;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+}
+
+html, body {
+  height: 100%;
+  font-family: var(--sans);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+}
+
+#root {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Leaflet overrides */
+.leaflet-container {
+  font-family: var(--sans) !important;
+  background: var(--paper) !important;
+}
+
+.leaflet-control-zoom a {
+  font-family: var(--sans) !important;
+}
+
+/* Mobile touch targets */
+@media (max-width: 768px) {
+  .leaflet-control-zoom a {
+    width: 36px !important;
+    height: 36px !important;
+    line-height: 36px !important;
+    font-size: 18px !important;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--panel-border);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+/* Leaflet selection rectangle */
+.selection-rect {
+  stroke: #c96a3a;
+  stroke-width: 2;
+  stroke-dasharray: 6, 4;
+  fill: rgba(201, 106, 58, 0.08);
+}
