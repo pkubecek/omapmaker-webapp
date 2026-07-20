@@ -512,7 +512,7 @@ export default function SettingsPanel({ settings, onSettings, files, onFiles, is
         <div style={{ ...S.label, marginTop: 12, marginBottom: 8 }}>Kupky</div>
         {[
           ['Min. průměr (m)', 'knoMinDiameter', '0.5', '0.5', '50', 'Minimální průměr kupky v metrech.'],
-          ['Max. průměr (m)', 'knoMaxDiameter', '0.5', '0.5', '50', 'Maximální průměr kupky. Větší kopce se ignorují.'],
+          ['Max. průměr (m)', 'knoMaxDiameter', '0.5', '0.5', '50', 'Maximální průměr kupky. Větší kupy se ignorují.'],
           ['Min. výška (m)', 'knoMinHeight', '0.1', '0.1', '10', 'Minimální výška kupky nad okolním terénem.'],
         ].map(([lbl, key, step, min, max, tip]) => (
           <div style={S.row} key={key}>
