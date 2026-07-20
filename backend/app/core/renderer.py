@@ -114,15 +114,24 @@ def generate_contour_layers(grid_x, grid_y, dmr_grid, clip_polygon=None,
     base_levels = np.setdiff1d(base_levels, major_levels)
 
     # Pomocné vrstevnice — kreslí se tam, kde je terénní detail, který by základní
-    # interval sám přeskočil: mírný celkový sklon (bez pomocných vrstevnic už
-    # základní interval stačí), ale znatelný lokální rozdíl výšek v okolí bodu
-    # (hrbolek, terasa, prohlubeň...). Kritéria jsou v reálných jednotkách
-    # (metry, stupně) vázaných na zvolený interval — ne relativní percentily
-    # napříč celým gridem, které nemají žádný vztah ke skutečné velikosti detailu
-    # a navíc kolabují na "nikde", pokud grid obsahuje jediný NaN.
+    # interval sám přeskočil (hrbolek, terasa, prohlubeň...). Kritéria jsou v
+    # reálných jednotkách (metry, stupně) vázaných na zvolený interval — ne
+    # relativní percentily napříč celým gridem, které nemají žádný vztah ke
+    # skutečné velikosti detailu a navíc kolabují na "nikde", pokud grid
+    # obsahuje jediný NaN.
+    #
+    # Reliéf se měří z dat OČIŠTĚNÝCH od celkového trendu svahu (regional_trend
+    # = hodně vyhlazená verze terénu), ne z čistého max-min. Bez tohohle by
+    # samotný sklon (15 m okno × tan(sklon) = "umělý" rozdíl výšek) na strmějším
+    # svahu snadno překročil práh sám o sobě bez jakéhokoliv skutečného útvaru,
+    # zatímco na mírném svahu by naopak musel veškerý rozdíl pocházet ze
+    # skutečného detailu — a jemné útvary by tak na mírných svazích práh
+    # nedosahovaly. Po odečtení trendu měří local_relief jen to, co ve svahu
+    # skutečně "vyčnívá", nezávisle na tom, jak strmý je podklad.
     DETAIL_WINDOW_M = 15.0        # velikost okolí pro hodnocení lokálního reliéfu (m)
-    DETAIL_RELIEF_FRACTION = 0.3  # lokální rozdíl výšek musí být aspoň tato část intervalu
-    MAX_SLOPE_DEG = 25.0          # nad tímto sklonem už hustota base/major stačí sama
+    DETAIL_RELIEF_FRACTION = 0.15  # zbytkový (detrendovaný) rozdíl výšek musí být aspoň tato část intervalu
+    TREND_WINDOW_M = 40.0          # měřítko, na kterém se počítá "celkový trend" svahu k odečtení
+    MAX_SLOPE_DEG = 25.0           # nad tímto sklonem už hustota base/major stačí sama
 
     detail_valid_mask = (detail_grid > 0) & (~np.isnan(detail_grid))
     detail_plot = np.where(detail_valid_mask, detail_grid, np.nan)
@@ -134,18 +143,38 @@ def generate_contour_layers(grid_x, grid_y, dmr_grid, clip_polygon=None,
     if np.any(detail_valid_mask):
         fill_value = float(np.nanmean(detail_plot))
         dmr_filled = np.where(detail_valid_mask, detail_plot, fill_value)
+
         window_px = max(3, int(round(DETAIL_WINDOW_M / max(px_step_x, 1e-6))))
         if window_px % 2 == 0:
             window_px += 1  # liché okno kvůli symetrii filtru
-        local_max = maximum_filter(dmr_filled, size=window_px, mode="nearest")
-        local_min = minimum_filter(dmr_filled, size=window_px, mode="nearest")
+
+        trend_sigma_px = max(1.0, TREND_WINDOW_M / max(px_step_x, 1e-6))
+        regional_trend = gaussian_filter(dmr_filled, sigma=trend_sigma_px, mode="nearest")
+        residual = dmr_filled - regional_trend  # jen lokální detail, bez vlivu celkového sklonu
+
+        local_max = maximum_filter(residual, size=window_px, mode="nearest")
+        local_min = minimum_filter(residual, size=window_px, mode="nearest")
         local_relief = local_max - local_min
+
+        # U okraje gridu je odhad regionálního trendu nespolehlivý (gaussovské
+        # vyhlazení tam nemá dost dat na obě strany), což může vyrobit falešný
+        # reziduál i na naprosto rovnoměrném svahu bez jakéhokoliv detailu.
+        # Radši v tomhle okrajovém pruhu pomocné vrstevnice nenabízet —
+        # základní/hlavní vrstevnice tam kreslí dál normálně.
+        edge_margin_px = int(round(1.5 * trend_sigma_px))
+        edge_safe_mask = np.ones_like(detail_grid, dtype=bool)
+        if edge_margin_px > 0:
+            edge_safe_mask[:edge_margin_px, :] = False
+            edge_safe_mask[-edge_margin_px:, :] = False
+            edge_safe_mask[:, :edge_margin_px] = False
+            edge_safe_mask[:, -edge_margin_px:] = False
 
         combined_mask = (
             (local_relief >= interval * DETAIL_RELIEF_FRACTION)
             & (slope_deg < MAX_SLOPE_DEG)
             & detail_valid_mask
             & valid_mask
+            & edge_safe_mask
         )
     else:
         combined_mask = np.zeros_like(dmr_grid, dtype=bool)
