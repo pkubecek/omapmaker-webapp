@@ -17,7 +17,7 @@ from scipy.ndimage import (
     binary_dilation, binary_erosion, gaussian_filter, label,
     find_objects, minimum_filter, binary_opening, binary_closing,
 )
-from shapely.geometry import MultiPoint, Point, shape
+from shapely.geometry import MultiPoint, Point, Polygon, MultiPolygon, shape
 from shapely.ops import unary_union
 import geopandas as gpd
 from pyproj import CRS, Transformer
@@ -262,6 +262,49 @@ def load_dmp_grid(dmp_path: str, grid_x: np.ndarray, grid_y: np.ndarray,
 # Vegetation classification
 # ---------------------------------------------------------------------------
 
+def _chaikin_ring(coords: np.ndarray, iterations: int = 4) -> np.ndarray:
+    """
+    Chaikinovo ořezávání rohů na uzavřeném kruhu souřadnic.
+    Každou hranu v každé iteraci nahradí dvěma body (25 % a 75 % podél hrany) —
+    limitně se blíží hladké (kvadratické B-spline) křivce bez ostrých rohů.
+    """
+    coords = np.asarray(coords, dtype=float)
+    if len(coords) >= 2 and np.allclose(coords[0], coords[-1]):
+        coords = coords[:-1]
+    if len(coords) < 3:
+        return np.vstack([coords, coords[0]]) if len(coords) else coords
+    for _ in range(iterations):
+        n = len(coords)
+        new_pts = np.empty((n * 2, 2))
+        p0 = coords
+        p1 = np.roll(coords, -1, axis=0)
+        new_pts[0::2] = 0.75 * p0 + 0.25 * p1
+        new_pts[1::2] = 0.25 * p0 + 0.75 * p1
+        coords = new_pts
+    return np.vstack([coords, coords[0]])
+
+
+def _chaikin_smooth_geom(geom, iterations: int = 4):
+    """Aplikuje Chaikinovo vyhlazení na exterior i interior kruhy Polygonu/MultiPolygonu."""
+    if geom is None or geom.is_empty:
+        return geom
+
+    def _smooth_poly(poly):
+        try:
+            ext = _chaikin_ring(np.asarray(poly.exterior.coords), iterations)
+            ints = [_chaikin_ring(np.asarray(r.coords), iterations) for r in poly.interiors]
+            new_poly = Polygon(ext, ints)
+            return new_poly if new_poly.is_valid else new_poly.buffer(0)
+        except Exception:
+            return poly
+
+    if geom.geom_type == "Polygon":
+        return _smooth_poly(geom)
+    elif geom.geom_type == "MultiPolygon":
+        return MultiPolygon([_smooth_poly(p) for p in geom.geoms if not p.is_empty])
+    return geom
+
+
 def classify_vegetation(vegetation_height: np.ndarray, bins: list,
                          transform, dmr_path: str,
                          progress_cb=None) -> gpd.GeoDataFrame:
@@ -320,7 +363,28 @@ def classify_vegetation(vegetation_height: np.ndarray, bins: list,
         gdf = gdf[gdf.geometry.area >= min_area]
         gdf.geometry = gdf.geometry.simplify(0.5, preserve_topology=True)
         dissolved = gdf.dissolve(by="class_name", aggfunc="first").reset_index()
-        gdf.geometry = gdf.geometry.buffer(0.8).buffer(0)
+
+        # Zaoblení hran — rastrová vektorizace dává "schodovité" polygony.
+        # Dilatace + eroze se zaoblenými rohy (round join) hrany vyhladí a zakulatí,
+        # aniž by se polygon výrazně zvětšil nebo zmenšil.
+        SMOOTH_DIST = 3.0  # metry — vyšší = kulatější, ale méně přesné hranice
+        dissolved.geometry = (
+            dissolved.geometry
+            .buffer(SMOOTH_DIST, join_style="round")
+            .buffer(-SMOOTH_DIST, join_style="round")
+        )
+        dissolved.geometry = dissolved.geometry.simplify(0.5, preserve_topology=True)
+        dissolved = dissolved[~dissolved.geometry.is_empty]
+
+        # Chaikinovo ořezávání rohů — z pořád hranatého (byť zaobleného) polygonu
+        # udělá skutečně hladkou křivku bez jediného ostrého lomu.
+        # POZOR: simplify() se NESMÍ volat po Chaikinu, znovu by vytvořil ostré rohy.
+        CHAIKIN_ITERATIONS = 4
+        dissolved["geometry"] = dissolved.geometry.apply(
+            lambda g: _chaikin_smooth_geom(g, iterations=CHAIKIN_ITERATIONS)
+        )
+        dissolved = dissolved[~dissolved.geometry.is_empty]
+
         _cb(f"Vegetace vektorizována: {len(dissolved)} tříd")
         return dissolved
     except Exception as e:
@@ -369,8 +433,28 @@ def vectorize_rocks(grid_x: np.ndarray, grid_y: np.ndarray,
             return gpd.GeoDataFrame(columns=["class_name", "geometry"])
         gdf = gpd.GeoDataFrame(features)
         gdf = gdf[gdf.geometry.area >= min_area]
-        gdf.geometry = gdf.geometry.buffer(0.4).simplify(0.3)
+        gdf.geometry = gdf.geometry.buffer(0.4)
         dissolved = gdf.dissolve(by="class_name").reset_index()
+
+        # Zaoblení hran — stejný princip jako u vegetace, ale s menším poloměrem:
+        # skalní útvary bývají menší a detailnější, velký SMOOTH_DIST by je smazal.
+        ROCK_SMOOTH_DIST = 1.0  # metry
+        dissolved.geometry = (
+            dissolved.geometry
+            .buffer(ROCK_SMOOTH_DIST, join_style="round")
+            .buffer(-ROCK_SMOOTH_DIST, join_style="round")
+        )
+        dissolved.geometry = dissolved.geometry.simplify(0.3, preserve_topology=True)
+        dissolved = dissolved[~dissolved.geometry.is_empty]
+
+        # Chaikinovo ořezávání rohů — hladká křivka bez ostrých lomů.
+        # POZOR: simplify() se NESMÍ volat po Chaikinu, znovu by vytvořil ostré rohy.
+        ROCK_CHAIKIN_ITERATIONS = 3
+        dissolved["geometry"] = dissolved.geometry.apply(
+            lambda g: _chaikin_smooth_geom(g, iterations=ROCK_CHAIKIN_ITERATIONS)
+        )
+        dissolved = dissolved[~dissolved.geometry.is_empty]
+
         _cb("Skály vektorizovány")
         return dissolved
     except Exception as e:
