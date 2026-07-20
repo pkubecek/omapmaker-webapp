@@ -108,8 +108,20 @@ def generate_contour_layers(grid_x, grid_y, dmr_grid, clip_polygon=None,
     _, gyy = np.gradient(gy)
     curvature = np.abs(gxx + gyy)
     slope = np.hypot(gx_g, gy)
-    curvature_thr = np.percentile(curvature[valid_mask], 30)
-    gentle_thr = np.percentile(slope[valid_mask], 30)
+    valid_curv = curvature[valid_mask]
+    valid_slope = slope[valid_mask]
+    # POZOR: np.percentile vrátí NaN, pokud vstup obsahuje jediný NaN (např. z okraje
+    # dlaždice nebo díry v LiDAR datech u hranice valid_mask) — díky NaN by pak
+    # combined_mask níže zkolabovala na "všude False" a pomocné vrstevnice by úplně
+    # zmizely, i když base/major fungují normálně. np.nanpercentile NaN hodnoty ignoruje.
+    if valid_curv.size and np.any(~np.isnan(valid_curv)):
+        curvature_thr = np.nanpercentile(valid_curv, 30)
+    else:
+        curvature_thr = np.inf
+    if valid_slope.size and np.any(~np.isnan(valid_slope)):
+        gentle_thr = np.nanpercentile(valid_slope, 30)
+    else:
+        gentle_thr = -np.inf
     combined_mask = (curvature > curvature_thr) & (slope < gentle_thr) & valid_mask
     dilated = binary_dilation(combined_mask, iterations=2)
     dmr_minor = np.where(dilated, dmr_plot, np.nan)
