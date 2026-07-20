@@ -64,15 +64,26 @@ def _generate_contours_for_levels(padded_grid, levels, transform_info, clip_geom
 
 
 def generate_contour_layers(grid_x, grid_y, dmr_grid, clip_polygon=None,
-                             progress_cb=None, interval=5.0) -> dict:
+                             progress_cb=None, interval=5.0, detail_grid=None) -> dict:
     """
     Generuje vrstevnice (základní `interval` m, hlavní 5x interval, pomocné interval/2).
     Výchozí interval je 5 m (hlavní 25 m, pomocné 2.5 m) — zachováno jako default.
+
+    `dmr_grid` — grid použitý pro VYKRESLENÍ čar (obvykle vyhlazený gaussovským
+    filtrem, aby byly čáry hladké).
+    `detail_grid` — nepovinný, méně/nevyhlazený grid (stejného tvaru jako dmr_grid)
+    použitý jen pro DETEKCI, kde je terénní detail pro pomocné vrstevnice. Pokud
+    se pro detekci použije stejně vyhlazený grid jako pro kreslení, jemné útvary
+    (menší než vyhlazovací jádro) v datech zmizí ještě před detekcí a pomocné
+    vrstevnice se pak neobjeví ani v mírném svahu s jemným reliéfem. Když
+    `detail_grid` není zadaný, použije se `dmr_grid` (původní chování).
     Vrátí dict: { 'base': GDF, 'major': GDF, 'minor': GDF }
     """
     interval = float(interval) if interval else 5.0
     major_interval = interval * 5
     minor_interval = interval / 2
+    if detail_grid is None:
+        detail_grid = dmr_grid
     def _cb(msg):
         if progress_cb:
             progress_cb(msg)
@@ -113,13 +124,16 @@ def generate_contour_layers(grid_x, grid_y, dmr_grid, clip_polygon=None,
     DETAIL_RELIEF_FRACTION = 0.3  # lokální rozdíl výšek musí být aspoň tato část intervalu
     MAX_SLOPE_DEG = 25.0          # nad tímto sklonem už hustota base/major stačí sama
 
-    gy, gx_g = np.gradient(dmr_grid)
+    detail_valid_mask = (detail_grid > 0) & (~np.isnan(detail_grid))
+    detail_plot = np.where(detail_valid_mask, detail_grid, np.nan)
+
+    gy, gx_g = np.gradient(detail_grid)
     slope_ratio = np.hypot(gx_g / max(px_step_x, 1e-6), gy / max(px_step_y, 1e-6))
     slope_deg = np.degrees(np.arctan(slope_ratio))
 
-    if np.any(valid_mask):
-        fill_value = float(np.nanmean(dmr_plot))
-        dmr_filled = np.where(valid_mask, dmr_plot, fill_value)
+    if np.any(detail_valid_mask):
+        fill_value = float(np.nanmean(detail_plot))
+        dmr_filled = np.where(detail_valid_mask, detail_plot, fill_value)
         window_px = max(3, int(round(DETAIL_WINDOW_M / max(px_step_x, 1e-6))))
         if window_px % 2 == 0:
             window_px += 1  # liché okno kvůli symetrii filtru
@@ -130,6 +144,7 @@ def generate_contour_layers(grid_x, grid_y, dmr_grid, clip_polygon=None,
         combined_mask = (
             (local_relief >= interval * DETAIL_RELIEF_FRACTION)
             & (slope_deg < MAX_SLOPE_DEG)
+            & detail_valid_mask
             & valid_mask
         )
     else:

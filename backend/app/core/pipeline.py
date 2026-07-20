@@ -185,7 +185,8 @@ def _process_tile(
     tcb("Generuji vrstevnice...")
     contour_layers = generate_contour_layers(grid_x, grid_y, dmr_grid_cubic_viz,
                                               clip_polygon=clip_polygon,
-                                              interval=CONTOUR_INTERVAL)
+                                              interval=CONTOUR_INTERVAL,
+                                              detail_grid=dmr_grid_linear_viz)
     for k, gdf_c in contour_layers.items():
         if not gdf_c.empty:
             contour_layers[k] = gdf_c.set_crs(CURRENT_CRS, allow_override=True)
