@@ -86,7 +86,7 @@ K dispozici jsou tři tlačítka ke stažení:
 3. Vrstvy z GPKG se automaticky přiřadí ke správným ISOM symbolům podle CRT tabulky
 
 ---
-Ve skalách může výsledek vypadat nějak takto:
+#### Ve skalách může výsledek vypadat nějak takto:
 <img width="2078" height="1658" alt="Žižkův kopec" src="https://github.com/user-attachments/assets/ced5d0b4-41c7-4eaf-895e-4ee5f7aa6ef6" />
 <img width="1111" height="1034" alt="Borný" src="https://github.com/user-attachments/assets/e5ee5dec-aa03-455a-b358-561c0efc9f8c" />
 
