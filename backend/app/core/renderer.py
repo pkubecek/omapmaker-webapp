@@ -20,7 +20,7 @@ from shapely.ops import unary_union
 from shapely import affinity
 import geopandas as gpd
 import pandas as pd
-from scipy.ndimage import binary_dilation, gaussian_filter
+from scipy.ndimage import binary_dilation, gaussian_filter, maximum_filter, minimum_filter
 from pyproj import Transformer
 
 from .symbols import SymbolLibrary, plot_symbol
@@ -102,27 +102,39 @@ def generate_contour_layers(grid_x, grid_y, dmr_grid, clip_polygon=None,
                              np.ceil(max_z / interval) * interval + 1, interval)
     base_levels = np.setdiff1d(base_levels, major_levels)
 
-    # Pomocné vrstevnice — jen v oblastech s velkou křivostí a malým sklonem
+    # Pomocné vrstevnice — kreslí se tam, kde je terénní detail, který by základní
+    # interval sám přeskočil: mírný celkový sklon (bez pomocných vrstevnic už
+    # základní interval stačí), ale znatelný lokální rozdíl výšek v okolí bodu
+    # (hrbolek, terasa, prohlubeň...). Kritéria jsou v reálných jednotkách
+    # (metry, stupně) vázaných na zvolený interval — ne relativní percentily
+    # napříč celým gridem, které nemají žádný vztah ke skutečné velikosti detailu
+    # a navíc kolabují na "nikde", pokud grid obsahuje jediný NaN.
+    DETAIL_WINDOW_M = 15.0        # velikost okolí pro hodnocení lokálního reliéfu (m)
+    DETAIL_RELIEF_FRACTION = 0.3  # lokální rozdíl výšek musí být aspoň tato část intervalu
+    MAX_SLOPE_DEG = 25.0          # nad tímto sklonem už hustota base/major stačí sama
+
     gy, gx_g = np.gradient(dmr_grid)
-    gxx, _ = np.gradient(gx_g)
-    _, gyy = np.gradient(gy)
-    curvature = np.abs(gxx + gyy)
-    slope = np.hypot(gx_g, gy)
-    valid_curv = curvature[valid_mask]
-    valid_slope = slope[valid_mask]
-    # POZOR: np.percentile vrátí NaN, pokud vstup obsahuje jediný NaN (např. z okraje
-    # dlaždice nebo díry v LiDAR datech u hranice valid_mask) — díky NaN by pak
-    # combined_mask níže zkolabovala na "všude False" a pomocné vrstevnice by úplně
-    # zmizely, i když base/major fungují normálně. np.nanpercentile NaN hodnoty ignoruje.
-    if valid_curv.size and np.any(~np.isnan(valid_curv)):
-        curvature_thr = np.nanpercentile(valid_curv, 30)
+    slope_ratio = np.hypot(gx_g / max(px_step_x, 1e-6), gy / max(px_step_y, 1e-6))
+    slope_deg = np.degrees(np.arctan(slope_ratio))
+
+    if np.any(valid_mask):
+        fill_value = float(np.nanmean(dmr_plot))
+        dmr_filled = np.where(valid_mask, dmr_plot, fill_value)
+        window_px = max(3, int(round(DETAIL_WINDOW_M / max(px_step_x, 1e-6))))
+        if window_px % 2 == 0:
+            window_px += 1  # liché okno kvůli symetrii filtru
+        local_max = maximum_filter(dmr_filled, size=window_px, mode="nearest")
+        local_min = minimum_filter(dmr_filled, size=window_px, mode="nearest")
+        local_relief = local_max - local_min
+
+        combined_mask = (
+            (local_relief >= interval * DETAIL_RELIEF_FRACTION)
+            & (slope_deg < MAX_SLOPE_DEG)
+            & valid_mask
+        )
     else:
-        curvature_thr = np.inf
-    if valid_slope.size and np.any(~np.isnan(valid_slope)):
-        gentle_thr = np.nanpercentile(valid_slope, 30)
-    else:
-        gentle_thr = -np.inf
-    combined_mask = (curvature > curvature_thr) & (slope < gentle_thr) & valid_mask
+        combined_mask = np.zeros_like(dmr_grid, dtype=bool)
+
     dilated = binary_dilation(combined_mask, iterations=2)
     dmr_minor = np.where(dilated, dmr_plot, np.nan)
     dmr_padded_minor = np.pad(dmr_minor, pad_width=pad, mode="edge")
@@ -130,6 +142,7 @@ def generate_contour_layers(grid_x, grid_y, dmr_grid, clip_polygon=None,
     minor_levels = np.arange(np.floor(min_z / minor_interval) * minor_interval,
                               np.ceil(max_z / minor_interval) * minor_interval + 1, minor_interval)
     minor_levels = np.setdiff1d(minor_levels, np.union1d(major_levels, base_levels))
+
 
     return {
         "base": _generate_contours_for_levels(dmr_padded, base_levels, transform_info, clip_geom),
