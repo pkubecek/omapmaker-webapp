@@ -64,11 +64,15 @@ def _generate_contours_for_levels(padded_grid, levels, transform_info, clip_geom
 
 
 def generate_contour_layers(grid_x, grid_y, dmr_grid, clip_polygon=None,
-                             progress_cb=None) -> dict:
+                             progress_cb=None, interval=5.0) -> dict:
     """
-    Generuje vrstevnice (základní 5m, hlavní 25m, pomocné 2.5m).
+    Generuje vrstevnice (základní `interval` m, hlavní 5x interval, pomocné interval/2).
+    Výchozí interval je 5 m (hlavní 25 m, pomocné 2.5 m) — zachováno jako default.
     Vrátí dict: { 'base': GDF, 'major': GDF, 'minor': GDF }
     """
+    interval = float(interval) if interval else 5.0
+    major_interval = interval * 5
+    minor_interval = interval / 2
     def _cb(msg):
         if progress_cb:
             progress_cb(msg)
@@ -92,8 +96,10 @@ def generate_contour_layers(grid_x, grid_y, dmr_grid, clip_polygon=None,
     min_z = np.nanmin(dmr_plot)
     max_z = np.nanmax(dmr_plot)
 
-    major_levels = np.arange(np.floor(min_z / 25) * 25, np.ceil(max_z / 25) * 25 + 1, 25)
-    base_levels = np.arange(np.floor(min_z / 5) * 5, np.ceil(max_z / 5) * 5 + 1, 5)
+    major_levels = np.arange(np.floor(min_z / major_interval) * major_interval,
+                              np.ceil(max_z / major_interval) * major_interval + 1, major_interval)
+    base_levels = np.arange(np.floor(min_z / interval) * interval,
+                             np.ceil(max_z / interval) * interval + 1, interval)
     base_levels = np.setdiff1d(base_levels, major_levels)
 
     # Pomocné vrstevnice — jen v oblastech s velkou křivostí a malým sklonem
@@ -109,7 +115,8 @@ def generate_contour_layers(grid_x, grid_y, dmr_grid, clip_polygon=None,
     dmr_minor = np.where(dilated, dmr_plot, np.nan)
     dmr_padded_minor = np.pad(dmr_minor, pad_width=pad, mode="edge")
 
-    minor_levels = np.arange(np.floor(min_z / 2.5) * 2.5, np.ceil(max_z / 2.5) * 2.5 + 1, 2.5)
+    minor_levels = np.arange(np.floor(min_z / minor_interval) * minor_interval,
+                              np.ceil(max_z / minor_interval) * minor_interval + 1, minor_interval)
     minor_levels = np.setdiff1d(minor_levels, np.union1d(major_levels, base_levels))
 
     return {

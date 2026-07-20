@@ -840,7 +840,7 @@ def add_vector_layers(
             pm("sym531", 56, None, cgdf, to_mask=False)
         elif zab("KrizSloupKulturnihoVyznamu") is not None:
             pm("sym531", 56, None, zab("KrizSloupKulturnihoVyznamu"), to_mask=False)
-        else:
+        else: 
             pm("sym531", 56, c("man_made").isin(["insect_hotel", "street_cabinet"]), gdf_centroids)
 
         # 532 - Schody

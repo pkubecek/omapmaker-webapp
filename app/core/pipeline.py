@@ -80,6 +80,7 @@ def _process_tile(
     SIGMA = params["sigma"]
     SLOPE_THRESHOLD = params["slope_threshold"]
     BINS = params["bins"]
+    CONTOUR_INTERVAL = params.get("contour_interval", 5)
     DEP = params.get("depressions", {})
     KNO = params.get("knolls", {})
     FIXED_PIXEL_SIZE = 0.5
@@ -183,7 +184,8 @@ def _process_tile(
 
     tcb("Generuji vrstevnice...")
     contour_layers = generate_contour_layers(grid_x, grid_y, dmr_grid_cubic_viz,
-                                              clip_polygon=clip_polygon)
+                                              clip_polygon=clip_polygon,
+                                              interval=CONTOUR_INTERVAL)
     for k, gdf_c in contour_layers.items():
         if not gdf_c.empty:
             contour_layers[k] = gdf_c.set_crs(CURRENT_CRS, allow_override=True)
@@ -306,6 +308,7 @@ def run_pipeline(job_id: str, params: dict, file_paths: dict,
     SIGMA = float(params.get("sigma", 4))
     SLOPE_THRESHOLD = float(params.get("slope_threshold", 45.0))
     NORTH_ROTATION = float(params.get("north_rotation", 5.0))
+    CONTOUR_INTERVAL = float(params.get("contour_interval", 5))
     BINS = [float(b) for b in params.get("bins", [1, 2, 6, 12])]
     LAYER_VISIBILITY = params.get("layers", {
         "contours": True, "rocks": True, "water": True,
@@ -326,6 +329,7 @@ def run_pipeline(job_id: str, params: dict, file_paths: dict,
     tile_params = {
         "crs": CURRENT_CRS, "sigma": SIGMA,
         "slope_threshold": SLOPE_THRESHOLD, "bins": BINS,
+        "contour_interval": CONTOUR_INTERVAL,
         "dep_min_diameter": DEP_MIN_DIAM, "dep_max_diameter": DEP_MAX_DIAM,
         "dep_min_depth": DEP_MIN_DEPTH,
         "kno_min_diameter": KNO_MIN_DIAM, "kno_max_diameter": KNO_MAX_DIAM,
