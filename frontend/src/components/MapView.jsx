@@ -251,7 +251,7 @@ export default function MapView({ bbox, onBboxChange, onCuzkComplete, onHelp, is
     L.control.zoom({ position: 'bottomleft' }).addTo(map);
 
     const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap', maxZoom: 19,
+      attribution: '© OpenStreetMap', maxZoom: 19, minZoom: 3,
     });
     const ortofotoLayer = L.tileLayer.wms('https://ags.cuzk.gov.cz/arcgis1/services/ORTOFOTO/MapServer/WMSServer', {
       layers: '0',
