@@ -58,11 +58,6 @@ h1, h2, h3, h4, h5, h6 {
   font-family: var(--sans) !important;
 }
 
-/* Odsazení zoom ovladače pod plovoucí přepínač podkladu (top-right) */
-.leaflet-top.leaflet-right .leaflet-control-zoom {
-  margin-top: 54px !important;
-}
-
 /* Mobile touch targets */
 @media (max-width: 768px) {
   .leaflet-control-zoom a {

@@ -54,8 +54,11 @@ const S = {
     color: 'var(--text-secondary)', fontFamily: 'var(--sans)', transition: 'background 0.15s',
   },
   toolCtrlBtnActive: { background: '#f0ead6', color: 'var(--text-primary)' },
+  rightStack: {
+    position: 'absolute', top: 10, right: 10, zIndex: 1000,
+    display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8,
+  },
   helpBtn: {
-    position: 'absolute', top: 156, right: 10, zIndex: 1000,
     width: 40, height: 40, padding: 0, borderRadius: '50%',
     display: 'flex', alignItems: 'center', justifyContent: 'center',
     background: 'rgba(255,255,255,0.92)', border: '0.5px solid var(--panel-border)',
@@ -63,7 +66,6 @@ const S = {
     fontWeight: 600, fontSize: 17, color: 'var(--text-primary)', fontFamily: 'var(--sans)',
   },
   baseLayerCtrl: {
-    position: 'absolute', top: 10, right: 10, zIndex: 1000,
     display: 'flex', background: 'rgba(255,255,255,0.92)',
     border: '0.5px solid var(--panel-border)', borderRadius: 'var(--radius-sm)',
     boxShadow: '0 2px 8px rgba(0,0,0,0.15)', overflow: 'hidden',
@@ -74,6 +76,18 @@ const S = {
     color: 'var(--text-secondary)', fontFamily: 'var(--sans)', transition: 'background 0.15s',
   },
   baseLayerBtnActive: { background: '#f0ead6', color: 'var(--text-primary)' },
+  zoomCtrl: {
+    display: 'flex', flexDirection: 'column', background: 'rgba(255,255,255,0.92)',
+    border: '0.5px solid var(--panel-border)', borderRadius: 'var(--radius-sm)',
+    boxShadow: '0 2px 8px rgba(0,0,0,0.15)', overflow: 'hidden',
+  },
+  zoomBtn: {
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    width: 30, height: 30, background: 'none', border: 'none',
+    fontSize: 16, fontWeight: 600, cursor: 'pointer',
+    color: 'var(--text-primary)', fontFamily: 'var(--sans)', lineHeight: 1,
+  },
+  zoomDivider: { height: '0.5px', background: 'var(--panel-border)' },
   hint: {
     position: 'absolute', bottom: 12, left: '50%', transform: 'translateX(-50%)',
     background: 'rgba(26,31,46,0.82)', color: '#fff', fontFamily: 'var(--mono)',
@@ -258,7 +272,6 @@ export default function MapView({ bbox, onBboxChange, onCuzkComplete, onHelp, is
   useEffect(() => {
     if (leafletRef.current) return;
     const map = L.map(mapRef.current, { center: [49.8, 15.5], zoom: 5, zoomControl: false });
-    L.control.zoom({ position: 'topright' }).addTo(map);
 
     const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '© OpenStreetMap', maxZoom: 19,
@@ -703,25 +716,32 @@ export default function MapView({ bbox, onBboxChange, onCuzkComplete, onHelp, is
           >{isMobile ? '⬜' : '⬜ Výběr oblasti'}</button>
         </div>
 
-        {/* Přepínač podkladu — plovoucí nad mapou */}
-        <div style={S.baseLayerCtrl}>
-          <button
-            style={{ ...S.baseLayerBtn, ...(baseLayer === 'osm' ? S.baseLayerBtnActive : {}) }}
-            onClick={() => setBaseLayer('osm')}
-          >{isMobile ? '🗺' : '🗺 Mapa'}</button>
-          <button
-            style={{ ...S.baseLayerBtn, ...(baseLayer === 'ortofoto' ? S.baseLayerBtnActive : {}) }}
-            onClick={() => setBaseLayer('ortofoto')}
-          >{isMobile ? '🛰' : '🛰 Ortofoto'}</button>
-        </div>
+        {/* Podklad, zoom a nápověda — jeden svislý sloupec vpravo nahoře, bez ruční pixelové matematiky */}
+        <div style={S.rightStack}>
+          <div style={S.baseLayerCtrl}>
+            <button
+              style={{ ...S.baseLayerBtn, ...(baseLayer === 'osm' ? S.baseLayerBtnActive : {}) }}
+              onClick={() => setBaseLayer('osm')}
+            >{isMobile ? '🗺' : '🗺 Mapa'}</button>
+            <button
+              style={{ ...S.baseLayerBtn, ...(baseLayer === 'ortofoto' ? S.baseLayerBtnActive : {}) }}
+              onClick={() => setBaseLayer('ortofoto')}
+            >{isMobile ? '🛰' : '🛰 Ortofoto'}</button>
+          </div>
 
-        {/* Nápověda — plovoucí nad mapou, vpravo dole */}
-        <button
-          className={!helpClicked ? 'select-pulse' : ''}
-          style={S.helpBtn}
-          onClick={() => { setHelpClicked(true); onHelp(); }}
-          title="Jak na to?"
-        >?</button>
+          <div style={S.zoomCtrl}>
+            <button style={S.zoomBtn} onClick={() => leafletRef.current && leafletRef.current.zoomIn()}>+</button>
+            <div style={S.zoomDivider} />
+            <button style={S.zoomBtn} onClick={() => leafletRef.current && leafletRef.current.zoomOut()}>−</button>
+          </div>
+
+          <button
+            className={!helpClicked ? 'select-pulse' : ''}
+            style={S.helpBtn}
+            onClick={() => { setHelpClicked(true); onHelp(); }}
+            title="Jak na to?"
+          >?</button>
+        </div>
 
         {tool === 'pan' && !bbox && (
           <div style={S.hint}>Vyberte oblast – nástroj Výběr oblasti</div>
