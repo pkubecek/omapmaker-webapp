@@ -1,3 +1,5 @@
+@import url('https://api.fontshare.com/v2/css?f[]=general-sans@400,500,600,700&display=swap');
+
 *, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
@@ -23,7 +25,7 @@
   --text-muted: #9ca3af;
   --mono: 'IBM Plex Mono', monospace;
   --sans: 'Inter', sans-serif;
-  --heading: 'GT Planar', var(--sans);
+  --heading: 'General Sans', var(--sans);
   --radius-sm: 4px;
   --radius-md: 8px;
   --radius-lg: 12px;
@@ -87,4 +89,13 @@ h1, h2, h3, h4, h5, h6 {
   stroke-width: 2;
   stroke-dasharray: 6, 4;
   fill: rgba(201, 106, 58, 0.08);
+}
+
+/* Pulzující animace pro tlačítko "Výběr oblasti", dokud na něj uživatel neklikne */
+@keyframes select-pulse {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(201, 106, 58, 0.45); }
+  50% { transform: scale(1.06); box-shadow: 0 0 0 6px rgba(201, 106, 58, 0); }
+}
+.select-pulse {
+  animation: select-pulse 1.4s ease-in-out infinite;
 }

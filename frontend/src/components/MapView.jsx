@@ -226,6 +226,7 @@ export default function MapView({ bbox, onBboxChange, onCuzkComplete, onHelp, is
   const rectRef = useRef(null);
   const drawState = useRef({ drawing: false, start: null });
   const [tool, setTool] = useState('pan');
+  const [selectClicked, setSelectClicked] = useState(false);
 
   // ČÚZK state
   const [dsmType, setDsmType] = useState('DMPOK');
@@ -247,11 +248,11 @@ export default function MapView({ bbox, onBboxChange, onCuzkComplete, onHelp, is
   // Init map — přidej polygony hranic
   useEffect(() => {
     if (leafletRef.current) return;
-    const map = L.map(mapRef.current, { center: [49.8, 15.5], zoom: 8, zoomControl: false });
+    const map = L.map(mapRef.current, { center: [49.8, 15.5], zoom: 5, zoomControl: false });
     L.control.zoom({ position: 'bottomleft' }).addTo(map);
 
     const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap', maxZoom: 19, minZoom: 3,
+      attribution: '© OpenStreetMap', maxZoom: 19,
     });
     const ortofotoLayer = L.tileLayer.wms('https://ags.cuzk.gov.cz/arcgis1/services/ORTOFOTO/MapServer/WMSServer', {
       layers: '0',
@@ -687,8 +688,9 @@ export default function MapView({ bbox, onBboxChange, onCuzkComplete, onHelp, is
             onClick={() => setTool('pan')}
           >{isMobile ? '✋' : '✋ Posun'}</button>
           <button
+            className={!selectClicked ? 'select-pulse' : ''}
             style={{ ...S.toolCtrlBtn, ...(tool === 'select' ? S.toolCtrlBtnActive : {}) }}
-            onClick={() => setTool('select')}
+            onClick={() => { setTool('select'); setSelectClicked(true); }}
           >{isMobile ? '⬜' : '⬜ Výběr oblasti'}</button>
         </div>
 
