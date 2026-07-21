@@ -9,7 +9,7 @@ const styles = {
     height: 48,
     background: 'var(--ink)',
     color: '#fff',
-    fontFamily: 'var(--heading)',
+    fontFamily: 'var(--mono)',
     fontSize: 15,
     flexShrink: 0,
     borderBottom: '1px solid rgba(255,255,255,0.06)',
@@ -18,7 +18,7 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     gap: 8,
-    fontWeight: 500,
+    fontWeight: 800,
     letterSpacing: '0.06em',
   },
   dot: {
