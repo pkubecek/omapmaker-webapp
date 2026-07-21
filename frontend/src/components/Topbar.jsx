@@ -10,7 +10,7 @@ const styles = {
     background: 'var(--ink)',
     color: '#fff',
     fontFamily: 'var(--mono)',
-    fontSize: 12,
+    fontSize: 15,
     flexShrink: 0,
     borderBottom: '1px solid rgba(255,255,255,0.06)',
   },
