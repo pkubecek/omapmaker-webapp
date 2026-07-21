@@ -42,6 +42,18 @@ const S = {
   divider: { width: '0.5px', height: 16, background: 'var(--panel-border)', margin: '0 2px', flexShrink: 0 },
   bboxInfo: { fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--text-secondary)' },
   mapContainer: { flex: 1, position: 'relative' },
+  toolCtrl: {
+    position: 'absolute', top: 10, left: 10, zIndex: 1000,
+    display: 'flex', background: 'rgba(255,255,255,0.92)',
+    border: '0.5px solid var(--panel-border)', borderRadius: 'var(--radius-sm)',
+    boxShadow: '0 2px 8px rgba(0,0,0,0.15)', overflow: 'hidden',
+  },
+  toolCtrlBtn: {
+    display: 'flex', alignItems: 'center', gap: 4, background: 'none',
+    border: 'none', padding: '6px 10px', fontSize: 11, cursor: 'pointer',
+    color: 'var(--text-secondary)', fontFamily: 'var(--sans)', transition: 'background 0.15s',
+  },
+  toolCtrlBtnActive: { background: '#f0ead6', color: 'var(--text-primary)' },
   baseLayerCtrl: {
     position: 'absolute', top: 10, right: 10, zIndex: 1000,
     display: 'flex', background: 'rgba(255,255,255,0.92)',
@@ -558,23 +570,6 @@ export default function MapView({ bbox, onBboxChange, onCuzkComplete, onHelp, is
         padding: isMobile ? '6px 8px' : '8px 12px',
         gap: isMobile ? 4 : 6,
       }}>
-        <button
-          style={{
-            ...S.toolBtn, ...(tool === 'pan' ? S.toolBtnActive : {}),
-            padding: isMobile ? '6px 8px' : '4px 10px',
-            fontSize: isMobile ? 12 : 11,
-          }}
-          onClick={() => setTool('pan')}
-        >{isMobile ? '✋' : '✋ Posun'}</button>
-        <button
-          style={{
-            ...S.toolBtn, ...(tool === 'select' ? S.toolBtnActive : {}),
-            padding: isMobile ? '6px 8px' : '4px 10px',
-            fontSize: isMobile ? 12 : 11,
-          }}
-          onClick={() => setTool('select')}
-        >{isMobile ? '⬜' : '⬜ Výběr oblasti'}</button>
-        <div style={S.divider} />
         {bbox && (
           <button style={{
             ...S.toolBtn,
@@ -683,6 +678,18 @@ export default function MapView({ bbox, onBboxChange, onCuzkComplete, onHelp, is
       {/* Mapa */}
       <div style={S.mapContainer}>
         <div ref={mapRef} style={{ width: '100%', height: '100%' }} />
+
+        {/* Nástroje Posun/Výběr — plovoucí nad mapou, vlevo nahoře */}
+        <div style={S.toolCtrl}>
+          <button
+            style={{ ...S.toolCtrlBtn, ...(tool === 'pan' ? S.toolCtrlBtnActive : {}) }}
+            onClick={() => setTool('pan')}
+          >{isMobile ? '✋' : '✋ Posun'}</button>
+          <button
+            style={{ ...S.toolCtrlBtn, ...(tool === 'select' ? S.toolCtrlBtnActive : {}) }}
+            onClick={() => setTool('select')}
+          >{isMobile ? '⬜' : '⬜ Výběr oblasti'}</button>
+        </div>
 
         {/* Přepínač podkladu — plovoucí nad mapou */}
         <div style={S.baseLayerCtrl}>
