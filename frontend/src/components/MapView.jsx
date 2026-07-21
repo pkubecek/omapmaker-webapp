@@ -55,7 +55,7 @@ const S = {
   },
   toolCtrlBtnActive: { background: '#f0ead6', color: 'var(--text-primary)' },
   helpBtn: {
-    position: 'absolute', top: 54, right: 10, zIndex: 1000,
+    position: 'absolute', top: 156, right: 10, zIndex: 1000,
     width: 40, height: 40, padding: 0, borderRadius: '50%',
     display: 'flex', alignItems: 'center', justifyContent: 'center',
     background: 'rgba(255,255,255,0.92)', border: '0.5px solid var(--panel-border)',
