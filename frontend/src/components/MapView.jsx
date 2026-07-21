@@ -282,7 +282,7 @@ export default function MapView({ bbox, onBboxChange, onCuzkComplete, onHelp, is
   // Init map — přidej polygony hranic
   useEffect(() => {
     if (leafletRef.current) return;
-    const map = L.map(mapRef.current, { center: [49.8, 15.5], zoom: 5, zoomControl: false });
+    const map = L.map(mapRef.current, { center: [49.8, 15.5], zoom: 8, zoomControl: false });
 
     const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '© OpenStreetMap', maxZoom: 19,
@@ -770,7 +770,7 @@ export default function MapView({ bbox, onBboxChange, onCuzkComplete, onHelp, is
             style={S.linkBtn}
             title="GitHub — zdrojový kód"
           >
-            <img src="https://github.com/favicon.ico" alt="GitHub" width="20" height="20" />
+            <img src="https://github.com/favicon.ico" alt="GitHub" width="25" height="25" />
           </a>
           <a
             href="https://mapy.ceskyorientak.cz/"
@@ -779,7 +779,7 @@ export default function MapView({ bbox, onBboxChange, onCuzkComplete, onHelp, is
             style={S.linkBtn}
             title="Mapový portál ČSOS"
           >
-            <img src="https://mapy.ceskyorientak.cz/favicon.ico" alt="Mapový portál ČSOS" width="20" height="20" />
+            <img src="https://mapy.ceskyorientak.cz/favicon.ico" alt="Mapový portál ČSOS" width="25" height="25" />
           </a>
         </div>
       </div>
