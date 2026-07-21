@@ -616,18 +616,6 @@ export default function MapView({ bbox, onBboxChange, onCuzkComplete, onHelp, is
               {kmLat && <span style={{ marginLeft: 6, color: 'var(--text-muted)' }}>~{kmLat}×{kmLon} km</span>}
             </span>
           )}
-          <button
-            style={{
-              ...S.toolBtn,
-              marginLeft: 'auto',
-              width: 26, height: 26, padding: 0,
-              borderRadius: '50%',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontWeight: 500, fontSize: 12,
-            }}
-            onClick={onHelp}
-            title="Jak na to?"
-          >?</button>
         </div>
       )}
 
