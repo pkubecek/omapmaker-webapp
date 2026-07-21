@@ -93,7 +93,7 @@ const S = {
     display: 'flex', flexDirection: 'column', gap: 8,
   },
   linkBtn: {
-    width: 36, height: 36, borderRadius: '50%',
+    width: 43, height: 43, borderRadius: '50%',
     display: 'flex', alignItems: 'center', justifyContent: 'center',
     background: 'rgba(255,255,255,0.92)', border: '0.5px solid var(--panel-border)',
     boxShadow: '0 2px 8px rgba(0,0,0,0.15)', textDecoration: 'none',
