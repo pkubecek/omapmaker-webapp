@@ -42,6 +42,18 @@ const S = {
   divider: { width: '0.5px', height: 16, background: 'var(--panel-border)', margin: '0 2px', flexShrink: 0 },
   bboxInfo: { fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--text-secondary)' },
   mapContainer: { flex: 1, position: 'relative' },
+  baseLayerCtrl: {
+    position: 'absolute', top: 10, right: 10, zIndex: 1000,
+    display: 'flex', background: 'rgba(255,255,255,0.92)',
+    border: '0.5px solid var(--panel-border)', borderRadius: 'var(--radius-sm)',
+    boxShadow: '0 2px 8px rgba(0,0,0,0.15)', overflow: 'hidden',
+  },
+  baseLayerBtn: {
+    display: 'flex', alignItems: 'center', gap: 4, background: 'none',
+    border: 'none', padding: '6px 10px', fontSize: 11, cursor: 'pointer',
+    color: 'var(--text-secondary)', fontFamily: 'var(--sans)', transition: 'background 0.15s',
+  },
+  baseLayerBtnActive: { background: '#f0ead6', color: 'var(--text-primary)' },
   hint: {
     position: 'absolute', bottom: 12, left: '50%', transform: 'translateX(-50%)',
     background: 'rgba(26,31,46,0.82)', color: '#fff', fontFamily: 'var(--mono)',
@@ -228,10 +240,11 @@ export default function MapView({ bbox, onBboxChange, onCuzkComplete, onHelp, is
     const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '© OpenStreetMap', maxZoom: 19,
     });
-    const ortofotoLayer = L.tileLayer.wms('https://ags.cuzk.gov.cz/arcgis/services/ortofoto/MapServer/WMSServer', {
-      layers: 'Ortofoto',
+    const ortofotoLayer = L.tileLayer.wms('https://ags.cuzk.gov.cz/arcgis1/services/ORTOFOTO/MapServer/WMSServer', {
+      layers: '0',
       format: 'image/jpeg',
       version: '1.3.0',
+      crs: L.CRS.EPSG3857,
       transparent: false,
       attribution: '© ČÚZK',
       maxZoom: 20,
@@ -562,23 +575,6 @@ export default function MapView({ bbox, onBboxChange, onCuzkComplete, onHelp, is
           onClick={() => setTool('select')}
         >{isMobile ? '⬜' : '⬜ Výběr oblasti'}</button>
         <div style={S.divider} />
-        <button
-          style={{
-            ...S.toolBtn, ...(baseLayer === 'osm' ? S.toolBtnActive : {}),
-            padding: isMobile ? '6px 8px' : '4px 10px',
-            fontSize: isMobile ? 12 : 11,
-          }}
-          onClick={() => setBaseLayer('osm')}
-        >{isMobile ? '🗺' : '🗺 Mapa'}</button>
-        <button
-          style={{
-            ...S.toolBtn, ...(baseLayer === 'ortofoto' ? S.toolBtnActive : {}),
-            padding: isMobile ? '6px 8px' : '4px 10px',
-            fontSize: isMobile ? 12 : 11,
-          }}
-          onClick={() => setBaseLayer('ortofoto')}
-        >{isMobile ? '🛰' : '🛰 Ortofoto'}</button>
-        <div style={S.divider} />
         {bbox && (
           <button style={{
             ...S.toolBtn,
@@ -687,6 +683,19 @@ export default function MapView({ bbox, onBboxChange, onCuzkComplete, onHelp, is
       {/* Mapa */}
       <div style={S.mapContainer}>
         <div ref={mapRef} style={{ width: '100%', height: '100%' }} />
+
+        {/* Přepínač podkladu — plovoucí nad mapou */}
+        <div style={S.baseLayerCtrl}>
+          <button
+            style={{ ...S.baseLayerBtn, ...(baseLayer === 'osm' ? S.baseLayerBtnActive : {}) }}
+            onClick={() => setBaseLayer('osm')}
+          >{isMobile ? '🗺' : '🗺 Mapa'}</button>
+          <button
+            style={{ ...S.baseLayerBtn, ...(baseLayer === 'ortofoto' ? S.baseLayerBtnActive : {}) }}
+            onClick={() => setBaseLayer('ortofoto')}
+          >{isMobile ? '🛰' : '🛰 Ortofoto'}</button>
+        </div>
+
         {tool === 'pan' && !bbox && (
           <div style={S.hint}>Vyberte oblast – nástroj Výběr oblasti</div>
         )}
