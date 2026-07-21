@@ -88,6 +88,17 @@ const S = {
     color: 'var(--text-primary)', fontFamily: 'var(--sans)', lineHeight: 1,
   },
   zoomDivider: { height: '0.5px', background: 'var(--panel-border)' },
+  linkStack: {
+    position: 'absolute', bottom: 12, left: 12, zIndex: 1000,
+    display: 'flex', flexDirection: 'column', gap: 8,
+  },
+  linkBtn: {
+    width: 36, height: 36, borderRadius: '50%',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    background: 'rgba(255,255,255,0.92)', border: '0.5px solid var(--panel-border)',
+    boxShadow: '0 2px 8px rgba(0,0,0,0.15)', textDecoration: 'none',
+    color: 'var(--text-primary)', transition: 'background 0.15s',
+  },
   hint: {
     position: 'absolute', bottom: 12, left: '50%', transform: 'translateX(-50%)',
     background: 'rgba(26,31,46,0.82)', color: '#fff', fontFamily: 'var(--mono)',
@@ -271,7 +282,7 @@ export default function MapView({ bbox, onBboxChange, onCuzkComplete, onHelp, is
   // Init map — přidej polygony hranic
   useEffect(() => {
     if (leafletRef.current) return;
-    const map = L.map(mapRef.current, { center: [49.8, 15.5], zoom: 8, zoomControl: false });
+    const map = L.map(mapRef.current, { center: [49.8, 15.5], zoom: 5, zoomControl: false });
 
     const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '© OpenStreetMap', maxZoom: 19,
@@ -749,6 +760,28 @@ export default function MapView({ bbox, onBboxChange, onCuzkComplete, onHelp, is
         {tool === 'select' && !bbox && (
           <div style={S.hint}>Táhněte myší pro výběr oblasti — pak stáhněte data a ta se sama nahrají jako vstupní</div>
         )}
+
+        {/* Externí odkazy — plovoucí nad mapou, vlevo dole */}
+        <div style={S.linkStack}>
+          <a
+            href="https://github.com/pkubecek/omapmaker-webapp"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={S.linkBtn}
+            title="GitHub — zdrojový kód"
+          >
+            <img src="https://github.com/favicon.ico" alt="GitHub" width="20" height="20" />
+          </a>
+          <a
+            href="https://mapy.ceskyorientak.cz/"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={S.linkBtn}
+            title="Mapový portál ČSOS"
+          >
+            <img src="https://mapy.ceskyorientak.cz/favicon.ico" alt="Mapový portál ČSOS" width="20" height="20" />
+          </a>
+        </div>
       </div>
     </div>
   );
