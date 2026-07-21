@@ -247,7 +247,8 @@ export default function MapView({ bbox, onBboxChange, onCuzkComplete, onHelp, is
   // Init map — přidej polygony hranic
   useEffect(() => {
     if (leafletRef.current) return;
-    const map = L.map(mapRef.current, { center: [49.8, 15.5], zoom: 5, zoomControl: true });
+    const map = L.map(mapRef.current, { center: [49.8, 15.5], zoom: 5, zoomControl: false });
+    L.control.zoom({ position: 'bottomleft' }).addTo(map);
 
     const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '© OpenStreetMap', maxZoom: 19,
@@ -564,37 +565,37 @@ export default function MapView({ bbox, onBboxChange, onCuzkComplete, onHelp, is
 
   return (
     <div style={S.wrap}>
-      {/* Toolbar */}
-      <div style={{
-        ...S.toolbar,
-        padding: isMobile ? '6px 8px' : '8px 12px',
-        gap: isMobile ? 4 : 6,
-      }}>
-        {bbox && (
+      {/* Toolbar — zobrazí se jen po výběru oblasti */}
+      {bbox && (
+        <div style={{
+          ...S.toolbar,
+          padding: isMobile ? '6px 8px' : '8px 12px',
+          gap: isMobile ? 4 : 6,
+        }}>
           <button style={{
             ...S.toolBtn,
             padding: isMobile ? '6px 8px' : '4px 10px',
           }} onClick={clearBbox}>×</button>
-        )}
-        {bboxLabel && !isMobile && (
-          <span style={S.bboxInfo}>
-            {bboxLabel}
-            {kmLat && <span style={{ marginLeft: 6, color: 'var(--text-muted)' }}>~{kmLat}×{kmLon} km</span>}
-          </span>
-        )}
-        <button
-          style={{
-            ...S.toolBtn,
-            marginLeft: 'auto',
-            width: 26, height: 26, padding: 0,
-            borderRadius: '50%',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontWeight: 500, fontSize: 12,
-          }}
-          onClick={onHelp}
-          title="Jak na to?"
-        >?</button>
-      </div>
+          {bboxLabel && !isMobile && (
+            <span style={S.bboxInfo}>
+              {bboxLabel}
+              {kmLat && <span style={{ marginLeft: 6, color: 'var(--text-muted)' }}>~{kmLat}×{kmLon} km</span>}
+            </span>
+          )}
+          <button
+            style={{
+              ...S.toolBtn,
+              marginLeft: 'auto',
+              width: 26, height: 26, padding: 0,
+              borderRadius: '50%',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontWeight: 500, fontSize: 12,
+            }}
+            onClick={onHelp}
+            title="Jak na to?"
+          >?</button>
+        </div>
+      )}
 
       {/* Download panel — zobrazí se po výběru oblasti */}
       {bbox && (
