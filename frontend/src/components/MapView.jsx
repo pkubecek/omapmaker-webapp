@@ -54,6 +54,14 @@ const S = {
     color: 'var(--text-secondary)', fontFamily: 'var(--sans)', transition: 'background 0.15s',
   },
   toolCtrlBtnActive: { background: '#f0ead6', color: 'var(--text-primary)' },
+  helpBtn: {
+    position: 'absolute', bottom: 10, right: 10, zIndex: 1000,
+    width: 30, height: 30, padding: 0, borderRadius: '50%',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    background: 'rgba(255,255,255,0.92)', border: '0.5px solid var(--panel-border)',
+    boxShadow: '0 2px 8px rgba(0,0,0,0.15)', cursor: 'pointer',
+    fontWeight: 500, fontSize: 13, color: 'var(--text-primary)', fontFamily: 'var(--sans)',
+  },
   baseLayerCtrl: {
     position: 'absolute', top: 10, right: 10, zIndex: 1000,
     display: 'flex', background: 'rgba(255,255,255,0.92)',
@@ -227,6 +235,7 @@ export default function MapView({ bbox, onBboxChange, onCuzkComplete, onHelp, is
   const drawState = useRef({ drawing: false, start: null });
   const [tool, setTool] = useState('pan');
   const [selectClicked, setSelectClicked] = useState(false);
+  const [helpClicked, setHelpClicked] = useState(false);
 
   // ČÚZK state
   const [dsmType, setDsmType] = useState('DMPOK');
@@ -705,6 +714,14 @@ export default function MapView({ bbox, onBboxChange, onCuzkComplete, onHelp, is
             onClick={() => setBaseLayer('ortofoto')}
           >{isMobile ? '🛰' : '🛰 Ortofoto'}</button>
         </div>
+
+        {/* Nápověda — plovoucí nad mapou, vpravo dole */}
+        <button
+          className={!helpClicked ? 'select-pulse' : ''}
+          style={S.helpBtn}
+          onClick={() => { setHelpClicked(true); onHelp(); }}
+          title="Jak na to?"
+        >?</button>
 
         {tool === 'pan' && !bbox && (
           <div style={S.hint}>Vyberte oblast – nástroj Výběr oblasti</div>
