@@ -55,12 +55,12 @@ const S = {
   },
   toolCtrlBtnActive: { background: '#f0ead6', color: 'var(--text-primary)' },
   helpBtn: {
-    position: 'absolute', bottom: 10, right: 10, zIndex: 1000,
-    width: 30, height: 30, padding: 0, borderRadius: '50%',
+    position: 'absolute', top: 54, right: 10, zIndex: 1000,
+    width: 40, height: 40, padding: 0, borderRadius: '50%',
     display: 'flex', alignItems: 'center', justifyContent: 'center',
     background: 'rgba(255,255,255,0.92)', border: '0.5px solid var(--panel-border)',
     boxShadow: '0 2px 8px rgba(0,0,0,0.15)', cursor: 'pointer',
-    fontWeight: 500, fontSize: 13, color: 'var(--text-primary)', fontFamily: 'var(--sans)',
+    fontWeight: 600, fontSize: 17, color: 'var(--text-primary)', fontFamily: 'var(--sans)',
   },
   baseLayerCtrl: {
     position: 'absolute', top: 10, right: 10, zIndex: 1000,
