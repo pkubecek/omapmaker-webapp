@@ -212,6 +212,10 @@ export default function MapView({ bbox, onBboxChange, onCuzkComplete, onHelp, is
   // Detekovaná/ručně zvolená země
   const [country, setCountry] = useState('cz');
 
+  // Podkladová vrstva mapy
+  const [baseLayer, setBaseLayer] = useState('osm');
+  const baseLayersRef = useRef({});
+
   useEffect(() => {
     if (!bbox) setCountry('cz');
   }, [bbox]);
@@ -220,9 +224,20 @@ export default function MapView({ bbox, onBboxChange, onCuzkComplete, onHelp, is
   useEffect(() => {
     if (leafletRef.current) return;
     const map = L.map(mapRef.current, { center: [49.8, 15.5], zoom: 5, zoomControl: true });
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+
+    const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '© OpenStreetMap', maxZoom: 19,
-    }).addTo(map);
+    });
+    const ortofotoLayer = L.tileLayer.wms('https://ags.cuzk.gov.cz/arcgis/services/ortofoto/MapServer/WMSServer', {
+      layers: 'Ortofoto',
+      format: 'image/jpeg',
+      version: '1.3.0',
+      transparent: false,
+      attribution: '© ČÚZK',
+      maxZoom: 20,
+    });
+    baseLayersRef.current = { osm: osmLayer, ortofoto: ortofotoLayer };
+    osmLayer.addTo(map);
 
     const layersRef = { current: [] };
 
@@ -252,6 +267,19 @@ export default function MapView({ bbox, onBboxChange, onCuzkComplete, onHelp, is
     leafletRef.current = map;
     return () => { map.remove(); leafletRef.current = null; };
   }, []);
+
+  // Přepínání podkladové vrstvy (mapa / ortofoto)
+  useEffect(() => {
+    const map = leafletRef.current;
+    if (!map) return;
+    Object.entries(baseLayersRef.current).forEach(([key, layer]) => {
+      if (key === baseLayer) {
+        if (!map.hasLayer(layer)) layer.addTo(map);
+      } else if (map.hasLayer(layer)) {
+        map.removeLayer(layer);
+      }
+    });
+  }, [baseLayer]);
 
   // Draw bbox
   useEffect(() => {
@@ -533,6 +561,23 @@ export default function MapView({ bbox, onBboxChange, onCuzkComplete, onHelp, is
           }}
           onClick={() => setTool('select')}
         >{isMobile ? '⬜' : '⬜ Výběr oblasti'}</button>
+        <div style={S.divider} />
+        <button
+          style={{
+            ...S.toolBtn, ...(baseLayer === 'osm' ? S.toolBtnActive : {}),
+            padding: isMobile ? '6px 8px' : '4px 10px',
+            fontSize: isMobile ? 12 : 11,
+          }}
+          onClick={() => setBaseLayer('osm')}
+        >{isMobile ? '🗺' : '🗺 Mapa'}</button>
+        <button
+          style={{
+            ...S.toolBtn, ...(baseLayer === 'ortofoto' ? S.toolBtnActive : {}),
+            padding: isMobile ? '6px 8px' : '4px 10px',
+            fontSize: isMobile ? 12 : 11,
+          }}
+          onClick={() => setBaseLayer('ortofoto')}
+        >{isMobile ? '🛰' : '🛰 Ortofoto'}</button>
         <div style={S.divider} />
         {bbox && (
           <button style={{
