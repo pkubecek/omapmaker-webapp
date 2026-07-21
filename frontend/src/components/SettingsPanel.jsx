@@ -12,7 +12,6 @@ const S = {
   },
   section: {
     padding: '14px 16px',
-    borderBottom: '0.5px solid var(--panel-border)',
   },
   label: {
     fontFamily: 'var(--mono)',
