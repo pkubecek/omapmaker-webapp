@@ -18,7 +18,7 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     gap: 8,
-    fontWeight: 600,
+    fontWeight: 500,
     letterSpacing: '0.06em',
   },
   dot: {
