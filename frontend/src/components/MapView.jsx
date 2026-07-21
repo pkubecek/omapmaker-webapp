@@ -729,19 +729,18 @@ export default function MapView({ bbox, onBboxChange, onCuzkComplete, onHelp, is
             >{isMobile ? '🛰' : '🛰 Ortofoto'}</button>
           </div>
 
-          <button
-            className={!helpClicked ? 'select-pulse' : ''}
-            style={S.helpBtn}
-            onClick={() => { setHelpClicked(true); onHelp(); }}
-            title="Jak na to?"
-          >?</button>
-          
           <div style={S.zoomCtrl}>
             <button style={S.zoomBtn} onClick={() => leafletRef.current && leafletRef.current.zoomIn()}>+</button>
             <div style={S.zoomDivider} />
             <button style={S.zoomBtn} onClick={() => leafletRef.current && leafletRef.current.zoomOut()}>−</button>
           </div>
 
+          <button
+            className={!helpClicked ? 'select-pulse' : ''}
+            style={S.helpBtn}
+            onClick={() => { setHelpClicked(true); onHelp(); }}
+            title="Jak na to?"
+          >?</button>
         </div>
 
         {tool === 'pan' && !bbox && (
