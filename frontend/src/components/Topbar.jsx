@@ -38,7 +38,7 @@ const styles = {
     padding: '5px 12px',
     borderRadius: 'var(--radius-sm)',
     fontSize: 11,
-    fontFamily: 'var(--mono)',
+    fontFamily: 'var(--heading)',
     cursor: 'pointer',
     display: 'flex',
     alignItems: 'center',
