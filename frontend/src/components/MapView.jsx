@@ -271,7 +271,7 @@ export default function MapView({ bbox, onBboxChange, onCuzkComplete, onHelp, is
   // Init map — přidej polygony hranic
   useEffect(() => {
     if (leafletRef.current) return;
-    const map = L.map(mapRef.current, { center: [49.8, 15.5], zoom: 5, zoomControl: false });
+    const map = L.map(mapRef.current, { center: [49.8, 15.5], zoom: 8, zoomControl: false });
 
     const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '© OpenStreetMap', maxZoom: 19,
@@ -729,18 +729,19 @@ export default function MapView({ bbox, onBboxChange, onCuzkComplete, onHelp, is
             >{isMobile ? '🛰' : '🛰 Ortofoto'}</button>
           </div>
 
-          <div style={S.zoomCtrl}>
-            <button style={S.zoomBtn} onClick={() => leafletRef.current && leafletRef.current.zoomIn()}>+</button>
-            <div style={S.zoomDivider} />
-            <button style={S.zoomBtn} onClick={() => leafletRef.current && leafletRef.current.zoomOut()}>−</button>
-          </div>
-
           <button
             className={!helpClicked ? 'select-pulse' : ''}
             style={S.helpBtn}
             onClick={() => { setHelpClicked(true); onHelp(); }}
             title="Jak na to?"
           >?</button>
+          
+          <div style={S.zoomCtrl}>
+            <button style={S.zoomBtn} onClick={() => leafletRef.current && leafletRef.current.zoomIn()}>+</button>
+            <div style={S.zoomDivider} />
+            <button style={S.zoomBtn} onClick={() => leafletRef.current && leafletRef.current.zoomOut()}>−</button>
+          </div>
+
         </div>
 
         {tool === 'pan' && !bbox && (
