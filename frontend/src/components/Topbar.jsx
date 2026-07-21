@@ -18,7 +18,7 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     gap: 8,
-    fontWeight: 800,
+    fontWeight: 600,
     letterSpacing: '0.06em',
   },
   dot: {
@@ -61,7 +61,7 @@ export default function Topbar({ status }) {
       <div style={styles.brand}>
         <span style={styles.dot} />
         OMapMaker
-        <span style={styles.version}>v1.0</span>
+        <span style={styles.version}></span>
       </div>
       <span style={styles.status}>{status}</span>
     </div>
