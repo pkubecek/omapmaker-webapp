@@ -36,3 +36,4 @@ def debug_memory():
             for stat in top_stats
         ],
     }
+pica
