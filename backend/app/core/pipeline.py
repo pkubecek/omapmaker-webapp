@@ -652,8 +652,6 @@ def run_pipeline(job_id: str, params: dict, file_paths: dict,
         "world_file_path": render_result.get("world_file_path"),
     }
 
-    # Uvolni paměť po velkých rastrech/GeoDataFrames zpět OS
-    del merged, tile_results, gdf_osm, zabaged_gdfs, isom_gdfs, render_result
     release_memory()
 
     return result
