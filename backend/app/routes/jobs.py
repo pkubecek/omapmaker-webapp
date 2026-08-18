@@ -12,9 +12,9 @@ import asyncio
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException
 from fastapi.responses import FileResponse
 
-router = APIRouter()
-
 from ..core.job_store import job_path as _job_path, read_job as _read_job, write_job as _write_job
+
+router = APIRouter()
 MAX_CONCURRENT_JOBS = int(os.environ.get("MAX_CONCURRENT_JOBS", "3"))
 _job_semaphore = asyncio.Semaphore(MAX_CONCURRENT_JOBS)
 JOB_TIMEOUT_SECONDS = int(os.environ.get("JOB_TIMEOUT_SECONDS", "1800"))  # 30 min
