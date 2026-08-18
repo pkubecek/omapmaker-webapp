@@ -11,7 +11,7 @@ from fastapi import APIRouter
 
 router = APIRouter()
 
-# Zapni na startu appky (v main.py před `app = FastAPI()` přidej `tracemalloc.start()`)
+# Zapni na startu appky (v main.py před `app = FastAPI()` přidej `tracemalloc.start()`).
 
 
 @router.get("/debug/memory")
