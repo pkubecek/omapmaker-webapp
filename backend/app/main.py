@@ -1,3 +1,7 @@
+import tracemalloc
+tracemalloc.start()
+     
+from debug_memory import router as debug_router
 """
 main.py — FastAPI aplikace OMapMaker backend.
 
@@ -16,7 +20,7 @@ app = FastAPI(
     description="Backend pro generování orientačních map z LiDAR dat.",
     version="7.0.0",
 )
-
+app.include_router(debug_router)
 # Explicitní seznam povolených origins (z env proměnné nebo výchozí seznam)
 _EXTRA_ORIGINS = [
     o.strip()

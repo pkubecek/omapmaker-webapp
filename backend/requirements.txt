@@ -23,3 +23,5 @@ pysheds==0.4
 
 # SVG symbol parsing
 svgpath2mpl==1.0.0
+
+psutil
