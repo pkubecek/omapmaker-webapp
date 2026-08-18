@@ -4,6 +4,7 @@ klidu (žádný request), podívej se na výstup, pak zase smaž.
 """
 import gc
 import os
+import time
 import tracemalloc
 
 from fastapi import APIRouter
@@ -36,4 +37,46 @@ def debug_memory():
             for stat in top_stats
         ],
     }
-pica
+
+
+@router.get("/debug/system")
+def debug_system():
+    """
+    Ukáže CELÝ kontejner - všechny procesy, ne jen tenhle FastAPI proces.
+    Pomůže odhalit osiřelé/zombie subprocessy z run_job_process.py,
+    nebo potvrdit, že je to jen page cache (buff/cache), ne skutečně
+    použitá paměť.
+    """
+    import psutil
+
+    vm = psutil.virtual_memory()
+
+    processes = []
+    for p in psutil.process_iter(["pid", "ppid", "status", "cmdline", "memory_info", "create_time"]):
+        try:
+            info = p.info
+            cmdline = " ".join(info["cmdline"] or [])
+            if not cmdline:
+                continue
+            processes.append({
+                "pid": info["pid"],
+                "ppid": info["ppid"],
+                "status": info["status"],
+                "cmdline": cmdline[:150],
+                "rss_mb": round(info["memory_info"].rss / 1024 / 1024, 1) if info["memory_info"] else None,
+                "age_seconds": round(time.time() - info["create_time"], 1) if info["create_time"] else None,
+            })
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            continue
+
+    processes.sort(key=lambda x: x["rss_mb"] or 0, reverse=True)
+
+    return {
+        "system_total_mb": round(vm.total / 1024 / 1024, 1),
+        "system_used_mb": round(vm.used / 1024 / 1024, 1),
+        "system_available_mb": round(vm.available / 1024 / 1024, 1),
+        "system_cached_mb": round(getattr(vm, "cached", 0) / 1024 / 1024, 1),
+        "system_buffers_mb": round(getattr(vm, "buffers", 0) / 1024 / 1024, 1),
+        "process_count": len(processes),
+        "processes": processes,
+    }
