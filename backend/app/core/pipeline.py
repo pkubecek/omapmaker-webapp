@@ -19,6 +19,7 @@ import geopandas as gpd
 import osmnx as ox
 import fiona
 import matplotlib
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from PIL import Image
@@ -26,7 +27,7 @@ from pyproj import CRS, Transformer
 from shapely.geometry import box
 from rasterio.features import rasterize
 from rasterio.io import MemoryFile
-
+from .memory_utils import release_memory   # uprav cestu podle skutečné struktury (např. z app.core.memory_utils)
 from .processor import (
     load_dmr_grid, load_dmp_grid,
     classify_vegetation, vectorize_rocks,
@@ -645,8 +646,14 @@ def run_pipeline(job_id: str, params: dict, file_paths: dict,
     mins, secs = divmod(int(elapsed), 60)
     cb(100, f"Hotovo! Čas: {mins} min {secs} s · {n_tiles} dlaždic")
 
-    return {
+    result = {
         "png_path": render_result["png_path"],
         "gpkg_path": gpkg_path,
         "world_file_path": render_result.get("world_file_path"),
     }
+
+    # Uvolni paměť po velkých rastrech/GeoDataFrames zpět OS
+    del merged, tile_results, gdf_osm, zabaged_gdfs, isom_gdfs, render_result
+    release_memory()
+
+    return result
