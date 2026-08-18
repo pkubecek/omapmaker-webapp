@@ -5,40 +5,59 @@ Joby se ukládají na disk (JSON) aby přežily restart kontejneru.
 import os
 import uuid
 import json
-import threading
 import shutil
+import sys
+import asyncio
 
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException
 from fastapi.responses import FileResponse
 
-from ..core.pipeline import run_pipeline
-
+from ..core.job_store import job_path as _job_path, read_job as _read_job, write_job as _write_job
+MAX_CONCURRENT_JOBS = int(os.environ.get("MAX_CONCURRENT_JOBS", "3"))
+_job_semaphore = asyncio.Semaphore(MAX_CONCURRENT_JOBS)
+async def _run_job_subprocess(job_id: str, job_dir: str):
+        """
+        Čeká na volný slot (max MAX_CONCURRENT_JOBS souběžně), pak spustí
+        zpracování jako samostatný proces a čeká na jeho dokončení -
+        to celé asynchronně, takže to neblokuje ostatní FastAPI requesty.
+        """
+        position_job = _read_job(job_id) or {}
+        if _job_semaphore.locked():
+            position_job["status"] = "queued"
+            position_job["step"] = f"Ve frontě (max {MAX_CONCURRENT_JOBS} souběžných jobů)..."
+            _write_job(job_id, position_job)
+ 
+        async with _job_semaphore:
+            try:
+                proc = await asyncio.create_subprocess_exec(
+                    sys.executable, "-m", "app.core.run_job_process", job_id, job_dir,
+                    cwd=os.getcwd(),
+                )
+                await proc.wait()
+                if proc.returncode != 0:
+                    job = _read_job(job_id) or {}
+                    if job.get("status") not in ("done", "error"):
+                        _write_job(job_id, {
+                            "status": "error",
+                            "progress": 0,
+                            "step": f"Proces skončil s chybou (kód {proc.returncode})",
+                            "error": f"Exit code {proc.returncode}",
+                            "png_path": None,
+                            "gpkg_path": None,
+                        })
+            except Exception as e:
+                _write_job(job_id, {
+                    "status": "error",
+                    "progress": 0,
+                    "step": f"Chyba spuštění: {e}",
+                    "error": str(e),
+                    "png_path": None,
+                    "gpkg_path": None,
+                })
 router = APIRouter()
 
 JOBS_DIR = os.environ.get("OMAPMAKER_JOBS_DIR", "./jobs")
 os.makedirs(JOBS_DIR, exist_ok=True)
-
-
-def _job_path(job_id: str) -> str:
-    return os.path.join(JOBS_DIR, job_id, "job.json")
-
-
-def _read_job(job_id: str) -> dict | None:
-    path = _job_path(job_id)
-    if not os.path.exists(path):
-        return None
-    try:
-        with open(path) as f:
-            return json.load(f)
-    except Exception:
-        return None
-
-
-def _write_job(job_id: str, data: dict):
-    path = _job_path(job_id)
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    with open(path, "w") as f:
-        json.dump(data, f)
 
 
 def _save_file(upload: UploadFile, dest_dir: str) -> str:
@@ -106,51 +125,25 @@ async def create_job(
         "png_path": None,
         "gpkg_path": None,
     })
-
-    def _progress_cb(pct: int, msg: str):
-        job = _read_job(job_id) or {}
-        job["status"] = "running"
-        job["progress"] = pct
-        job["step"] = msg
-        _write_job(job_id, job)
-
-    def _run():
-        try:
-            result = run_pipeline(
-                job_id=job_id,
-                params=params_dict,
-                file_paths={
-                    "dtm": dtm_path,
-                    "dsm": dsm_path,
-                    "zabaged": zabaged_paths,
-                    "isom": isom_paths,
-                },
-                output_dir=job_dir,
-                progress_cb=_progress_cb,
-            )
-            _write_job(job_id, {
-                "status": "done",
-                "progress": 100,
-                "step": "Hotovo!",
-                "error": None,
-                "png_path": result.get("png_path"),
-                "gpkg_path": result.get("gpkg_path"),
-            })
-        except Exception as e:
-            import traceback
-            traceback.print_exc()
-            _write_job(job_id, {
-                "status": "error",
-                "progress": 0,
-                "step": f"Chyba: {e}",
-                "error": str(e),
-                "png_path": None,
-                "gpkg_path": None,
-            })
-
-    threading.Thread(target=_run, daemon=True).start()
+ 
+    file_paths = {
+        "dtm": dtm_path,
+        "dsm": dsm_path,
+        "zabaged": zabaged_paths,
+        "isom": isom_paths,
+    }
+    # Parametry a cesty se předávají přes JSON soubory, subprocess
+    # nesdílí Python paměť s hlavním procesem
+    with open(os.path.join(job_dir, "params.json"), "w") as f:
+        json.dump(params_dict, f)
+    with open(os.path.join(job_dir, "file_paths.json"), "w") as f:
+        json.dump(file_paths, f)
+ 
+    # Naplánuje spuštění (respektuje MAX_CONCURRENT_JOBS limit),
+    # request se hned vrátí - frontend pozná stav pollingem /jobs/{id}
+    asyncio.create_task(_run_job_subprocess(job_id, job_dir))
+ 
     return {"job_id": job_id}
-
 
 @router.get("/jobs/{job_id}")
 async def get_job(job_id: str):
