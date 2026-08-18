@@ -20,13 +20,13 @@ app = FastAPI(
     description="Backend pro generování orientačních map z LiDAR dat.",
     version="7.0.0",
 )
-app.include_router(debug_router)
 # Explicitní seznam povolených origins (z env proměnné nebo výchozí seznam)
 _EXTRA_ORIGINS = [
     o.strip()
     for o in os.environ.get("CORS_ORIGINS", "").split(",")
     if o.strip()
 ]
+app.include_router(debug_router)
 
 ALLOWED_ORIGINS = [
     "http://localhost:3000",

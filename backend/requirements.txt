@@ -2,7 +2,7 @@ fastapi==0.111.0
 uvicorn[standard]==0.29.0
 python-multipart==0.0.9
 aiofiles==23.2.1
-
+psutil
 # GIS / LiDAR
 laspy[lazrs]==2.5.3
 numpy>=1.26.0
@@ -23,5 +23,3 @@ pysheds==0.4
 
 # SVG symbol parsing
 svgpath2mpl==1.0.0
-
-psutil
