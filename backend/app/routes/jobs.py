@@ -18,8 +18,9 @@ _job_semaphore = asyncio.Semaphore(MAX_CONCURRENT_JOBS)
 async def _run_job_subprocess(job_id: str, job_dir: str):
         """
         Čeká na volný slot (max MAX_CONCURRENT_JOBS souběžně), pak spustí
-        zpracování jako samostatný proces a čeká na jeho dokončení -
-        to celé asynchronně, takže to neblokuje ostatní FastAPI requesty.
+        zpracování jako samostatný proces. Pokud job běží déle než
+        JOB_TIMEOUT_SECONDS (typicky zaseklé stahování dat z ČÚZK/GUGiK),
+        proces se násilně zabije, aby nedržel paměť navěky.
         """
         position_job = _read_job(job_id) or {}
         if _job_semaphore.locked():
@@ -28,12 +29,27 @@ async def _run_job_subprocess(job_id: str, job_dir: str):
             _write_job(job_id, position_job)
  
         async with _job_semaphore:
+            proc = None
             try:
                 proc = await asyncio.create_subprocess_exec(
                     sys.executable, "-m", "app.core.run_job_process", job_id, job_dir,
                     cwd=os.getcwd(),
                 )
-                await proc.wait()
+                try:
+                    await asyncio.wait_for(proc.wait(), timeout=JOB_TIMEOUT_SECONDS)
+                except asyncio.TimeoutError:
+                    proc.kill()
+                    await proc.wait()  # počkej, ať se opravdu ukončí (zamezí zombie)
+                    _write_job(job_id, {
+                        "status": "error",
+                        "progress": 0,
+                        "step": f"Zpracování překročilo časový limit ({JOB_TIMEOUT_SECONDS // 60} min) a bylo ukončeno.",
+                        "error": "timeout",
+                        "png_path": None,
+                        "gpkg_path": None,
+                    })
+                    return
+ 
                 if proc.returncode != 0:
                     job = _read_job(job_id) or {}
                     if job.get("status") not in ("done", "error"):
@@ -46,6 +62,9 @@ async def _run_job_subprocess(job_id: str, job_dir: str):
                             "gpkg_path": None,
                         })
             except Exception as e:
+                if proc is not None and proc.returncode is None:
+                    proc.kill()
+                    await proc.wait()
                 _write_job(job_id, {
                     "status": "error",
                     "progress": 0,
@@ -54,10 +73,6 @@ async def _run_job_subprocess(job_id: str, job_dir: str):
                     "png_path": None,
                     "gpkg_path": None,
                 })
-router = APIRouter()
-
-JOBS_DIR = os.environ.get("OMAPMAKER_JOBS_DIR", "./jobs")
-os.makedirs(JOBS_DIR, exist_ok=True)
 
 
 def _save_file(upload: UploadFile, dest_dir: str) -> str:
