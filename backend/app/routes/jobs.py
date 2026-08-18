@@ -15,10 +15,8 @@ from fastapi.responses import FileResponse
 from ..core.job_store import job_path as _job_path, read_job as _read_job, write_job as _write_job
 MAX_CONCURRENT_JOBS = int(os.environ.get("MAX_CONCURRENT_JOBS", "3"))
 _job_semaphore = asyncio.Semaphore(MAX_CONCURRENT_JOBS)
-    JOB_TIMEOUT_SECONDS = int(os.environ.get("JOB_TIMEOUT_SECONDS", "1800"))  # 30 min
- 
- 
-    async def _run_job_subprocess(job_id: str, job_dir: str):
+JOB_TIMEOUT_SECONDS = int(os.environ.get("JOB_TIMEOUT_SECONDS", "1800"))  # 30 min
+async def _run_job_subprocess(job_id: str, job_dir: str):
         """
         Čeká na volný slot (max MAX_CONCURRENT_JOBS souběžně), pak spustí
         zpracování jako samostatný proces. Pokud job běží déle než
