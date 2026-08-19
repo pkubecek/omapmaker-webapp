@@ -493,7 +493,7 @@ def add_vector_layers(
                 pm("sym501", 49, mask, zab("ArealUceloveZastavby"))
         else:
             pm("sym501", 49,
-               (c("amenity") == "parking") | (c("place") == "square") | c("highway").isin(["pedestrian", "footway"]),
+               (c("amenity") == "parking") | (c("place") == "square") | c("highway").isin(["pedestrian", "footway"]) | (c("man_made") == "bridge"),
                gdf_polys)
 
         # 502D - Dálnice
@@ -713,7 +713,6 @@ def add_vector_layers(
                     pm("sym513-1b", 30, None, zab(zk), to_mask=False)
         else:
             pm("sym513-1a", 30, c("barrier") == "wall", gdf_lines)
-            pm("sym513-1b", 30, c("barrier") == "wall", gdf_lines)
 
         # 515 - Nepřekonatelná zeď
         cgdf = isom("515")
@@ -727,8 +726,7 @@ def add_vector_layers(
         elif zab("HradbaValBastaOpevneni") is not None:
             pm("sym515b", 30, None, zab("HradbaValBastaOpevneni"), to_mask=False)
         else:
-            pm("sym515a", 30, c("barrier") == "city_wall", gdf_lines)
-            pm("sym515b", 30, c("barrier") == "city_wall", gdf_lines)
+            pm("sym515a", 30, c("barrier").isin("city_wall", "retaining_wall"), gdf_lines)
 
         # 520 - Privátní oblast
         if visibility.get("private", True):
