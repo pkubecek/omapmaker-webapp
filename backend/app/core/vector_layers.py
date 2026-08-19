@@ -534,7 +534,7 @@ def add_vector_layers(
 
         # 503 - Silnice / zpevněná cesta
         cgdf = isom("503")
-        mask_service = (c("highway").isin(["tertiary_link", "service", "residential"]) | c("highway").isin(["track", "road", "cycleway", "unclassified"]) &
+        mask_service = (c("highway").isin(["tertiary_link", "service", "residential", "living_street"]) | c("highway").isin(["track", "road", "cycleway", "unclassified"]) &
                         (c("surface").isin(["concrete", "asphalt"])) | (c("tracktype") == "grade1") &
                         ~c("tunnel").isin(["yes", "avalanche_protector", "building_passage"]) &
                         (c("bridge") != "yes") & (c("access") != "private"))
