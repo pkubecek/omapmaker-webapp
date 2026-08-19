@@ -493,8 +493,8 @@ def add_vector_layers(
                 pm("sym501", 49, mask, zab("ArealUceloveZastavby"))
         else:
             pm("sym501", 49,
-               (c("amenity") == "parking") | (c("place") == "square") | (c("highway").isin(["pedestrian", "footway"]),
-               gdf_polys))
+               (c("amenity") == "parking") | (c("place") == "square") | c("highway").isin(["pedestrian", "footway"]),
+               gdf_polys)
 
         # 502D - Dálnice
         cgdf = isom("502D")
