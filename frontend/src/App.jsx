@@ -109,7 +109,7 @@ export default function App() {
   }, [addLog]);
 
   const handleRun = useCallback(async () => {
-    if (!files.dtm || !files.dsm) return;
+    if (!files.dtm) return;
     setLogLines([]);
     setJob({ status: 'queued', progress: 0, step: 'Odesílám data...', jobId: null });
     addLog('Spouštím analýzu...', 'info');
