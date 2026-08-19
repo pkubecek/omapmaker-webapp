@@ -1,22 +1,4 @@
 <?xml version='1.0' encoding='utf-8'?>
-<!--
-  symbols4.xml — ISSprOM 2019-2 (rev. 6, leden 2024), tiskové měřítko 1:4000.
-  Rozměry převedeny přímo ze specifikace (mm -> pt, 1pt = 0.352778mm),
-  BEZ dalšího škálování podle scale (na rozdíl od symbols10/15.xml, kde
-  je bazovou hodnotou ISOM 1:15000) - ISSprOM už je definované pro 1:4000.
-
-  Barvy: hnědá #d15c00, černá #000000, modrá #21d1ff/#90e8ff,
-  zelená #0e990e/#3dff17, žlutá #f7f2c2/#ffba35, fialová #c800c8
-  (přetisková/spodní) a #a000a0 (výpalová/horní) - PŘIBLIŽNÉ odstíny,
-  ověř proti oficiální IOF barevné definici (Print and Colour Definition).
-
-  Značky beze shody v ISOM (nový tvar, jen odhad z textového popisu):
-  105.2, 501.2, 512.3, 533 - označeny <!-- OVĚŘIT -->, zkontroluj vizuálně
-  v OOM oproti referenční šabloně před použitím na ostré mapě.
-
-  Path definice pro zbytek přejaty z symbols10.xml/symbols15.xml
-  (tvar je dle ISSprOM shodný s ISOM 2017-2), jen přepočtené linewidth.
--->
 <root>
 
     <!-- ============================================================ -->

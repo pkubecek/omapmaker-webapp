@@ -421,9 +421,9 @@ export default function SettingsPanel({ settings, onSettings, files, onFiles, is
           <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
             <Tooltip text={TOOLTIPS.scale} />
             <select style={S.select} value={settings.scale} onChange={(e) => set('scale', e.target.value)}>
-              <option value="10000">1 : 10 000 (ISOM)</option>
-              <option value="15000">1 : 15 000 (ISOM)</option>
-              <option value="4000">1 : 4 000 (ISSprOM - sprint)</option>
+              <option value="10000">1 : 10 000 (ISOM 2017-2)</option>
+              <option value="15000">1 : 15 000 (ISOM 2017-2)</option>
+              <option value="4000">1 : 4 000 (ISSprOM 2019-2)</option>
             </select>
           </div>
         </div>
