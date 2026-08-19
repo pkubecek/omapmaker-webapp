@@ -726,7 +726,7 @@ def add_vector_layers(
         elif zab("HradbaValBastaOpevneni") is not None:
             pm("sym515b", 30, None, zab("HradbaValBastaOpevneni"), to_mask=False)
         else:
-            pm("sym515a", 30, c("barrier").isin("city_wall", "retaining_wall"), gdf_lines)
+            pm("sym515a", 30, c("barrier").isin(["city_wall", "retaining_wall"]), gdf_lines)
 
         # 520 - Privátní oblast
         if visibility.get("private", True):
