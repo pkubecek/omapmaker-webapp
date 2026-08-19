@@ -493,8 +493,8 @@ def add_vector_layers(
                 pm("sym501", 49, mask, zab("ArealUceloveZastavby"))
         else:
             pm("sym501", 49,
-               (c("amenity") == "parking") | (c("place") == "square"),
-               gdf_polys)
+               (c("amenity") == "parking") | (c("place") == "square") | (c("highway").isin(["pedestrian", "footway"]),
+               gdf_polys))
 
         # 502D - Dálnice
         cgdf = isom("502D")
@@ -572,7 +572,7 @@ def add_vector_layers(
 
         # 505 - Pěší cesta
         cgdf = isom("505")
-        mask_footway = (c("highway").isin(["pedestrian", "road", "footway", "track", "bridleway"]) |
+        mask_footway = (c("highway").isin(["road", "track", "bridleway"]) |
                         ((c("highway") == "cycleway") & (~c("surface").isin(["concrete", "asphalt"])) &
                         (c("tracktype") != "grade1")) &
                         (c("bridge") != "yes") & (c("access") != "private"))
