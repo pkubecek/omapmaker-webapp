@@ -1,0 +1,675 @@
+<?xml version='1.0' encoding='utf-8'?>
+<!--
+  symbols4.xml — ISSprOM 2019-2 (rev. 6, leden 2024), tiskové měřítko 1:4000.
+  Rozměry převedeny přímo ze specifikace (mm -> pt, 1pt = 0.352778mm),
+  BEZ dalšího škálování podle scale (na rozdíl od symbols10/15.xml, kde
+  je bazovou hodnotou ISOM 1:15000) - ISSprOM už je definované pro 1:4000.
+
+  Barvy: hnědá #d15c00, černá #000000, modrá #21d1ff/#90e8ff,
+  zelená #0e990e/#3dff17, žlutá #f7f2c2/#ffba35, fialová #c800c8
+  (přetisková/spodní) a #a000a0 (výpalová/horní) - PŘIBLIŽNÉ odstíny,
+  ověř proti oficiální IOF barevné definici (Print and Colour Definition).
+
+  Značky beze shody v ISOM (nový tvar, jen odhad z textového popisu):
+  105.2, 501.2, 512.3, 533 - označeny <!-- OVĚŘIT -->, zkontroluj vizuálně
+  v OOM oproti referenční šabloně před použitím na ostré mapě.
+
+  Path definice pro zbytek přejaty z symbols10.xml/symbols15.xml
+  (tvar je dle ISSprOM shodný s ISOM 2017-2), jen přepočtené linewidth.
+-->
+<root>
+
+    <!-- ============================================================ -->
+    <!-- 4.1 TERÉNNÍ TVARY (hnědá #d15c00)                             -->
+    <!-- ============================================================ -->
+
+    <!-- 101: Základní vrstevnice -->
+    <symbol id="sym101" type="line">
+        <style color="#d15c00" linewidth="0.4252" linestyle="solid" />
+    </symbol>
+
+    <!-- 102: Zdůrazněná vrstevnice -->
+    <symbol id="sym102" type="line">
+        <style color="#d15c00" linewidth="0.8505" linestyle="solid" />
+    </symbol>
+
+    <!-- 103: Doplňková vrstevnice -->
+    <symbol id="sym103" type="line">
+        <style color="#d15c00" linewidth="0.3402" linestyle="(0, (5.67, 0.567))" />
+    </symbol>
+
+    <!-- 104: Zemní sráz (min. výška 1m, spádovky) -->
+    <symbol id="sym104" type="line">
+        <style color="#d15c00" linewidth="0.7" linestyle="solid" capstyle="butt" />
+        <style_ticks length="4" spacing="5" linewidth="0.4536" color="#d15c00" />
+    </symbol>
+
+    <!-- 105.1: Malý zemní val -->
+    <symbol id="sym105-1a" type="line">
+        <style color="#d15c00" linewidth="0.6" linestyle="solid" />
+    </symbol>
+    <symbol id="sym105-1b" type="line">
+        <style color="#d15c00" linewidth="1.4" linestyle="(0, (0.00667, 5.67))" solid_capstyle="round" />
+    </symbol>
+
+    <!-- 105.2: Opěrný zemní val viditelný z jedné strany -->
+    <!-- OVĚŘIT: nová značka, poloviční příčky směřující na nižší úroveň -->
+    <symbol id="sym105-2" type="line">
+        <style color="#d15c00" linewidth="0.6" linestyle="solid" />
+        <style_ticks length="2" spacing="3" linewidth="0.4536" color="#d15c00" angle="45" />
+    </symbol>
+
+    <!-- 107: Erozní rýha -->
+    <symbol id="sym107" type="line">
+        <style color="#d15c00" linewidth="0.8" linestyle="solid" />
+    </symbol>
+
+    <!-- 108: Malá erozní rýha -->
+    <symbol id="sym108" type="line">
+        <style color="#d15c00" linewidth="0.8" linestyle="(0, (0.00667, 3))" solid_capstyle="round" />
+    </symbol>
+
+    <!-- 109: Malá kupka -->
+    <symbol id="sym109" type="point">
+        <path d="M 3.75 0 A 3.75 3.75 0 0 3.75 -3.75 0 A 3.75 3.75 0 0 3.75 3.75 0 Z" />
+        <style facecolor="#d15c00" edgecolor="#d15c00" linewidth="0" />
+    </symbol>
+
+    <!-- 110: Malá protáhlá kupka -->
+    <symbol id="sym110" type="point">
+        <path d="M -6.8 -3.4 A 3.4 3.4 0 0 6.8 3.4 -3.4 A 3.4 3.4 0 0 6.8 -3.4 3.4 Z" />
+        <style facecolor="#d15c00" edgecolor="#d15c00" linewidth="0" />
+    </symbol>
+
+    <!-- 111: Malá prohlubeň -->
+    <symbol id="sym111" type="point">
+        <path d="M -5.6 0 A 5.6 5.6 0 0 5.6 5.6 0" />
+        <style facecolor="none" edgecolor="#d15c00" linewidth="0.6" />
+    </symbol>
+
+    <!-- 112: Jáma nebo díra -->
+    <symbol id="sym112" type="point">
+        <path d="M -3.6 -3.8 L 0 4.4 L 3.6 -3.8" />
+        <style facecolor="none" edgecolor="#d15c00" linewidth="0.6" />
+    </symbol>
+
+    <!-- 113: Rozbitý povrch -->
+    <symbol id="sym113" type="area">
+        <style facecolor="none" edgecolor="none" linewidth="0" linestyle="solid" dotdistance="2.2" dotsize="0.85" dotcolor="#d15c00" />
+    </symbol>
+
+    <!-- 115: Výrazný terénní objekt -->
+    <symbol id="sym115" type="point">
+        <path d="M -4.6 0 L 0 -3.9 L 4.6 0 L 0 3.9 Z" />
+        <style facecolor="none" edgecolor="#d15c00" linewidth="0.6" />
+    </symbol>
+
+
+    <!-- ============================================================ -->
+    <!-- 4.2 SKÁLY A BALVANY (černá #000000)                           -->
+    <!-- ============================================================ -->
+
+    <!-- 201: Nepřekonatelný sráz -->
+    <symbol id="sym201" type="line">
+        <style color="#000000" linewidth="1.0" linestyle="solid" capstyle="butt" />
+        <style_ticks length="4" spacing="5" linewidth="0.4536" color="#000000" />
+    </symbol>
+
+    <!-- 202: Překonatelný sráz -->
+    <symbol id="sym202" type="line">
+        <style color="#000000" linewidth="0.6" linestyle="solid" capstyle="butt" />
+        <style_ticks length="3.33333" spacing="4.33333" linewidth="0.4536" color="#000000" />
+    </symbol>
+
+    <!-- 203: Kamenná jáma nebo jeskyně -->
+    <symbol id="sym203" type="point">
+        <path d="M -3.6 -3.8 L 0 4.4 L 3.6 -3.8" />
+        <style facecolor="none" edgecolor="#000000" linewidth="0.5" solid_capstyle="round" />
+    </symbol>
+
+    <!-- 204: Balvan -->
+    <symbol id="sym204" type="point">
+        <path d="M 3.4 0 A 3.4 3.4 0 0 3.4 -3.4 0 A 3.4 3.4 0 0 3.4 3.4 0 Z" />
+        <style facecolor="#000000" edgecolor="#000000" linewidth="0" />
+    </symbol>
+
+    <!-- 205: Velký balvan -->
+    <symbol id="sym205" type="point">
+        <path d="M 5.1 0 A 5.1 5.1 0 0 5.1 -5.1 0 A 5.1 5.1 0 0 5.1 5.1 0 Z" />
+        <style facecolor="#000000" edgecolor="#000000" linewidth="0" />
+    </symbol>
+
+    <!-- 206: Obrovský balvan nebo skalní věž -->
+    <symbol id="sym206" type="area">
+        <style facecolor="#000000" edgecolor="none" linewidth="0" />
+    </symbol>
+
+    <!-- 207: Shluk balvanů -->
+    <symbol id="sym207" type="point">
+        <path d="M 0 -3.4 L 4.1 4.1 L -4.1 4.1 Z" />
+        <style facecolor="#000000" edgecolor="#000000" linewidth="0" />
+    </symbol>
+
+    <!-- 208: Balvanové pole - trojúhelníky, náhodně rozmístěné (viz renderer) -->
+    <symbol id="sym208" type="area">
+        <style facecolor="none" edgecolor="none" linewidth="0" linestyle="solid" dotdistance="3.5" dotsize="1.2" dotcolor="#000000" marker_shape="triangle" />
+    </symbol>
+
+    <!-- 210: Kamenitý povrch -->
+    <symbol id="sym210" type="area">
+        <style facecolor="none" edgecolor="none" linewidth="0" linestyle="solid" dotdistance="2.0" dotsize="0.6" dotcolor="#000000" />
+    </symbol>
+
+    <!-- 213: Otevřený písčitý povrch -->
+    <symbol id="sym213" type="area">
+        <style facecolor="#f7f2c2" edgecolor="none" linewidth="0" linestyle="solid" dotdistance="2.0" dotsize="0.6" dotcolor="#000000" />
+    </symbol>
+
+    <!-- 214: Holá skála (35% černá) -->
+    <symbol id="sym214" type="area">
+        <style facecolor="#b3b3b3" edgecolor="none" linewidth="0" linestyle="solid" />
+    </symbol>
+
+
+    <!-- ============================================================ -->
+    <!-- 4.3 VODA A BAŽINY (modrá #21d1ff)                             -->
+    <!-- ============================================================ -->
+
+    <!-- 301: Nepřekonatelné vodní těleso -->
+    <symbol id="sym301" type="area">
+        <style facecolor="#21d1ff" edgecolor="#000000" linewidth="0.4" />
+    </symbol>
+
+    <!-- 302: Mělké vodní těleso -->
+    <symbol id="sym302" type="area">
+        <style facecolor="#90e8ff" edgecolor="#21d1ff" linewidth="0.4" />
+    </symbol>
+
+    <!-- 303: Jáma s vodou -->
+    <symbol id="sym303" type="point">
+        <path d="M -3.6 -3.8 L 0 4.4 L 3.6 -3.8" />
+        <style facecolor="none" edgecolor="#21d1ff" linewidth="0.5" />
+    </symbol>
+
+    <!-- 305: Malý překonatelný vodní tok -->
+    <symbol id="sym305" type="line">
+        <style color="#21d1ff" linewidth="0.85" />
+    </symbol>
+
+    <!-- 306: Malý / sezónní vodní tok -->
+    <symbol id="sym306" type="line">
+        <style color="#21d1ff" linewidth="0.6" linestyle="(0, (3.54375, 0.70875))" />
+    </symbol>
+
+    <!-- 307: Nepřekonatelná bažina -->
+    <symbol id="sym307" type="area">
+        <style facecolor="none" edgecolor="#000000" linewidth="0.4" linestyle="solid" hatchcolor="#21d1ff" hatchdistance="1.8" hatchwidth="0.5" hatchstyle="solid" />
+    </symbol>
+
+    <!-- 308: Bažina -->
+    <symbol id="sym308" type="area">
+        <style facecolor="none" edgecolor="none" linewidth="0" linestyle="solid" hatchcolor="#21d1ff" hatchdistance="1.8" hatchwidth="0.5" hatchstyle="solid" />
+    </symbol>
+
+    <!-- 309: Úzká bažina -->
+    <symbol id="sym309" type="area">
+        <style facecolor="none" edgecolor="none" linewidth="0" linestyle="solid" dotdistance="2.0" dotsize="0.6" dotcolor="#21d1ff" />
+    </symbol>
+
+    <!-- 310: Nezřetelná bažina -->
+    <symbol id="sym310" type="area">
+        <style facecolor="none" edgecolor="none" linewidth="0" linestyle="solid" hatchcolor="#21d1ff" hatchdistance="2.6" hatchwidth="0.35" hatchstyle="(0, (1.8, 1.8))" />
+    </symbol>
+
+    <!-- 311: Malá fontána nebo studna -->
+    <symbol id="sym311" type="point">
+        <path d="M -5.1 -5.1 L 5.1 5.1 M -5.1 5.1 L 5.1 -5.1" />
+        <style facecolor="none" edgecolor="#21d1ff" linewidth="0.6" />
+    </symbol>
+
+    <!-- 312: Pramen -->
+    <symbol id="sym312" type="point">
+        <path d="M 0 -3.4 L 4.1 4.1 L -4.1 4.1 Z" />
+        <style facecolor="#21d1ff" edgecolor="#21d1ff" linewidth="0" />
+    </symbol>
+
+    <!-- 313: Výrazný vodní objekt -->
+    <symbol id="sym313" type="point">
+        <path d="M 6.8 0 A 6.8 6.8 0 0 6.8 -6.8 0 A 6.8 6.8 0 0 6.8 6.8 0 Z" />
+        <style facecolor="none" edgecolor="#21d1ff" linewidth="0.5" />
+    </symbol>
+
+
+    <!-- ============================================================ -->
+    <!-- 4.4 VEGETACE (bílá/žlutá/zelená)                              -->
+    <!-- ============================================================ -->
+
+    <!-- 401: Otevřený prostor -->
+    <symbol id="sym401" type="area">
+        <style facecolor="#ffba35" edgecolor="none" linewidth="0" />
+    </symbol>
+
+    <!-- 402: Otevřený prostor s rozptýlenými stromy -->
+    <symbol id="sym402" type="area">
+        <style facecolor="#ffba35" edgecolor="none" linewidth="0" linestyle="solid" dotdistance="3.1" dotsize="0.85" dotcolor="#ffffff" />
+    </symbol>
+
+    <!-- 403: Divoký otevřený prostor -->
+    <symbol id="sym403" type="area">
+        <style facecolor="#ffd685" edgecolor="none" linewidth="0" />
+    </symbol>
+
+    <!-- 404: Divoký otevřený prostor s rozptýlenými stromy -->
+    <symbol id="sym404" type="area">
+        <style facecolor="#ffd685" edgecolor="none" linewidth="0" linestyle="solid" dotdistance="3.4" dotsize="0.85" dotcolor="#ffffff" />
+    </symbol>
+
+    <!-- 405: Les (bílá = žádná plocha; vykresli jako "díru" v jiné vrstvě) -->
+    <symbol id="sym405" type="area">
+        <style facecolor="#ffffff" edgecolor="none" linewidth="0" />
+    </symbol>
+
+    <!-- 406: Vegetace: pomalý běh -->
+    <symbol id="sym406" type="area">
+        <style facecolor="#a8f090" edgecolor="none" linewidth="0" />
+    </symbol>
+
+    <!-- 407: Vegetace: pomalý běh, dobrá viditelnost (šrafy) -->
+    <symbol id="sym407" type="area">
+        <style facecolor="none" edgecolor="none" linewidth="0" linestyle="solid" hatchcolor="#0e990e" hatchdistance="1.6" hatchwidth="0.5" hatchstyle="solid" />
+    </symbol>
+
+    <!-- 408: Vegetace: chůze -->
+    <symbol id="sym408" type="area">
+        <style facecolor="#3dff17" edgecolor="none" linewidth="0" />
+    </symbol>
+
+    <!-- 409: Vegetace: chůze, dobrá viditelnost -->
+    <symbol id="sym409" type="area">
+        <style facecolor="none" edgecolor="none" linewidth="0" linestyle="solid" hatchcolor="#0e990e" hatchdistance="1.26" hatchwidth="0.42" hatchstyle="solid" />
+    </symbol>
+
+    <!-- 410: Vegetace: prodírání -->
+    <symbol id="sym410" type="area">
+        <style facecolor="#0e990e" edgecolor="none" linewidth="0" />
+    </symbol>
+
+    <!-- 411: Nepřekonatelná vegetace -->
+    <symbol id="sym411" type="area">
+        <style facecolor="#006600" edgecolor="#000000" linewidth="0.4" />
+    </symbol>
+
+    <!-- 412: Obdělávaná půda -->
+    <symbol id="sym412a" type="area">
+        <style facecolor="#ffba35" edgecolor="none" linewidth="0" />
+    </symbol>
+    <symbol id="sym412b" type="line">
+        <style color="#000000" linewidth="0.85" linestyle="(0, (2.5, 2.5, 2.5, 8.5))" />
+    </symbol>
+
+    <!-- 413: Sad -->
+    <symbol id="sym413" type="area">
+        <style facecolor="#ffba35" edgecolor="none" linewidth="0" linestyle="solid" dotdistance="3.2" dotsize="0.9" dotcolor="#0e990e" />
+    </symbol>
+
+    <!-- 414: Vinice nebo podobné kultury -->
+    <symbol id="sym414" type="area">
+        <style facecolor="#ffba35" edgecolor="none" linewidth="0" linestyle="solid" hatchcolor="#0e990e" hatchdistance="3.2" hatchwidth="0.6" hatchstyle="(0, (3.6859, 1.7012))" />
+    </symbol>
+
+    <!-- 415: Zřetelná hranice obdělávané půdy -->
+    <symbol id="sym415" type="line">
+        <style color="#000000" linewidth="0.4252" linestyle="(0, (4.2525, 1.063125))" />
+    </symbol>
+
+    <!-- 416: Zřetelná hranice vegetace -->
+    <symbol id="sym416p" type="area">
+        <style facecolor="none" edgecolor="#000000" linewidth="0.4252" linestyle="(0, (0.8505, 0.567))" />
+    </symbol>
+    <symbol id="sym416l" type="line">
+        <style color="#000000" linewidth="0.4252" linestyle="(0, (0.8505, 0.567))" />
+    </symbol>
+
+    <!-- 417: Výrazný velký strom -->
+    <symbol id="sym417a" type="point">
+        <path d="M 8 0 A 8 8 0 0 8 -8 0 A 8 8 0 0 8 8 0 Z" />
+        <style facecolor="#ffffff" edgecolor="#ffffff" linewidth="0" />
+    </symbol>
+    <symbol id="sym417b" type="point">
+        <path d="M 6.8 0 A 6.8 6.8 0 0 6.8 -6.8 0 A 6.8 6.8 0 0 6.8 6.8 0 Z" />
+        <style facecolor="none" edgecolor="#0e990e" linewidth="0.6" />
+    </symbol>
+
+    <!-- 418: Výrazný keř nebo malý strom -->
+    <symbol id="sym418a" type="point">
+        <path d="M 4.5 0 A 4.5 4.5 0 0 4.5 -4.5 0 A 4.5 4.5 0 0 4.5 4.5 0 Z" />
+        <style facecolor="#0e990e" edgecolor="none" linewidth="0" />
+    </symbol>
+    <symbol id="sym418b" type="point">
+        <path d="M 1.4 0 A 1.4 1.4 0 0 1.4 -1.4 0 A 1.4 1.4 0 0 1.4 1.4 0 Z" />
+        <style facecolor="#ffffff" edgecolor="none" linewidth="0" />
+    </symbol>
+
+    <!-- 419: Výrazný vegetační objekt (kříž + bílá maska) -->
+    <symbol id="sym419mask" type="point">
+        <path d="M -5 -5 L 5 5 M -5 5 L 5 -5" />
+        <style facecolor="none" edgecolor="#ffffff" linewidth="1.4" />
+    </symbol>
+    <symbol id="sym419" type="point">
+        <path d="M -5 -5 L 5 5 M -5 5 L 5 -5" />
+        <style facecolor="none" edgecolor="#0e990e" linewidth="0.6" />
+    </symbol>
+
+
+    <!-- ============================================================ -->
+    <!-- 4.5 UMĚLÉ OBJEKTY (černá, hnědá 30/50%)                       -->
+    <!-- ============================================================ -->
+
+    <!-- 501: Zpevněná plocha -->
+    <symbol id="sym501" type="area">
+        <style facecolor="#e8ae80" edgecolor="none" linewidth="0" />
+    </symbol>
+
+    <!-- 501.1: Schod nebo okraj zpevněné plochy -->
+    <symbol id="sym501-1" type="line">
+        <style color="#000000" linewidth="0.4" linestyle="solid" />
+    </symbol>
+
+    <!-- 501.2: Schod/okraj zpevněné plochy ve spodní úrovni -->
+    <!-- OVĚŘIT: nová značka, mezera 0.15mm na koncích -->
+    <symbol id="sym501-2" type="line">
+        <style color="#000000" linewidth="0.4" linestyle="solid" />
+    </symbol>
+
+    <!-- 501.3: Zpevněná plocha s rozptýlenými stromy -->
+    <symbol id="sym501-3" type="area">
+        <style facecolor="#e8ae80" edgecolor="none" linewidth="0" linestyle="solid" dotdistance="3.1" dotsize="0.85" dotcolor="#ffffff" />
+    </symbol>
+
+    <!-- 505: Nezpevněná pěšina nebo cesta -->
+    <symbol id="sym505a" type="line">
+        <style color="#000000" linewidth="1.0" linestyle="solid" />
+    </symbol>
+    <symbol id="sym505b" type="line">
+        <style color="#e8ae80" linewidth="0.5" linestyle="solid" />
+    </symbol>
+
+    <!-- 506: Malá nezpevněná pěšina nebo cesta -->
+    <symbol id="sym506" type="line">
+        <style color="#000000" linewidth="0.7" linestyle="(0, (4.2525, 1.063125))" />
+    </symbol>
+
+    <!-- 507: Nezřetelná pěšina -->
+    <symbol id="sym507" type="line">
+        <style color="#000000" linewidth="0.5" linestyle="(0, (2.835, 0.7088, 2.835, 2.268))" />
+    </symbol>
+
+    <!-- 508: Průsek -->
+    <symbol id="sym508" type="line">
+        <style color="#000000" linewidth="0.4" linestyle="(0, (8.505, 0.7088))" />
+    </symbol>
+
+    <!-- 509.1: Železnice -->
+    <symbol id="sym509a" type="line">
+        <style color="#000000" linewidth="1.7" linestyle="solid" />
+    </symbol>
+    <symbol id="sym509b" type="line">
+        <style color="#ffffff" linewidth="1.0" linestyle="(0, (2.8353, 4.2529))" />
+    </symbol>
+
+    <!-- 509.2: Tramvajová trať (50% černá, tenká) -->
+    <symbol id="sym509-2" type="line">
+        <style color="#808080" linewidth="0.23" linestyle="solid" />
+    </symbol>
+
+    <!-- 510: Elektrické vedení, lanovka nebo lyžařský vlek -->
+    <symbol id="sym510" type="line">
+        <style color="#000000" linewidth="0.5" linestyle="solid" />
+    </symbol>
+
+    <!-- 511: Hlavní elektrické vedení -->
+    <symbol id="sym511a" type="line">
+        <style color="#000000" linewidth="0.3" linestyle="solid" />
+    </symbol>
+    <symbol id="sym511P" type="point">
+        <path d="M -2 -2 L 2 -2 L 2 2 L -2 2 Z" />
+        <style facecolor="#000000" edgecolor="none" linewidth="0" />
+    </symbol>
+
+    <!-- 512.1: Vstup pod most nebo do tunelu (trojúhelníky) -->
+    <symbol id="sym512-1" type="line">
+        <style color="#000000" linewidth="1.0" linestyle="solid" />
+    </symbol>
+
+    <!-- 512.2: Podchod nebo tunel -->
+    <symbol id="sym512-2" type="line">
+        <style color="#000000" linewidth="1.0" linestyle="solid" />
+    </symbol>
+
+    <!-- 512.3: Oblast průběžná v nižší úrovni (bílé šrafy 45°) -->
+    <!-- OVĚŘIT: nová značka, kombinovatelná s mnoha dalšími -->
+    <symbol id="sym512-3" type="area">
+        <style facecolor="none" edgecolor="none" linewidth="0" linestyle="solid" hatchcolor="#ffffff" hatchdistance="2.5" hatchwidth="0.3" hatchstyle="solid" />
+    </symbol>
+
+    <!-- 513.1: Překonatelná zeď -->
+    <symbol id="sym513-1" type="line">
+        <style color="#000000" linewidth="0.6" linestyle="(0, (0.00667, 5.67))" solid_capstyle="round" />
+    </symbol>
+
+    <!-- 513.2: Překonatelná opěrná zeď -->
+    <symbol id="sym513-2a" type="line">
+        <style color="#000000" linewidth="0.6" linestyle="solid" />
+    </symbol>
+    <symbol id="sym513-2b" type="line">
+        <style color="#000000" linewidth="1.2" linestyle="(0, (0.00667, 5.67))" solid_capstyle="round" />
+    </symbol>
+
+    <!-- 515: Nepřekonatelná zeď -->
+    <symbol id="sym515a" type="line">
+        <style color="#000000" linewidth="0.8" linestyle="solid" />
+    </symbol>
+    <symbol id="sym515b" type="line">
+        <style color="#000000" linewidth="1.8" linestyle="(0, (0.06667, 8.505, 0.00667, 2.28))" solid_capstyle="round" />
+    </symbol>
+
+    <!-- 516: Překonatelný plot nebo zábradlí -->
+    <symbol id="sym516" type="line">
+        <style color="#000000" linewidth="0.3" linestyle="solid" />
+        <style_ticks length="2" spacing="2.835" linewidth="0.3" color="#000000" angle="45" />
+    </symbol>
+
+    <!-- 518: Nepřekonatelný plot nebo zábradlí -->
+    <symbol id="sym518" type="line">
+        <style color="#000000" linewidth="2.8" linestyle="solid" />
+        <style_ticks length="6.66667" spacing="4.16833" linewidth="0.56" color="#000000" angle="45" />
+    </symbol>
+
+    <!-- 519: Průchod (volitelné) -->
+    <symbol id="sym519" type="point">
+        <path d="M -2 -3 L -2 3 M 2 -3 L 2 3" />
+        <style facecolor="none" edgecolor="#000000" linewidth="0.4" />
+    </symbol>
+
+    <!-- 520: Oblast se zákazem vstupu -->
+    <symbol id="sym520" type="area">
+        <style facecolor="#9eba1d" edgecolor="#000000" linewidth="0.28" />
+    </symbol>
+
+    <!-- 521: Budova -->
+    <symbol id="sym521" type="area">
+        <style facecolor="#808080" edgecolor="#000000" linewidth="0.4" />
+    </symbol>
+
+    <!-- 522: Zastřešení -->
+    <symbol id="sym522" type="area">
+        <style facecolor="#cccccc" edgecolor="#000000" linewidth="0.3" />
+    </symbol>
+
+    <!-- 522.1: Pilíř -->
+    <symbol id="sym522-1" type="point">
+        <path d="M -1.5 -1.5 L 1.5 -1.5 L 1.5 1.5 L -1.5 1.5 Z" />
+        <style facecolor="#000000" edgecolor="none" linewidth="0" />
+    </symbol>
+
+    <!-- 524: Vysoká věž -->
+    <symbol id="sym524a" type="point">
+        <path d="M 0 -7 L 0 7 M -7 0 L 7 0" />
+        <style facecolor="none" edgecolor="#000000" linewidth="0.35" />
+    </symbol>
+    <symbol id="sym524b" type="point">
+        <path d="M 4.2 0 A 4.2 4.2 0 0 4.2 -4.2 0 A 4.2 4.2 0 0 4.2 4.2 0 Z" />
+        <style facecolor="#000000" edgecolor="none" linewidth="0" />
+    </symbol>
+
+    <!-- 525: Malá věž / posed -->
+    <symbol id="sym525" type="point">
+        <path d="M -8.5 -8.5 L 8.5 -8.5 M 0 -8.5 L 0 8.5" />
+        <style facecolor="none" edgecolor="#000000" linewidth="0.5" />
+    </symbol>
+
+    <!-- 526: Mohyla, pomník, socha, malý památník nebo hraniční kámen -->
+    <symbol id="sym526a" type="point">
+        <path d="M 5.6 0 A 5.6 5.6 0 0 5.6 -5.6 0 A 5.6 5.6 0 0 5.6 5.6 0 Z" />
+        <style facecolor="none" edgecolor="#000000" linewidth="0.5" />
+    </symbol>
+    <symbol id="sym526b" type="point">
+        <path d="M 0.7 0 A 0.7 0.7 0 0 1 -0.7 0 A 0.7 0.7 0 0 1 0.7 0 Z" />
+        <style facecolor="#000000" edgecolor="none" linewidth="0" />
+    </symbol>
+
+    <!-- 527: Krmelec -->
+    <symbol id="sym527" type="point">
+        <path d="M -8.5 -8.5 L 8.5 -8.5 L 8.5 8.5 L -8.5 8.5 Z M -8.5 -8.5 L 8.5 8.5 M -8.5 8.5 L 8.5 -8.5" />
+        <style facecolor="none" edgecolor="#000000" linewidth="0.3" />
+    </symbol>
+
+    <!-- 528: Výrazný liniový objekt -->
+    <symbol id="sym528" type="line">
+        <style color="#000000" linewidth="0.4" linestyle="solid" />
+    </symbol>
+
+    <!-- 529: Výrazný nepřekonatelný liniový objekt -->
+    <symbol id="sym529" type="line">
+        <style color="#000000" linewidth="0.7" linestyle="solid" />
+    </symbol>
+
+    <!-- 530: Výrazný umělý objekt - kroužek -->
+    <symbol id="sym530" type="point">
+        <path d="M 5.6 0 A 5.6 5.6 0 0 5.6 -5.6 0 A 5.6 5.6 0 0 5.6 5.6 0 Z" />
+        <style facecolor="none" edgecolor="#000000" linewidth="0.24" />
+    </symbol>
+
+    <!-- 531: Výrazný umělý objekt - křížek -->
+    <symbol id="sym531" type="point">
+        <path d="M -5.6 -5.6 L 5.6 5.6 M -5.6 5.6 L 5.6 -5.6" />
+        <style facecolor="none" edgecolor="#000000" linewidth="0.6" />
+    </symbol>
+
+    <!-- 532: Schodiště -->
+    <symbol id="sym532a" type="line">
+        <style color="#000000" linewidth="1.2" linestyle="solid" />
+    </symbol>
+    <symbol id="sym532b" type="line">
+        <style color="#e8ae80" linewidth="0.9" linestyle="solid" />
+    </symbol>
+    <symbol id="sym532c" type="line">
+        <style color="#ffffff" linewidth="0.6" linestyle="solid" />
+    </symbol>
+
+    <!-- 533: Oblast s překážkami (50% černá) -->
+    <!-- OVĚŘIT: nová značka -->
+    <symbol id="sym533" type="area">
+        <style facecolor="#808080" edgecolor="none" linewidth="0" />
+    </symbol>
+
+
+    <!-- ============================================================ -->
+    <!-- 4.6 TECHNICKÉ ZNAČKY                                          -->
+    <!-- ============================================================ -->
+
+    <!-- 601: Magnetický poledník -->
+    <symbol id="sym601" type="line">
+        <style color="#000000" linewidth="0.3" linestyle="solid" />
+    </symbol>
+
+
+    <!-- ============================================================ -->
+    <!-- 4.7 ZNAČKY STAVBY TRATĚ (fialová)                             -->
+    <!-- spodní fialová (přetisková) = #c800c8, horní fialová          -->
+    <!-- (výpalová) = #a000a0 - PŘIBLIŽNÉ, ověř oficiální CMYK/RGB      -->
+    <!-- ============================================================ -->
+
+    <!-- 701: Start (trojúhelník) -->
+    <symbol id="sym701" type="point">
+        <path d="M 0 -8.5 L 7.36 4.25 L -7.36 4.25 Z" />
+        <style facecolor="none" edgecolor="#c800c8" linewidth="1.0" />
+    </symbol>
+
+    <!-- 702: Místo výdeje map -->
+    <symbol id="sym702" type="point">
+        <path d="M -3 -3 L 3 -3 L 3 3 L -3 3 Z" />
+        <style facecolor="none" edgecolor="#a000a0" linewidth="0.8" />
+    </symbol>
+
+    <!-- 703: Kontrola (kružnice) -->
+    <symbol id="sym703" type="point">
+        <path d="M 8.5 0 A 8.5 8.5 0 0 8.5 -8.5 0 A 8.5 8.5 0 0 8.5 8.5 0 Z" />
+        <style facecolor="none" edgecolor="#c800c8" linewidth="1.0" />
+    </symbol>
+
+    <!-- 704: Číslo kontroly - vykresleno jako text, ne symbol XML -->
+
+    <!-- 705: Spojnice -->
+    <symbol id="sym705" type="line">
+        <style color="#c800c8" linewidth="0.7" linestyle="solid" />
+    </symbol>
+
+    <!-- 706: Cíl (dvě soustředné kružnice) -->
+    <symbol id="sym706a" type="point">
+        <path d="M 6 0 A 6 6 0 0 6 -6 0 A 6 6 0 0 6 6 0 Z" />
+        <style facecolor="none" edgecolor="#c800c8" linewidth="1.0" />
+    </symbol>
+    <symbol id="sym706b" type="point">
+        <path d="M 9 0 A 9 9 0 0 9 -9 0 A 9 9 0 0 9 9 0 Z" />
+        <style facecolor="none" edgecolor="#c800c8" linewidth="1.0" />
+    </symbol>
+
+    <!-- 707: Značený úsek -->
+    <symbol id="sym707" type="line">
+        <style color="#a000a0" linewidth="1.0" linestyle="(0, (4, 2))" />
+    </symbol>
+
+    <!-- 708: Nepřekonatelná hranice -->
+    <symbol id="sym708" type="line">
+        <style color="#c800c8" linewidth="0.7" linestyle="(0, (1.5, 1.5))" />
+    </symbol>
+
+    <!-- 709: Nepřístupná oblast (šrafy) -->
+    <symbol id="sym709" type="area">
+        <style facecolor="none" edgecolor="none" linewidth="0" linestyle="solid" hatchcolor="#a000a0" hatchdistance="3.4" hatchwidth="0.57" hatchstyle="solid" />
+    </symbol>
+
+    <!-- 710.1: Bod přechodu -->
+    <symbol id="sym710-1" type="point">
+        <path d="M -6.4 -3.2 A 3.2 3.2 0 0 1 -3.2 -6.4 M 6.4 3.2 A 3.2 3.2 0 0 1 3.2 6.4" />
+        <style facecolor="none" edgecolor="#c800c8" linewidth="1.4" />
+    </symbol>
+
+    <!-- 710.2: Úsek přechodu -->
+    <symbol id="sym710-2" type="line">
+        <style color="#a000a0" linewidth="1.0" linestyle="solid" />
+    </symbol>
+
+    <!-- 714: Dočasná stavba nebo uzavřená oblast -->
+    <symbol id="sym714" type="area">
+        <style facecolor="#c869c8" edgecolor="#a000a0" linewidth="0.5" />
+    </symbol>
+
+    <!-- 715: Bod pokračování po výměně mapy -->
+    <symbol id="sym715" type="point">
+        <path d="M 0 -8.5 L 7.36 4.25 L -7.36 4.25 Z" />
+        <style facecolor="none" edgecolor="#c800c8" linewidth="1.0" />
+    </symbol>
+
+</root>

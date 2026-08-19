@@ -339,7 +339,12 @@ def run_pipeline(job_id: str, params: dict, file_paths: dict,
     }
 
     # Symbols
-    sym_xml = f"symbols{10 if SCALE == 10000 else 15}.xml"
+    if SCALE == 10000:
+        sym_xml = "symbols10.xml"
+    elif SCALE == 4000:
+        sym_xml = "symbols4.xml"
+    else:
+        sym_xml = "symbols15.xml"
     for candidate in [sym_xml,
                        os.path.join(os.path.dirname(__file__), "..", "..", sym_xml),
                        os.path.join(os.path.dirname(__file__), sym_xml)]:
