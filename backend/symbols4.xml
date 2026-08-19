@@ -399,6 +399,63 @@
         <style facecolor="#e8ae80" edgecolor="none" linewidth="0" linestyle="solid" dotdistance="3.1" dotsize="0.85" dotcolor="#ffffff" />
     </symbol>
 
+    <!-- ============================================================ -->
+    <!-- CESTY/SILNICE - NENÍ V OFICIÁLNÍ ISSprOM SPECIFIKACI          -->
+    <!-- ISSprOM oficiálně kreslí cesty jako skutečný půdorys (501),   -->
+    <!-- ale OSM/ZABAGED data neobsahují reálnou šířku vozovky, takže  -->
+    <!-- jako pragmatické řešení používáme klasifikované liniové       -->
+    <!-- symboly stejně jako ISOM (stejné klíče, co volá                -->
+    <!-- vector_layers.py), o cca 30% širší než ISOM ekvivalent pro    -->
+    <!-- lepší čitelnost při chybějící šířce dat.                     -->
+    <!-- ============================================================ -->
+
+    <!-- 502D: Široká silnice (dvojitá) -->
+    <symbol id="sym502Da" type="line">
+        <style color="#000000" linewidth="5.64" linestyle="solid" />
+    </symbol>
+    <symbol id="sym502Db" type="line">
+        <style color="#e8ae80" linewidth="4.09" linestyle="solid" />
+    </symbol>
+    <symbol id="sym502Dc" type="line">
+        <style color="#000000" linewidth="0.77" linestyle="solid" />
+    </symbol>
+    <symbol id="sym502DBa" type="line">
+        <style color="#000000" linewidth="8.24" linestyle="solid" />
+    </symbol>
+    <symbol id="sym502DBb" type="line">
+        <style color="#ffffff" linewidth="7.59" linestyle="solid" />
+    </symbol>
+
+    <!-- 502: Silnice (standardní) -->
+    <symbol id="sym502a" type="line">
+        <style color="#000000" linewidth="2.76" linestyle="solid" />
+    </symbol>
+    <symbol id="sym502b" type="line">
+        <style color="#e8ae80" linewidth="1.66" linestyle="solid" />
+    </symbol>
+    <symbol id="sym502Ba" type="line">
+        <style color="#000000" linewidth="7.11" linestyle="solid" />
+    </symbol>
+    <symbol id="sym502Bb" type="line">
+        <style color="#ffffff" linewidth="5.16" linestyle="solid" />
+    </symbol>
+
+    <!-- 503: Silnice -->
+    <symbol id="sym503" type="line">
+        <style color="#000000" linewidth="1.93" linestyle="solid" />
+    </symbol>
+    <symbol id="sym503Ba" type="line">
+        <style color="#000000" linewidth="5.84" linestyle="solid" />
+    </symbol>
+    <symbol id="sym503Bb" type="line">
+        <style color="#ffffff" linewidth="3.89" linestyle="solid" />
+    </symbol>
+
+    <!-- 504: Vozová cesta -->
+    <symbol id="sym504" type="line">
+        <style color="#000000" linewidth="1.93" linestyle="(0, (12.7575, 1.063125))" />
+    </symbol>
+
     <!-- 505: Nezpevněná pěšina nebo cesta -->
     <symbol id="sym505a" type="line">
         <style color="#000000" linewidth="1.0" linestyle="solid" />
