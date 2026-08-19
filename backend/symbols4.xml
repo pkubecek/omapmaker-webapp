@@ -1,4 +1,31 @@
 <?xml version='1.0' encoding='utf-8'?>
+<!--
+  symbols4.xml — ISSprOM 2019-2 (rev. 6, leden 2024), tiskové měřítko 1:4000.
+  Rozměry převedeny přímo ze specifikace (mm -> pt, 1pt = 0.352778mm),
+  BEZ dalšího škálování podle scale (na rozdíl od symbols10/15.xml, kde
+  je bazovou hodnotou ISOM 1:15000) - ISSprOM už je definované pro 1:4000.
+
+  Barvy: hnědá #d15c00, černá #000000, modrá #21d1ff/#90e8ff,
+  zelená #0e990e/#3dff17, žlutá #f7f2c2/#ffba35, fialová #c800c8
+  (přetisková/spodní) a #a000a0 (výpalová/horní) - PŘIBLIŽNÉ odstíny,
+  ověř proti oficiální IOF barevné definici (Print and Colour Definition).
+
+  Značky beze shody v ISOM (nový tvar, jen odhad z textového popisu):
+  105.2, 501.2, 512.3, 533 - označeny poznámkou OVĚŘIT u definice,
+  zkontroluj vizuálně v OOM oproti referenční šabloně před použitím
+  na ostré mapě.
+
+  Path definice pro zbytek přejaty z symbols10.xml/symbols15.xml
+  (tvar je dle ISSprOM shodný s ISOM 2017-2), jen přepočtené linewidth.
+
+  DŮLEŽITÉ - jednotky bodových značek (type="point"):
+  Souřadnice v <path d="..."> jsou dle symbols.py PŘÍMO V MAPOVÝCH METRECH,
+  ne v pt ani mm přepočtených přes měřítko. Použito: radius = "Stopa"
+  (průměr dle ISSprOM) / 2, u obdélníkových stop poloviční rozměr jako
+  semi-osa. Pokud po vyzkoušení budou značky pořád příliš velké/malé,
+  jde jen o jednotný multiplikátor - stačí přepočítat všechny path
+  souřadnice stejným poměrem.
+-->
 <root>
 
     <!-- ============================================================ -->
@@ -51,28 +78,28 @@
         <style color="#d15c00" linewidth="0.8" linestyle="(0, (0.00667, 3))" solid_capstyle="round" />
     </symbol>
 
-    <!-- 109: Malá kupka -->
+    <!-- 109: Malá kupka (Stopa 3m diam -> r=1.5) -->
     <symbol id="sym109" type="point">
-        <path d="M 3.75 0 A 3.75 3.75 0 0 3.75 -3.75 0 A 3.75 3.75 0 0 3.75 3.75 0 Z" />
+        <path d="M 1.5 0 A 1.5 1.5 0 0 1.5 -1.5 0 A 1.5 1.5 0 0 1.5 1.5 0 Z" />
         <style facecolor="#d15c00" edgecolor="#d15c00" linewidth="0" />
     </symbol>
 
-    <!-- 110: Malá protáhlá kupka -->
+    <!-- 110: Malá protáhlá kupka (Stopa 4.8x2.4m -> semi 2.4/1.2) -->
     <symbol id="sym110" type="point">
-        <path d="M -6.8 -3.4 A 3.4 3.4 0 0 6.8 3.4 -3.4 A 3.4 3.4 0 0 6.8 -3.4 3.4 Z" />
-        <style facecolor="#d15c00" edgecolor="#d15c00" linewidth="0" />
+        <path d="M 0 -1.2 C 0.66 -1.2 1.2 -0.663 1.2 0 C 1.2 0.663 0.66 1.2 0 1.2 C -0.66 1.2 -1.2 0.663 -1.2 0 C -1.2 -0.663 -0.66 -1.2 0 -1.2 Z" />
+        <style facecolor="#d15c00" edgecolor="none" linewidth="0" />
     </symbol>
 
-    <!-- 111: Malá prohlubeň -->
+    <!-- 111: Malá prohlubeň (Stopa 4.8x2.4m -> r=1.2 půlkružnice) -->
     <symbol id="sym111" type="point">
-        <path d="M -5.6 0 A 5.6 5.6 0 0 5.6 5.6 0" />
-        <style facecolor="none" edgecolor="#d15c00" linewidth="0.6" />
+        <path d="M -1.2 0 A 1.2 1.2 0 0 1.2 1.2 0" />
+        <style facecolor="none" edgecolor="#d15c00" linewidth="0.35" />
     </symbol>
 
-    <!-- 112: Jáma nebo díra -->
+    <!-- 112: Jáma nebo díra (Stopa 4.4x5.0m -> semi 2.2/2.5) -->
     <symbol id="sym112" type="point">
-        <path d="M -3.6 -3.8 L 0 4.4 L 3.6 -3.8" />
-        <style facecolor="none" edgecolor="#d15c00" linewidth="0.6" />
+        <path d="M -2.2 -1.9 L 0 2.5 L 2.2 -1.9" />
+        <style facecolor="none" edgecolor="#d15c00" linewidth="0.35" />
     </symbol>
 
     <!-- 113: Rozbitý povrch -->
@@ -80,10 +107,10 @@
         <style facecolor="none" edgecolor="none" linewidth="0" linestyle="solid" dotdistance="2.2" dotsize="0.85" dotcolor="#d15c00" />
     </symbol>
 
-    <!-- 115: Výrazný terénní objekt -->
+    <!-- 115: Výrazný terénní objekt (Stopa 5.4x4.6m -> semi 2.7/2.3) -->
     <symbol id="sym115" type="point">
-        <path d="M -4.6 0 L 0 -3.9 L 4.6 0 L 0 3.9 Z" />
-        <style facecolor="none" edgecolor="#d15c00" linewidth="0.6" />
+        <path d="M -2.7 0 L 0 -2.3 L 2.7 0 L 0 2.3 Z" />
+        <style facecolor="none" edgecolor="#d15c00" linewidth="0.35" />
     </symbol>
 
 
@@ -103,32 +130,36 @@
         <style_ticks length="3.33333" spacing="4.33333" linewidth="0.4536" color="#000000" />
     </symbol>
 
-    <!-- 203: Kamenná jáma nebo jeskyně -->
-    <symbol id="sym203" type="point">
-        <path d="M -3.6 -3.8 L 0 4.4 L 3.6 -3.8" />
-        <style facecolor="none" edgecolor="#000000" linewidth="0.5" solid_capstyle="round" />
+    <!-- 203: Kamenná jáma nebo jeskyně (Stopa 4.4x5.0m -> semi 2.2/2.5) -->
+    <symbol id="sym203-1" type="point">
+        <path d="M -2.2 -1.9 L 0 2.5 L 2.2 -1.9" />
+        <style facecolor="none" edgecolor="#000000" linewidth="0.3" solid_capstyle="round" />
+    </symbol>
+    <symbol id="sym203-2" type="point">
+        <path d="M -2.2 -1.9 L 0 2.5 L 2.2 -1.9" />
+        <style facecolor="none" edgecolor="#000000" linewidth="0.3" solid_capstyle="round" />
     </symbol>
 
-    <!-- 204: Balvan -->
+    <!-- 204: Balvan (Stopa 2.4m diam -> r=1.2) -->
     <symbol id="sym204" type="point">
-        <path d="M 3.4 0 A 3.4 3.4 0 0 3.4 -3.4 0 A 3.4 3.4 0 0 3.4 3.4 0 Z" />
+        <path d="M 1.2 0 A 1.2 1.2 0 0 1.2 -1.2 0 A 1.2 1.2 0 0 1.2 1.2 0 Z" />
         <style facecolor="#000000" edgecolor="#000000" linewidth="0" />
     </symbol>
 
-    <!-- 205: Velký balvan -->
+    <!-- 205: Velký balvan (Stopa 3.6m diam -> r=1.8) -->
     <symbol id="sym205" type="point">
-        <path d="M 5.1 0 A 5.1 5.1 0 0 5.1 -5.1 0 A 5.1 5.1 0 0 5.1 5.1 0 Z" />
+        <path d="M 1.8 0 A 1.8 1.8 0 0 1.8 -1.8 0 A 1.8 1.8 0 0 1.8 1.8 0 Z" />
         <style facecolor="#000000" edgecolor="#000000" linewidth="0" />
     </symbol>
 
-    <!-- 206: Obrovský balvan nebo skalní věž -->
+    <!-- 206: Obrovský balvan nebo skalní věž (kreslí se skutečným půdorysem) -->
     <symbol id="sym206" type="area">
         <style facecolor="#000000" edgecolor="none" linewidth="0" />
     </symbol>
 
-    <!-- 207: Shluk balvanů -->
+    <!-- 207: Shluk balvanů (Stopa 4.8x4.0m -> semi 2.4/2.0) -->
     <symbol id="sym207" type="point">
-        <path d="M 0 -3.4 L 4.1 4.1 L -4.1 4.1 Z" />
+        <path d="M 0 -2.0 L 2.4 2.0 L -2.4 2.0 Z" />
         <style facecolor="#000000" edgecolor="#000000" linewidth="0" />
     </symbol>
 
@@ -167,10 +198,10 @@
         <style facecolor="#90e8ff" edgecolor="#21d1ff" linewidth="0.4" />
     </symbol>
 
-    <!-- 303: Jáma s vodou -->
+    <!-- 303: Jáma s vodou (Stopa 4.4x5.0m -> semi 2.2/2.5) -->
     <symbol id="sym303" type="point">
-        <path d="M -3.6 -3.8 L 0 4.4 L 3.6 -3.8" />
-        <style facecolor="none" edgecolor="#21d1ff" linewidth="0.5" />
+        <path d="M 2.5 0 A 2.5 2.5 0 0 2.5 -2.5 0 A 2.5 2.5 0 0 2.5 2.5 0 Z" />
+        <style facecolor="#21d1ff" edgecolor="#21d1ff" linewidth="0" />
     </symbol>
 
     <!-- 305: Malý překonatelný vodní tok -->
@@ -203,22 +234,22 @@
         <style facecolor="none" edgecolor="none" linewidth="0" linestyle="solid" hatchcolor="#21d1ff" hatchdistance="2.6" hatchwidth="0.35" hatchstyle="(0, (1.8, 1.8))" />
     </symbol>
 
-    <!-- 311: Malá fontána nebo studna -->
+    <!-- 311: Malá fontána nebo studna (Stopa 3.6x3.6m -> semi 1.8) -->
     <symbol id="sym311" type="point">
-        <path d="M -5.1 -5.1 L 5.1 5.1 M -5.1 5.1 L 5.1 -5.1" />
-        <style facecolor="none" edgecolor="#21d1ff" linewidth="0.6" />
+        <path d="M -1.8 -1.8 L 1.8 1.8 M -1.8 1.8 L 1.8 -1.8" />
+        <style facecolor="none" edgecolor="#21d1ff" linewidth="0.35" />
     </symbol>
 
-    <!-- 312: Pramen -->
+    <!-- 312: Pramen (Stopa 4.8x2.4m -> semi 2.4/1.2) -->
     <symbol id="sym312" type="point">
-        <path d="M 0 -3.4 L 4.1 4.1 L -4.1 4.1 Z" />
-        <style facecolor="#21d1ff" edgecolor="#21d1ff" linewidth="0" />
+        <path d="M -1.2 0 A 1.2 1.2 0 0 0 1.2 0" />
+        <style facecolor="none" edgecolor="#21d1ff" linewidth="0.35" />
     </symbol>
 
-    <!-- 313: Výrazný vodní objekt -->
+    <!-- 313: Výrazný vodní objekt (Stopa 4.8m diam -> r=2.4) -->
     <symbol id="sym313" type="point">
-        <path d="M 6.8 0 A 6.8 6.8 0 0 6.8 -6.8 0 A 6.8 6.8 0 0 6.8 6.8 0 Z" />
-        <style facecolor="none" edgecolor="#21d1ff" linewidth="0.5" />
+        <path d="M 2.4 0 A 2.4 2.4 0 0 2.4 -2.4 0 A 2.4 2.4 0 0 2.4 2.4 0 Z" />
+        <style facecolor="none" edgecolor="#21d1ff" linewidth="0.35" />
     </symbol>
 
 
@@ -312,34 +343,34 @@
         <style color="#000000" linewidth="0.4252" linestyle="(0, (0.8505, 0.567))" />
     </symbol>
 
-    <!-- 417: Výrazný velký strom -->
+    <!-- 417: Výrazný velký strom (Stopa 4.8m diam, maska OM 5.6m -> r=2.4/2.8) -->
     <symbol id="sym417a" type="point">
-        <path d="M 8 0 A 8 8 0 0 8 -8 0 A 8 8 0 0 8 8 0 Z" />
+        <path d="M 2.8 0 A 2.8 2.8 0 0 2.8 -2.8 0 A 2.8 2.8 0 0 2.8 2.8 0 Z" />
         <style facecolor="#ffffff" edgecolor="#ffffff" linewidth="0" />
     </symbol>
     <symbol id="sym417b" type="point">
-        <path d="M 6.8 0 A 6.8 6.8 0 0 6.8 -6.8 0 A 6.8 6.8 0 0 6.8 6.8 0 Z" />
-        <style facecolor="none" edgecolor="#0e990e" linewidth="0.6" />
+        <path d="M 2.4 0 A 2.4 2.4 0 0 2.4 -2.4 0 A 2.4 2.4 0 0 2.4 2.4 0 Z" />
+        <style facecolor="none" edgecolor="#0e990e" linewidth="0.35" />
     </symbol>
 
-    <!-- 418: Výrazný keř nebo malý strom -->
+    <!-- 418: Výrazný keř nebo malý strom (Stopa 3.2m diam -> r=1.6) -->
     <symbol id="sym418a" type="point">
-        <path d="M 4.5 0 A 4.5 4.5 0 0 4.5 -4.5 0 A 4.5 4.5 0 0 4.5 4.5 0 Z" />
+        <path d="M 1.6 0 A 1.6 1.6 0 0 1.6 -1.6 0 A 1.6 1.6 0 0 1.6 1.6 0 Z" />
         <style facecolor="#0e990e" edgecolor="none" linewidth="0" />
     </symbol>
     <symbol id="sym418b" type="point">
-        <path d="M 1.4 0 A 1.4 1.4 0 0 1.4 -1.4 0 A 1.4 1.4 0 0 1.4 1.4 0 Z" />
+        <path d="M 0.5 0 A 0.5 0.5 0 0 0.5 -0.5 0 A 0.5 0.5 0 0 0.5 0.5 0 Z" />
         <style facecolor="#ffffff" edgecolor="none" linewidth="0" />
     </symbol>
 
-    <!-- 419: Výrazný vegetační objekt (kříž + bílá maska) -->
+    <!-- 419: Výrazný vegetační objekt (Stopa 4.8x4.8m, maska OM 7.1x7.1 -> polovina 2.4/3.55) -->
     <symbol id="sym419mask" type="point">
-        <path d="M -5 -5 L 5 5 M -5 5 L 5 -5" />
-        <style facecolor="none" edgecolor="#ffffff" linewidth="1.4" />
+        <path d="M -3.55 -3.55 L 3.55 3.55 M -3.55 3.55 L 3.55 -3.55" />
+        <style facecolor="none" edgecolor="#ffffff" linewidth="0.7" />
     </symbol>
     <symbol id="sym419" type="point">
-        <path d="M -5 -5 L 5 5 M -5 5 L 5 -5" />
-        <style facecolor="none" edgecolor="#0e990e" linewidth="0.6" />
+        <path d="M -2.4 -2.4 L 2.4 2.4 M -2.4 2.4 L 2.4 -2.4" />
+        <style facecolor="none" edgecolor="#0e990e" linewidth="0.35" />
     </symbol>
 
 
@@ -488,42 +519,42 @@
         <style facecolor="#cccccc" edgecolor="#000000" linewidth="0.3" />
     </symbol>
 
-    <!-- 522.1: Pilíř -->
+    <!-- 522.1: Pilíř (min. rozměr ~1x1m -> semi 0.5) -->
     <symbol id="sym522-1" type="point">
-        <path d="M -1.5 -1.5 L 1.5 -1.5 L 1.5 1.5 L -1.5 1.5 Z" />
+        <path d="M -0.5 -0.5 L 0.5 -0.5 L 0.5 0.5 L -0.5 0.5 Z" />
         <style facecolor="#000000" edgecolor="none" linewidth="0" />
     </symbol>
 
-    <!-- 524: Vysoká věž -->
+    <!-- 524: Vysoká věž (Stopa 8.4m diam -> r=4.2, kříž o stejném poloměru) -->
     <symbol id="sym524a" type="point">
-        <path d="M 0 -7 L 0 7 M -7 0 L 7 0" />
-        <style facecolor="none" edgecolor="#000000" linewidth="0.35" />
+        <path d="M 0 -4.2 L 0 4.2 M -4.2 0 L 4.2 0" />
+        <style facecolor="none" edgecolor="#000000" linewidth="0.25" />
     </symbol>
     <symbol id="sym524b" type="point">
-        <path d="M 4.2 0 A 4.2 4.2 0 0 4.2 -4.2 0 A 4.2 4.2 0 0 4.2 4.2 0 Z" />
+        <path d="M 2.5 0 A 2.5 2.5 0 0 2.5 -2.5 0 A 2.5 2.5 0 0 2.5 2.5 0 Z" />
         <style facecolor="#000000" edgecolor="none" linewidth="0" />
     </symbol>
 
-    <!-- 525: Malá věž / posed -->
+    <!-- 525: Malá věž / posed (Stopa 6x6m -> semi 3) -->
     <symbol id="sym525" type="point">
-        <path d="M -8.5 -8.5 L 8.5 -8.5 M 0 -8.5 L 0 8.5" />
-        <style facecolor="none" edgecolor="#000000" linewidth="0.5" />
+        <path d="M -3 -3 L 3 -3 M 0 -3 L 0 3" />
+        <style facecolor="none" edgecolor="#000000" linewidth="0.35" />
     </symbol>
 
-    <!-- 526: Mohyla, pomník, socha, malý památník nebo hraniční kámen -->
+    <!-- 526: Mohyla, pomník atd. (Stopa 4m diam -> r=2) -->
     <symbol id="sym526a" type="point">
-        <path d="M 5.6 0 A 5.6 5.6 0 0 5.6 -5.6 0 A 5.6 5.6 0 0 5.6 5.6 0 Z" />
-        <style facecolor="none" edgecolor="#000000" linewidth="0.5" />
+        <path d="M 2 0 A 2 2 0 0 2 -2 0 A 2 2 0 0 2 2 0 Z" />
+        <style facecolor="none" edgecolor="#000000" linewidth="0.35" />
     </symbol>
     <symbol id="sym526b" type="point">
-        <path d="M 0.7 0 A 0.7 0.7 0 0 1 -0.7 0 A 0.7 0.7 0 0 1 0.7 0 Z" />
+        <path d="M 0.3 0 A 0.3 0.3 0 0 1 -0.3 0 A 0.3 0.3 0 0 1 0.3 0 Z" />
         <style facecolor="#000000" edgecolor="none" linewidth="0" />
     </symbol>
 
-    <!-- 527: Krmelec -->
+    <!-- 527: Krmelec (Stopa 6x6m -> semi 3) -->
     <symbol id="sym527" type="point">
-        <path d="M -8.5 -8.5 L 8.5 -8.5 L 8.5 8.5 L -8.5 8.5 Z M -8.5 -8.5 L 8.5 8.5 M -8.5 8.5 L 8.5 -8.5" />
-        <style facecolor="none" edgecolor="#000000" linewidth="0.3" />
+        <path d="M -3 -3 L 3 -3 L 3 3 L -3 3 Z M -3 -3 L 3 3 M -3 3 L 3 -3" />
+        <style facecolor="none" edgecolor="#000000" linewidth="0.25" />
     </symbol>
 
     <!-- 528: Výrazný liniový objekt -->
@@ -536,16 +567,16 @@
         <style color="#000000" linewidth="0.7" linestyle="solid" />
     </symbol>
 
-    <!-- 530: Výrazný umělý objekt - kroužek -->
+    <!-- 530: Výrazný umělý objekt - kroužek (Stopa 4m diam -> r=2) -->
     <symbol id="sym530" type="point">
-        <path d="M 5.6 0 A 5.6 5.6 0 0 5.6 -5.6 0 A 5.6 5.6 0 0 5.6 5.6 0 Z" />
-        <style facecolor="none" edgecolor="#000000" linewidth="0.24" />
+        <path d="M 2 0 A 2 2 0 0 2 -2 0 A 2 2 0 0 2 2 0 Z" />
+        <style facecolor="none" edgecolor="#000000" linewidth="0.2" />
     </symbol>
 
-    <!-- 531: Výrazný umělý objekt - křížek -->
+    <!-- 531: Výrazný umělý objekt - křížek (Stopa 4.8x4.8m -> polovina 2.4) -->
     <symbol id="sym531" type="point">
-        <path d="M -5.6 -5.6 L 5.6 5.6 M -5.6 5.6 L 5.6 -5.6" />
-        <style facecolor="none" edgecolor="#000000" linewidth="0.6" />
+        <path d="M -2.4 -2.4 L 2.4 2.4 M -2.4 2.4 L 2.4 -2.4" />
+        <style facecolor="none" edgecolor="#000000" linewidth="0.35" />
     </symbol>
 
     <!-- 532: Schodiště -->
@@ -594,9 +625,9 @@
         <style facecolor="none" edgecolor="#a000a0" linewidth="0.8" />
     </symbol>
 
-    <!-- 703: Kontrola (kružnice) -->
+    <!-- 703: Kontrola (Stopa 24m diam -> r=12) -->
     <symbol id="sym703" type="point">
-        <path d="M 8.5 0 A 8.5 8.5 0 0 8.5 -8.5 0 A 8.5 8.5 0 0 8.5 8.5 0 Z" />
+        <path d="M 12 0 A 12 12 0 0 12 -12 0 A 12 12 0 0 12 12 0 Z" />
         <style facecolor="none" edgecolor="#c800c8" linewidth="1.0" />
     </symbol>
 
