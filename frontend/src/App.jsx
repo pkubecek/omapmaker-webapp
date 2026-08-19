@@ -205,7 +205,7 @@ export default function App() {
     }
   }, [addLog]);
 
-  const canRun = Boolean(files.dtm && files.dsm);
+  const canRun = Boolean(files.dtm);
   const hasDtm = Boolean(files.dtm?.serverPath || (files.dtm && files.dtm.size > 0));
   const hasDsm = Boolean(files.dsm?.serverPath || (files.dsm && files.dsm.size > 0));
   const running = job.status === 'running' || job.status === 'queued';
@@ -213,7 +213,7 @@ export default function App() {
   let topStatus = 'Připraveno';
   if (!hasDtm && !hasDsm) topStatus = 'Nahrajte DTM a DSM';
   else if (!hasDtm) topStatus = 'Chybí DTM';
-  else if (!hasDsm) topStatus = 'Chybí DSM';
+  else if (!hasDsm) topStatus = 'Připraveno (bez DSM — bez vegetace)';
   else if (running) topStatus = 'Zpracovávám...';
   else if (job.status === 'done') topStatus = 'Mapa vygenerována ✓';
   else if (job.status === 'error') topStatus = 'Chyba!';
