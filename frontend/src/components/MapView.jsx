@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { startCuzkDownload, getCuzkStatus, startPolandDownload, getPolandStatus } from '../api';
+import { startCuzkDownload, getCuzkStatus, startPolandDownload, getPolandStatus,
+  startItalyDownload, getItalyStatus } from '../api';
 import EUROPE_BORDERS from './europeBorders';
 
 // Tooltip styl pro country polygony
@@ -141,6 +142,7 @@ function fmtCoord(v) { return v.toFixed(4); }
 const DATA_SOURCES = [
   { key: 'cz',  flag: '🇨🇿', label: 'ČÚZK',   sublabel: 'Česká republika',  available: true  },
   { key: 'pl',  flag: '🇵🇱', label: 'GUGiK',   sublabel: 'Polsko (Beta)',           available: true  },
+  { key: 'it',  flag: '🇮🇹', label: 'SITR',    sublabel: 'Sicílie (Beta)',   available: true  },
   { key: 'sk',  flag: '🇸🇰', label: 'ÚGKK SR', sublabel: 'Slovensko',        available: false },
   { key: 'at',  flag: '🇦🇹', label: 'BEV',     sublabel: 'Rakousko',         available: false },
   { key: 'de',  flag: '🇩🇪', label: 'BKG',     sublabel: 'Německo',          available: false },
@@ -590,6 +592,51 @@ export default function MapView({ bbox, onBboxChange, onCuzkComplete, onHelp, is
     }, 3000);
   }, [bbox, cuzkState, onCuzkComplete]);
 
+  // Itálie (Sicílie) stahování s pollingem
+  const handleItalyDownload = useCallback(async () => {
+    if (!bbox || cuzkState === 'downloading') return;
+    setCuzkState('downloading');
+    setCuzkProgress(5);
+    setCuzkMsg('Spouštím stahování ze SITR...');
+
+    let dlId = null;
+    try {
+      const { download_id } = await startItalyDownload(bbox);
+      dlId = download_id;
+    } catch (err) {
+      setCuzkMsg(`Chyba: ${err.response?.data?.detail || err.message}`);
+      setCuzkState('error');
+      return;
+    }
+
+    const poll = setInterval(async () => {
+      try {
+        const s = await getItalyStatus(dlId);
+        setCuzkProgress(s.progress || 0);
+        setCuzkMsg(s.step || '');
+
+        if (s.status === 'done') {
+          clearInterval(poll);
+          setCuzkMsg('Hotovo! (bez DSM — SITR ho nepublikuje)');
+          setCuzkState('done');
+          setCuzkProgress(100);
+          const dmrServerPath = s.dmr_path;
+          const crs = s.crs || 'EPSG:25833';
+          // dmp_path je vždy prázdný — pipeline poběží bez vegetace
+          if (onCuzkComplete) onCuzkComplete(dmrServerPath, null, crs, 'server_path');
+        } else if (s.status === 'error') {
+          clearInterval(poll);
+          setCuzkMsg(`Chyba: ${s.error || s.step}`);
+          setCuzkState('error');
+        }
+      } catch (pollErr) {
+        clearInterval(poll);
+        setCuzkMsg(`Chyba připojení: ${pollErr.message}`);
+        setCuzkState('error');
+      }
+    }, 3000);
+  }, [bbox, cuzkState, onCuzkComplete]);
+
   const bboxLabel = bbox
     ? `${fmtCoord(bbox.min_lat)}–${fmtCoord(bbox.max_lat)} N · ${fmtCoord(bbox.min_lon)}–${fmtCoord(bbox.max_lon)} E`
     : '';
@@ -662,13 +709,22 @@ export default function MapView({ bbox, onBboxChange, onCuzkComplete, onHelp, is
             <span style={{ ...S.cuzkLabel, fontStyle: 'italic' }}>LiDAR · EPSG:2180</span>
           )}
 
+          {/* IT-specifické: info */}
+          {country === 'it' && (
+            <span style={{ ...S.cuzkLabel, fontStyle: 'italic' }}>DTM 2m · EPSG:25833 · bez DSM</span>
+          )}
+
           {/* Tlačítko stáhnout */}
           {cuzkState === 'idle' && (
             <button style={{
               ...S.cuzkBtn,
               width: isMobile ? '100%' : 'auto',
               padding: isMobile ? '8px 12px' : '5px 12px',
-            }} onClick={country === 'cz' ? handleCuzkDownload : handlePolandDownload}>
+            }} onClick={
+              country === 'cz' ? handleCuzkDownload :
+              country === 'pl' ? handlePolandDownload :
+              handleItalyDownload
+            }>
               ↓ Stáhnout DMR + DMP
             </button>
           )}
@@ -690,7 +746,11 @@ export default function MapView({ bbox, onBboxChange, onCuzkComplete, onHelp, is
             <>
               <span style={{ ...S.cuzkMsg, color: 'var(--rock)' }}>{cuzkMsg}</span>
               <button style={{ ...S.cuzkBtn, background: 'var(--text-secondary)' }}
-                onClick={country === 'cz' ? handleCuzkDownload : handlePolandDownload}>
+                onClick={
+                  country === 'cz' ? handleCuzkDownload :
+                  country === 'pl' ? handlePolandDownload :
+                  handleItalyDownload
+                }>
                 Zkusit znovu
               </button>
             </>

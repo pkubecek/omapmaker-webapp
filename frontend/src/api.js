@@ -87,3 +87,17 @@ export async function getAustriaStatus(downloadId) {
   const res = await api.get(`/api/download/austria/${downloadId}`);
   return res.data;
 }
+
+// ---------------------------------------------------------------------------
+// SITR (Sicílie, Itálie)
+// ---------------------------------------------------------------------------
+
+export async function startItalyDownload(bbox) {
+  const res = await api.post('/api/download/italy', { bbox });
+  return res.data;
+}
+
+export async function getItalyStatus(downloadId) {
+  const res = await api.get(`/api/download/italy/${downloadId}`);
+  return res.data;
+}

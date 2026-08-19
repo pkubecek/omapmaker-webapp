@@ -1,5 +1,5 @@
 """
-routes/download.py — stahování dat z ČÚZK, GUGiK (Polsko) a BEV (Rakousko) jako background job.
+routes/download.py — stahování dat z ČÚZK, GUGiK (Polsko), BEV (Rakousko) a SITR (Sicílie) jako background job.
 """
 import os
 import uuid
@@ -12,6 +12,7 @@ from pydantic import BaseModel
 from ..core.downloader import download_cuzk as _download_cuzk
 from ..core.poland_downloader import download_poland as _download_poland
 from ..core.austria_downloader import download_austria as _download_austria
+from ..core.italy_downloader import download_italy as _download_italy
 
 router = APIRouter()
 
@@ -47,6 +48,7 @@ JOBS_BASE = os.environ.get("OMAPMAKER_JOBS_DIR", "./jobs")
 _cuzk_read, _cuzk_write = _make_status_helpers(JOBS_BASE + "/cuzk")
 _pl_read,   _pl_write   = _make_status_helpers(JOBS_BASE + "/poland")
 _at_read,   _at_write   = _make_status_helpers(JOBS_BASE + "/austria")
+_it_read,   _it_write   = _make_status_helpers(JOBS_BASE + "/italy")
 
 
 # ---------------------------------------------------------------------------
@@ -68,6 +70,9 @@ class PolandRequest(BaseModel):
     use_lidar_point_cloud: bool = True
 
 class AustriaRequest(BaseModel):
+    bbox: BboxModel
+
+class ItalyRequest(BaseModel):
     bbox: BboxModel
 
 
@@ -221,3 +226,33 @@ async def get_austria_dmr(dl_id: str):
 @router.get("/download/austria/{dl_id}/dmp")
 async def get_austria_dmp(dl_id: str):
     return _file_response(_at_read, dl_id, "dmp_path", "DSM")
+
+
+# ---------------------------------------------------------------------------
+# SITR (Sicílie, Itálie)
+# ---------------------------------------------------------------------------
+
+@router.post("/download/italy")
+async def start_italy_download(req: ItalyRequest):
+    dl_id = str(uuid.uuid4())[:8]
+    out_dir = os.path.join(JOBS_BASE, "italy", dl_id)
+    os.makedirs(out_dir, exist_ok=True)
+    _it_write(dl_id, {"status": "running", "progress": 0, "step": "Spouštím stahování ze SITR (Sicílie)...",
+                       "dmr_path": None, "dmp_path": None, "crs": "EPSG:25833", "error": None})
+    _run_download(dl_id, _download_italy,
+                  {"bbox": req.bbox.model_dump(), "out_dir": out_dir},
+                  _it_read, _it_write)
+    return {"download_id": dl_id}
+
+@router.get("/download/italy/{dl_id}")
+async def get_italy_status(dl_id: str):
+    s = _it_read(dl_id)
+    if s is None:
+        raise HTTPException(status_code=404, detail="Download nenalezen.")
+    return {"download_id": dl_id, **s}
+
+@router.get("/download/italy/{dl_id}/dmr")
+async def get_italy_dmr(dl_id: str):
+    return _file_response(_it_read, dl_id, "dmr_path", "DTM")
+
+# Pozn.: žádný /dmp endpoint — SITR DSM nepublikuje (viz italy_downloader.py)
