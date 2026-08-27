@@ -24,6 +24,7 @@ from scipy.ndimage import binary_dilation, gaussian_filter, maximum_filter, mini
 from pyproj import Transformer
 
 from .symbols import SymbolLibrary, plot_symbol
+from .exporter import _oom_isom_code
 
 
 SCALE_DEFAULT = 10000
@@ -324,6 +325,7 @@ def render_map(
     output_png_path,
     progress_cb=None,
     collector=None,
+    selected_codes: set | None = None,
 ) -> dict:
     """
     Sestaví matplotlib mapu a uloží ji jako PNG + world file.
@@ -380,6 +382,9 @@ def render_map(
         try:
             veg_clipped = gpd.clip(gdf_vegetation, clip_box_map)
             for class_name, sym_key in VEG_MAP.items():
+                code = _oom_isom_code(sym_key)
+                if selected_codes is not None and code not in selected_codes:
+                    continue
                 if class_name in veg_clipped.get("class_name", pd.Series()).values:
                     mask = veg_clipped["class_name"] == class_name
                     sub = veg_clipped[mask]
@@ -391,7 +396,7 @@ def render_map(
 
     # Skály a vrstevnice
     if layer_visibility.get("rocks", True):
-        if gdf_rocks is not None and not gdf_rocks.empty:
+        if gdf_rocks is not None and not gdf_rocks.empty and (selected_codes is None or "201" in selected_codes):
             _cb("Kreslím skály...")
             try:
                 rocks_cl = gpd.clip(gdf_rocks, clip_box_map)
@@ -406,18 +411,20 @@ def render_map(
             ("sym102", "major", 25),
             ("sym103", "minor", 25),
         ]:
+            if selected_codes is not None and _oom_isom_code(sym_key) not in selected_codes:
+                continue
             gdf_c = contour_layers.get(layer_key)
             if gdf_c is not None and not gdf_c.empty:
                 plot_symbol(ax, sym_key, gdf_c, zo, sym_library, current_crs)
 
     # Terénní mikrotvary
     if layer_visibility.get("contours", True):
-        if depressions:
+        if depressions and (selected_codes is None or "111" in selected_codes):
             _cb("Kreslím prohlubně...")
             dep_gdf = gpd.GeoDataFrame(geometry=depressions, crs=current_crs)
             # Prohlubně (sym111) se kreslí otočené o 180° — stejně jako v originálu
             _plot_symbol_rotated(ax, "sym111", dep_gdf, 21, sym_library, current_crs, rotate_deg=180)
-        if knolls:
+        if knolls and (selected_codes is None or "109" in selected_codes):
             _cb("Kreslím kupky...")
             kno_gdf = gpd.GeoDataFrame(geometry=knolls, crs=current_crs)
             plot_symbol(ax, "sym109", kno_gdf, 21, sym_library, current_crs)
@@ -439,6 +446,7 @@ def render_map(
         sym_library=sym_library,
         current_crs=current_crs,
         collector=collector,
+        selected_codes=selected_codes,
     )
 
     # Uložení PNG

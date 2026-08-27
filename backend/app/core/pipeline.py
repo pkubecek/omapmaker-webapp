@@ -9,6 +9,7 @@ import os
 import gc
 import time
 import math
+import pickle
 import tempfile
 import numpy as np
 import rasterio
@@ -42,6 +43,59 @@ from .zabaged_wfs import download_zabaged_wfs
 # Max velikost dlaždice v metrech. 1500×1500m při 0.5m pixelu = 9M pixelů = ~700 MB
 TILE_SIZE_M = 1500
 OVERLAP_M = 150   # překryv kvůli artefaktům na hranicích
+
+
+def _cache_path(output_dir, job_id):
+    return os.path.join(output_dir, f"{job_id}_vectorcache.pkl")
+
+
+def render_from_cache(job_id: str, output_dir: str, selected_codes=None,
+                       layer_visibility: dict | None = None,
+                       progress_cb=None) -> dict:
+    """
+    Znovu vyrenderuje PNG z už spočtených vektorových dat (bez opětovného
+    zpracování LiDAR dlaždic a bez nového stažení OSM/ZABAGED). Používá se
+    pro export s jiným výběrem vrstev poté, co uživatel proklikal live náhled.
+    GPKG se v tomto kroku znovu negeneruje — ten vzniká jen u plného run_pipeline.
+    """
+    from .renderer import render_map
+
+    cache_path = _cache_path(output_dir, job_id)
+    with open(cache_path, "rb") as f:
+        cache = pickle.load(f)
+
+    sym_library = SymbolLibrary(cache["sym_xml"])
+
+    def cb(msg):
+        if progress_cb:
+            progress_cb(msg)
+
+    output_png = os.path.join(output_dir, f"{job_id}_OMap_custom.png")
+    result = render_map(
+        grid_x=None, grid_y=None,
+        dmr_grid_cubic=None, dmr_grid_linear=None,
+        gdf_vegetation=cache["merged"]["gdf_vegetation"],
+        gdf_rocks=cache["merged"]["gdf_rocks"],
+        contour_layers=cache["merged"]["contour_layers"],
+        depressions=cache["merged"]["depressions"],
+        knolls=cache["merged"]["knolls"],
+        gdf_osm=cache["gdf_osm"],
+        zabaged_gdfs=cache["zabaged_gdfs"],
+        isom_gdfs=cache["isom_gdfs"],
+        extent=cache["global_extent"],
+        clip_polygon=cache["merged"]["clip_polygon"],
+        sym_library=sym_library,
+        current_crs=cache["current_crs"],
+        scale=cache["scale"],
+        paper_format=cache["paper_format"],
+        north_rotation=cache["north_rotation"],
+        layer_visibility=layer_visibility or cache["layer_visibility"],
+        output_png_path=output_png,
+        progress_cb=cb,
+        collector=None,
+        selected_codes=set(selected_codes) if selected_codes else None,
+    )
+    return {"png_path": result["png_path"], "world_file_path": result.get("world_file_path")}
 
 
 def _compute_tiles(minx, maxx, miny, maxy, tile_size, overlap):
@@ -317,6 +371,8 @@ def run_pipeline(job_id: str, params: dict, file_paths: dict,
         "vegetation": True, "roads": True, "buildings": True,
         "man_made": True, "magnetic_lines": False,
     })
+    _sel = params.get("selected_codes")
+    SELECTED_CODES = set(_sel) if _sel else None
 
     dep_params = params.get("depressions", {})
     DEP_MIN_DIAM = float(dep_params.get("min_diameter", 2))
@@ -559,6 +615,26 @@ def run_pipeline(job_id: str, params: dict, file_paths: dict,
 
     global_extent = (global_minx, global_maxx, global_miny, global_maxy)
 
+    # Cache vektorových dat pro pozdější re-render s jiným výběrem vrstev
+    # (viz render_from_cache) — bez opětovného zpracování LiDAR dlaždic.
+    try:
+        with open(_cache_path(output_dir, job_id), "wb") as f:
+            pickle.dump({
+                "merged": merged,
+                "gdf_osm": gdf_osm,
+                "zabaged_gdfs": zabaged_gdfs,
+                "isom_gdfs": isom_gdfs,
+                "global_extent": global_extent,
+                "current_crs": CURRENT_CRS,
+                "scale": SCALE,
+                "paper_format": PAPER_FORMAT,
+                "north_rotation": NORTH_ROTATION,
+                "layer_visibility": LAYER_VISIBILITY,
+                "sym_xml": sym_xml,
+            }, f, protocol=pickle.HIGHEST_PROTOCOL)
+    except Exception as e:
+        print(f"[pipeline] Cache pickle chyba (re-render s jiným výběrem nebude dostupný): {e}")
+
     # GPKG collector — vytvořen PŘED render_map, aby ho add_vector_layers
     # mohl naplnit ve stejném průchodu jako kreslí PNG. Díky tomu GPKG
     # obsahuje přesně to samé, co se vykreslí (žádná oddělená/neúplná
@@ -571,19 +647,19 @@ def run_pipeline(job_id: str, params: dict, file_paths: dict,
     ]:
         gdf_c = merged["contour_layers"].get(layer_key)
         if gdf_c is not None and not gdf_c.empty:
-            collector.collect(sym_key, gdf_c)
+            collector.collect(sym_key, gdf_c, group="contours")
 
     # Skály
     if merged["gdf_rocks"] is not None and not merged["gdf_rocks"].empty:
-        collector.collect("sym201", merged["gdf_rocks"])
+        collector.collect("sym201", merged["gdf_rocks"], group="rocks")
 
     # Mikrotvary
     if merged["depressions"]:
         collector.collect("sym111", gpd.GeoDataFrame(
-            geometry=merged["depressions"], crs=CURRENT_CRS))
+            geometry=merged["depressions"], crs=CURRENT_CRS), group="contours")
     if merged["knolls"]:
         collector.collect("sym109", gpd.GeoDataFrame(
-            geometry=merged["knolls"], crs=CURRENT_CRS))
+            geometry=merged["knolls"], crs=CURRENT_CRS), group="contours")
 
     # Vegetace — všechny třídy (z LiDAR rastru, mimo vector_layers.py)
     VEG_SYM = {
@@ -596,7 +672,7 @@ def run_pipeline(job_id: str, params: dict, file_paths: dict,
         for class_name, sym_key in VEG_SYM.items():
             subset = veg[veg["class_name"] == class_name]
             if not subset.empty:
-                collector.collect(sym_key, subset)
+                collector.collect(sym_key, subset, group="vegetation")
 
     # Render — add_vector_layers (volaný uvnitř render_map) zároveň
     # naplní collector přesně tím, co kreslí do PNG (OSM + ZABAGED + ISOM).
@@ -626,6 +702,7 @@ def run_pipeline(job_id: str, params: dict, file_paths: dict,
         output_png_path=output_png,
         progress_cb=lambda msg: cb(90, msg),
         collector=collector,
+        selected_codes=SELECTED_CODES,
     )
 
     # ISOM vlastní vrstvy — generický fallback i pro kódy, které
@@ -634,7 +711,16 @@ def run_pipeline(job_id: str, params: dict, file_paths: dict,
         if gdf_i is None or gdf_i.empty:
             continue
         clean_key = isom_key.replace(".shp", "").replace(".SHP", "")
-        collector.collect(clean_key, gdf_i)
+        collector.collect(clean_key, gdf_i, group="other")
+
+    # GeoJSON export pro klientský live náhled (výběr vrstev)
+    vectors_path = None
+    try:
+        vectors_path = os.path.join(output_dir, f"{job_id}_vectors.geojson")
+        collector.export_geojson(vectors_path, simplify_tolerance=0.5)
+    except Exception as e:
+        print(f"[pipeline] GeoJSON preview export chyba: {e}")
+        vectors_path = None
 
     # GPKG export
     gpkg_path = None
@@ -655,6 +741,7 @@ def run_pipeline(job_id: str, params: dict, file_paths: dict,
         "png_path": render_result["png_path"],
         "gpkg_path": gpkg_path,
         "world_file_path": render_result.get("world_file_path"),
+        "vectors_path": vectors_path,
     }
 
     release_memory()

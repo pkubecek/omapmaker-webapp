@@ -29,6 +29,17 @@ export function getGpkgUrl(jobId) {
   return `${BASE}/api/jobs/${jobId}/gpkg`;
 }
 
+export function getVectorsUrl(jobId) {
+  return `${BASE}/api/jobs/${jobId}/vectors`;
+}
+
+export async function renderCustomPng(jobId, selectedCodes) {
+  const res = await api.post(`/api/jobs/${jobId}/render`, {
+    selected_codes: selectedCodes,
+  });
+  return res.data; // { png_url: "..." }
+}
+
 // ---------------------------------------------------------------------------
 // ČÚZK (Česká republika)
 // ---------------------------------------------------------------------------

@@ -7,6 +7,7 @@ import pandas as pd
 from shapely.geometry import box
 
 from .symbols import SymbolLibrary, plot_symbol
+from .exporter import _oom_isom_code
 
 
 def _get_col(df, col):
@@ -28,6 +29,7 @@ def add_vector_layers(
     ax, gdf, extent, zabaged_gdfs, dmr_grid, grid_x, grid_y,
     visibility, isom_gdfs, sym_library: SymbolLibrary, current_crs: str,
     collector=None,
+    selected_codes: set | None = None,
 ):
     print(f"[vector_layers] extent={extent}")
     print(f"[vector_layers] ZABAGED klíče: {list(zabaged_gdfs.keys())}")
@@ -50,6 +52,14 @@ def add_vector_layers(
 
     _CLIFF_SYMS = {"sym104", "sym201", "sym202"}
 
+    _current_group = {"name": None}
+
+    def _section(name, default=True):
+        """Označí aktuální sekci (kvůli group tagu do collectoru) a vrátí
+        stejnou hodnotu jako dřívější `visibility.get(name, default)`."""
+        _current_group["name"] = name
+        return visibility.get(name, default)
+
     def pm(sym_key, zorder, mask, src_gdf, to_mask=True):
         if src_gdf is None or src_gdf.empty:
             return
@@ -63,15 +73,23 @@ def add_vector_layers(
             subset = src_gdf.copy()
         if subset.empty:
             return
+
+        code = _oom_isom_code(sym_key)
+        should_draw = ax is not None and (selected_codes is None or code in selected_codes)
+
         # Pro cliff symboly předej DMR grid pro správný směr fousku
-        if ax is not None:
+        if should_draw:
             if sym_key in _CLIFF_SYMS:
                 plot_symbol(ax, sym_key, subset, zorder, sym_library, current_crs,
                             dmr_grid=dmr_grid, grid_x=grid_x, grid_y=grid_y)
             else:
                 plot_symbol(ax, sym_key, subset, zorder, sym_library, current_crs)
+
+        # Sbírá se VŽDY, nezávisle na výběru — vektorová data pro GPKG a pro
+        # GeoJSON preview musí obsahovat kompletní sadu, filtruje se jen
+        # samotné kreslení do PNG.
         if collector is not None:
-            collector.collect(sym_key, subset)
+            collector.collect(sym_key, subset, group=_current_group["name"])
 
     if gdf is not None and not gdf.empty:
         gdf = gdf.reset_index(drop=True)
@@ -115,7 +133,7 @@ def add_vector_layers(
     # ----------------------------------------------------------------
     # TERRAIN
     # ----------------------------------------------------------------
-    if visibility.get("contours", True):
+    if _section("contours"):
         # 104 - Zemní sráz
         cgdf = isom("104")
         if cgdf is not None:
@@ -151,7 +169,7 @@ def add_vector_layers(
     # ----------------------------------------------------------------
     # ROCKS
     # ----------------------------------------------------------------
-    if visibility.get("rocks", True):
+    if _section("rocks"):
         # 203-1 - Jeskyně
         cgdf = isom("203.1")
         if cgdf is not None:
@@ -230,7 +248,7 @@ def add_vector_layers(
     # ----------------------------------------------------------------
     # WATER
     # ----------------------------------------------------------------
-    if visibility.get("water", True):
+    if _section("water"):
         # 301 - Vodní plocha
         cgdf = isom("301")
         if cgdf is not None:
@@ -366,7 +384,7 @@ def add_vector_layers(
     # ----------------------------------------------------------------
     # VEGETATION
     # ----------------------------------------------------------------
-    if visibility.get("vegetation", True):
+    if _section("vegetation"):
         # 401 - Otevřený prostor
         cgdf = isom("401")
         if cgdf is not None:
@@ -480,7 +498,7 @@ def add_vector_layers(
     # ----------------------------------------------------------------
     # ROADS
     # ----------------------------------------------------------------
-    if visibility.get("roads", True):
+    if _section("roads"):
         # 501 - Parkoviště
         cgdf = isom("501")
         if cgdf is not None:
@@ -678,7 +696,7 @@ def add_vector_layers(
     # ----------------------------------------------------------------
     # MAN MADE
     # ----------------------------------------------------------------
-    if visibility.get("man_made", True):
+    if _section("man_made"):
         # 510 - El. vedení (nízké napětí / lanovky)
         cgdf = isom("510")
         if cgdf is not None:
@@ -729,7 +747,7 @@ def add_vector_layers(
             pm("sym515a", 30, c("barrier").isin(["city_wall", "retaining_wall", "wall"]), gdf_lines)
 
         # 520 - Privátní oblast
-        if visibility.get("private", True):
+        if _section("private"):
             cgdf = isom("520")
             if cgdf is not None:
                 pm("sym520", 1.5, None, cgdf, to_mask=False)
@@ -750,7 +768,7 @@ def add_vector_layers(
                        gdf_polys)
 
         # 521 - Budova
-        if visibility.get("buildings", True):
+        if _section("buildings"):
             cgdf = isom("521")
             if cgdf is not None:
                 pm("sym521", 50, None, cgdf, to_mask=False)

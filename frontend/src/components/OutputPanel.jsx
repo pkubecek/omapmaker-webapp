@@ -1,5 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { getPngUrl, getGpkgUrl } from '../api';
+import { getPngUrl, getGpkgUrl, getVectorsUrl, renderCustomPng } from '../api';
+import LayerSelector from './LayerSelector';
+import VectorPreview from './VectorPreview';
 
 const S = {
   panel: {
@@ -81,6 +83,15 @@ const S = {
   previewPlaceholder: { textAlign: 'center', color: 'var(--text-muted)', padding: 16 },
   placeholderIcon: { fontSize: 28, marginBottom: 6, opacity: 0.3 },
   placeholderText: { fontSize: 11, lineHeight: 1.4 },
+  toggleRow: {
+    display: 'flex', gap: 6, marginBottom: 10,
+  },
+  toggleBtn: {
+    flex: 1, padding: '5px 0', fontSize: 10, fontFamily: 'var(--mono)',
+    border: '0.5px solid var(--panel-border)', borderRadius: 'var(--radius-sm)',
+    background: 'none', color: 'var(--text-secondary)', cursor: 'pointer',
+  },
+  toggleBtnActive: { background: '#f0ead6', color: 'var(--text-primary)' },
   dlBtn: {
     display: 'flex',
     alignItems: 'center',
@@ -132,7 +143,7 @@ function RunBtn({ disabled, onClick, children }) {
 }
 
 // Tlačítko se stažením + hover efekt
-function DlBtn({ href, download, disabled, primary, children }) {
+function DlBtn({ href, download, disabled, primary, onClick, children }) {
   const [hovered, setHovered] = useState(false);
 
   const baseStyle = {
@@ -155,6 +166,19 @@ function DlBtn({ href, download, disabled, primary, children }) {
 
   if (disabled) {
     return <button style={baseStyle} disabled>{children}</button>;
+  }
+
+  if (onClick) {
+    return (
+      <button
+        onClick={onClick}
+        style={baseStyle}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+      >
+        {children}
+      </button>
+    );
   }
 
   return (
@@ -181,6 +205,11 @@ const STATUS_LABELS = {
 export default function OutputPanel({ job, logLines, canRun, running, onRun, isMobile }) {
   const logRef = useRef(null);
   const [lightbox, setLightbox] = useState(false);
+  const [viewMode, setViewMode] = useState('png'); // 'png' | 'vectors'
+  const [vectorData, setVectorData] = useState(null);
+  const [selectedCodes, setSelectedCodes] = useState(null); // null = vše
+  const [exporting, setExporting] = useState(false);
+  const [customPngUrl, setCustomPngUrl] = useState(null);
   const { status = 'idle', progress = 0, step = '', jobId = null } = job || {};
   const isDone = status === 'done';
   const isError = status === 'error';
@@ -197,17 +226,39 @@ export default function OutputPanel({ job, logLines, canRun, running, onRun, isM
     return () => window.removeEventListener('keydown', handler);
   }, [lightbox]);
 
+  // Stáhni vektorová data pro live náhled, jakmile je job hotový
+  useEffect(() => {
+    if (!isDone || !jobId) { setVectorData(null); return; }
+    setSelectedCodes(null);
+    setCustomPngUrl(null);
+    fetch(getVectorsUrl(jobId))
+      .then((r) => (r.ok ? r.json() : null))
+      .then(setVectorData)
+      .catch(() => setVectorData(null));
+  }, [isDone, jobId]);
+
   const panelStyle = {
     ...S.panel,
     width: isMobile ? '100%' : 'clamp(240px, 20vw, 320px)',
   };
 
-  const now = () => {
-    const d = new Date();
-    return [d.getHours(), d.getMinutes(), d.getSeconds()]
-      .map((n) => String(n).padStart(2, '0'))
-      .join(':');
+  const handleExportCustomPng = async () => {
+    if (!jobId) return;
+    setExporting(true);
+    try {
+      const codesArray = selectedCodes === null ? null : Array.from(selectedCodes);
+      const { png_url } = await renderCustomPng(jobId, codesArray);
+      setCustomPngUrl(png_url);
+      setViewMode('png');
+    } catch (err) {
+      console.error('Export s vlastním výběrem selhal', err);
+    } finally {
+      setExporting(false);
+    }
   };
+
+  const hasFilter = selectedCodes !== null;
+  const currentPngUrl = customPngUrl || (jobId ? getPngUrl(jobId) : undefined);
 
   return (
     <div style={panelStyle}>
@@ -264,19 +315,43 @@ export default function OutputPanel({ job, logLines, canRun, running, onRun, isM
         </div>
       </div>
 
+      {/* Výběr vrstev — jen po dokončení a jen pokud máme vektorová data */}
+      {isDone && vectorData && (
+        <div style={S.section}>
+          <div style={S.sectionLabel}>Vrstvy</div>
+          <LayerSelector vectorData={vectorData} selectedCodes={selectedCodes} onChange={setSelectedCodes} />
+        </div>
+      )}
+
       {/* Output */}
       <div style={S.outputSection}>
         <div style={S.sectionLabel}>Výstup</div>
+
+        {isDone && vectorData && (
+          <div style={S.toggleRow}>
+            <button
+              style={{ ...S.toggleBtn, ...(viewMode === 'png' ? S.toggleBtnActive : {}) }}
+              onClick={() => setViewMode('png')}
+            >PNG</button>
+            <button
+              style={{ ...S.toggleBtn, ...(viewMode === 'vectors' ? S.toggleBtnActive : {}) }}
+              onClick={() => setViewMode('vectors')}
+            >Live náhled</button>
+          </div>
+        )}
+
         <div
-          style={{ ...S.previewWrap, cursor: isDone && jobId ? 'zoom-in' : 'default' }}
-          onClick={() => isDone && jobId && setLightbox(true)}
-          title={isDone && jobId ? 'Kliknutím zvětšit' : undefined}
+          style={{ ...S.previewWrap, cursor: isDone && jobId && viewMode === 'png' ? 'zoom-in' : 'default' }}
+          onClick={() => isDone && jobId && viewMode === 'png' && setLightbox(true)}
+          title={isDone && jobId && viewMode === 'png' ? 'Kliknutím zvětšit' : undefined}
         >
-          {isDone && jobId ? (
+          {isDone && jobId && viewMode === 'vectors' ? (
+            <VectorPreview vectorData={vectorData} selectedCodes={selectedCodes} />
+          ) : isDone && jobId ? (
             <>
               <img
                 style={S.previewImg}
-                src={getPngUrl(jobId)}
+                src={currentPngUrl}
                 alt="Náhled vygenerované mapy"
                 onError={(e) => { e.target.style.display = 'none'; }}
               />
@@ -308,7 +383,7 @@ export default function OutputPanel({ job, logLines, canRun, running, onRun, isM
             }}
           >
             <img
-              src={getPngUrl(jobId)}
+              src={currentPngUrl}
               alt="Mapa"
               style={{
                 maxWidth: '92vw', maxHeight: '92vh',
@@ -329,8 +404,14 @@ export default function OutputPanel({ job, logLines, canRun, running, onRun, isM
           </div>
         )}
 
-        <DlBtn href={isDone && jobId ? getPngUrl(jobId) : undefined}
-          download="OMap.png" disabled={!isDone} primary>
+        {isDone && hasFilter && (
+          <DlBtn onClick={handleExportCustomPng} disabled={exporting} primary>
+            {exporting ? '⏳ Renderuji výběr...' : '⚙ Vyrenderovat PNG s vybranými vrstvami'}
+          </DlBtn>
+        )}
+
+        <DlBtn href={isDone && jobId ? currentPngUrl : undefined}
+          download="OMap.png" disabled={!isDone} primary={!hasFilter}>
           ↓ Stáhnout mapu v PNG
         </DlBtn>
 

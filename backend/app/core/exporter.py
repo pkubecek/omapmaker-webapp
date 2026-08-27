@@ -1,5 +1,6 @@
 """
-exporter.py — export výsledných vrstev do GeoPackage pro OpenOrienteering Mapper.
+exporter.py — export výsledných vrstev do GeoPackage pro OpenOrienteering Mapper
+a do lehkého GeoJSON balíčku pro klientský live náhled (výběr vrstev).
 """
 import os
 import re
@@ -14,18 +15,23 @@ def _oom_isom_code(sym_key: str) -> str | None:
 
 
 class OomCollector:
-    """Sbírá GeoDataFramy podle ISOM kódů pro pozdější export do GPKG."""
+    """Sbírá GeoDataFramy podle ISOM kódů pro pozdější export do GPKG.
+    Nově navíc drží lehký paralelní store (`_geojson_rows`) pro GeoJSON
+    preview na frontendu — nezávislý na GPKG logice, takže ji nijak nemění."""
 
     def __init__(self, current_crs: str = "EPSG:5514"):
         self._layers: dict = {}
         self._crs = current_crs
+        self._geojson_rows: list = []
 
-    def collect(self, sym_key: str, gdf: gpd.GeoDataFrame):
+    def collect(self, sym_key: str, gdf: gpd.GeoDataFrame, group: str | None = None):
         if gdf is None or gdf.empty:
             return
         code = _oom_isom_code(sym_key)
         if code is None:
             return
+
+        # --- GPKG store (beze změny chování) ---
         if code not in self._layers:
             self._layers[code] = {"Point": [], "Line": [], "Polygon": []}
         for geom_type, geom_types in [
@@ -37,6 +43,14 @@ class OomCollector:
             subset = gdf.loc[mask, ["geometry"]].copy()
             if not subset.empty:
                 self._layers[code][geom_type].append(subset)
+
+        # --- GeoJSON store (pro live náhled na klientu) ---
+        self._geojson_rows.append({
+            "sym_key": sym_key,
+            "code": code,
+            "group": group or "other",
+            "geometry": gdf.geometry,
+        })
 
     def export(self, output_path: str):
         if not self._layers:
@@ -80,6 +94,40 @@ class OomCollector:
                     print(f"[exporter] Chyba isom_{code} [{geom_type}]: {e}")
 
         print(f"[exporter] GPKG export: {written} vrstev → {output_path}")
+
+    def export_geojson(self, output_path: str, simplify_tolerance: float | None = None):
+        """
+        Uloží lehký GeoJSON se všemi sesbíranými prvky, properties =
+        {code, sym_key, group}. Souřadnice zůstávají v `self._crs` (bez
+        reprojekce do WGS84) — frontend je jen škáluje do SVG viewBoxu pro
+        schematický náhled, nekreslí je nad podkladovou mapou.
+
+        `simplify_tolerance` (v metrech) — vyplatí se pro těžké LiDAR vrstvy
+        (vrstevnice, mikroreliéf), ať GeoJSON zůstane rozumně malý; na PNG/GPKG
+        export to nemá vliv, ty jedou z plné geometrie.
+        """
+        if not self._geojson_rows:
+            print("[exporter] Žádná data pro GeoJSON export.")
+            return None
+
+        frames = []
+        for row in self._geojson_rows:
+            geom = row["geometry"]
+            if simplify_tolerance:
+                geom = geom.simplify(simplify_tolerance, preserve_topology=True)
+            gdf = gpd.GeoDataFrame(
+                {"code": row["code"], "sym_key": row["sym_key"], "group": row["group"]},
+                geometry=geom, crs=self._crs,
+            )
+            frames.append(gdf)
+
+        merged = gpd.GeoDataFrame(pd.concat(frames, ignore_index=True), crs=self._crs)
+        merged = merged[merged.geometry.notna() & ~merged.geometry.is_empty]
+        if os.path.exists(output_path):
+            os.remove(output_path)
+        merged.to_file(output_path, driver="GeoJSON")
+        print(f"[exporter] GeoJSON preview export: {len(merged)} prvků → {output_path}")
+        return output_path
 
 
 def export_gpkg(layers: dict, output_path: str, current_crs: str = "EPSG:5514"):
