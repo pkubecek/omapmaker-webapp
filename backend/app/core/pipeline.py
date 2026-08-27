@@ -713,11 +713,13 @@ def run_pipeline(job_id: str, params: dict, file_paths: dict,
         clean_key = isom_key.replace(".shp", "").replace(".SHP", "")
         collector.collect(clean_key, gdf_i, group="other")
 
-    # GeoJSON export pro klientský live náhled (výběr vrstev)
+    # GeoJSON export pro klientský live náhled (výběr vrstev) — vyšší
+    # tolerance než finální export, protože jde jen o orientační náhled,
+    # ne o přesná data pro OOM (ta jsou v GPKG beze změny).
     vectors_path = None
     try:
         vectors_path = os.path.join(output_dir, f"{job_id}_vectors.geojson")
-        collector.export_geojson(vectors_path, simplify_tolerance=0.5)
+        collector.export_geojson(vectors_path, simplify_tolerance=2.0)
     except Exception as e:
         print(f"[pipeline] GeoJSON preview export chyba: {e}")
         vectors_path = None

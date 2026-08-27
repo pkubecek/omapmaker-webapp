@@ -143,7 +143,7 @@ class OomCollector:
         merged = merged[merged.geometry.notna() & ~merged.geometry.is_empty]
         if os.path.exists(output_path):
             os.remove(output_path)
-        merged.to_file(output_path, driver="GeoJSON")
+        merged.to_file(output_path, driver="GeoJSON", COORDINATE_PRECISION=2)
         print(f"[exporter] GeoJSON preview export: {len(merged)} prvků → {output_path}")
         return output_path
 

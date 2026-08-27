@@ -11,6 +11,7 @@ Spuštění:
 import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 
 from .routes.jobs import router as jobs_router
 from .routes.download import router as download_router
@@ -53,6 +54,10 @@ app.add_middleware(
 
 app.include_router(jobs_router, prefix="/api")
 app.include_router(download_router, prefix="/api")
+
+# Gzip odpovědi nad 1 kB — vectors.geojson (live náhled) bez toho jde
+# přes síť nekomprimovaný a klidně to jsou jednotky MB.
+app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 
 @app.get("/")
