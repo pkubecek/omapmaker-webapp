@@ -117,7 +117,7 @@ class OomCollector:
                 geom = geom.simplify(simplify_tolerance, preserve_topology=True)
             gdf = gpd.GeoDataFrame(
                 {"code": row["code"], "sym_key": row["sym_key"], "group": row["group"]},
-                geometry=geom, crs=self._crs,
+                geometry=geom, crs=self._crs, index=geom.index,
             )
             frames.append(gdf)
 
