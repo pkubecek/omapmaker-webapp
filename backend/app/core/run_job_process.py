@@ -54,6 +54,7 @@ def main():
             "error": None,
             "png_path": result.get("png_path"),
             "gpkg_path": result.get("gpkg_path"),
+            "vectors_path": result.get("vectors_path"),
         })
     except Exception as e:
         traceback.print_exc()

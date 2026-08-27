@@ -7,10 +7,12 @@ import uuid
 import json
 import shutil
 import sys
+import time
 import asyncio
 
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException
 from fastapi.responses import FileResponse
+from pydantic import BaseModel
 
 from ..core.job_store import JOBS_DIR, job_path as _job_path, read_job as _read_job, write_job as _write_job
 
@@ -190,6 +192,66 @@ async def get_gpkg(job_id: str):
         raise HTTPException(status_code=404, detail="GPKG nenalezeno.")
     return FileResponse(gpkg_path, media_type="application/geopackage+sqlite3",
                         filename=f"OOM_{job_id}.gpkg")
+
+
+@router.get("/jobs/{job_id}/vectors")
+async def get_vectors(job_id: str):
+    """GeoJSON se všemi vykreslenými prvky (properties: code, sym_key, group)
+    pro klientský live náhled a výběr vrstev v LayerSelector/VectorPreview."""
+    job = _read_job(job_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail="Job nenalezen.")
+    if job["status"] != "done":
+        raise HTTPException(status_code=425, detail="Job ještě není hotový.")
+    vectors_path = job.get("vectors_path")
+    if not vectors_path or not os.path.exists(vectors_path):
+        raise HTTPException(status_code=404, detail="Vektorová data nenalezena.")
+    return FileResponse(vectors_path, media_type="application/geo+json")
+
+
+class RenderRequest(BaseModel):
+    selected_codes: list[str] | None = None
+
+
+@router.post("/jobs/{job_id}/render")
+async def render_custom(job_id: str, body: RenderRequest):
+    """Znovu vyrenderuje PNG z cache (bez opětovného zpracování LiDAR/OSM)
+    s výběrem vrstev, který si uživatel proklikal v LayerSelectoru."""
+    job = _read_job(job_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail="Job nenalezen.")
+    if job["status"] != "done":
+        raise HTTPException(status_code=425, detail="Job ještě není hotový.")
+
+    job_dir = os.path.join(JOBS_DIR, job_id)
+    from ..core.pipeline import render_from_cache
+
+    try:
+        result = render_from_cache(job_id, job_dir, selected_codes=body.selected_codes)
+    except FileNotFoundError:
+        raise HTTPException(
+            status_code=404,
+            detail="Cache pro znovu-vyrenderování nenalezena (job byl vytvořen před touto funkcí, spusťte generování znovu).",
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Render selhal: {e}")
+
+    job["custom_png_path"] = result["png_path"]
+    _write_job(job_id, job)
+
+    return {"png_url": f"/api/jobs/{job_id}/custom_png?t={int(time.time())}"}
+
+
+@router.get("/jobs/{job_id}/custom_png")
+async def get_custom_png(job_id: str):
+    job = _read_job(job_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail="Job nenalezen.")
+    custom_png_path = job.get("custom_png_path")
+    if not custom_png_path or not os.path.exists(custom_png_path):
+        raise HTTPException(status_code=404, detail="Vlastní PNG nenalezeno.")
+    return FileResponse(custom_png_path, media_type="image/png",
+                        filename=f"OMap_{job_id}_custom.png")
 
 
 @router.get("/crt/{filename}")

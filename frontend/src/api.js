@@ -37,7 +37,12 @@ export async function renderCustomPng(jobId, selectedCodes) {
   const res = await api.post(`/api/jobs/${jobId}/render`, {
     selected_codes: selectedCodes,
   });
-  return res.data; // { png_url: "..." }
+  // Backend vrací relativní cestu ("/api/jobs/{id}/custom_png?t=...") —
+  // doplníme BASE, ať funguje i když frontend (Vercel) a backend (Railway)
+  // běží na jiné doméně.
+  const raw = res.data?.png_url || '';
+  const png_url = raw.startsWith('http') ? raw : `${BASE}${raw}`;
+  return { ...res.data, png_url };
 }
 
 // ---------------------------------------------------------------------------
