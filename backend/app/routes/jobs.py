@@ -209,6 +209,21 @@ async def get_vectors(job_id: str):
     return FileResponse(vectors_path, media_type="application/geo+json")
 
 
+@router.get("/jobs/{job_id}/colors")
+async def get_colors(job_id: str):
+    """Mapa {ISOM kód: hex barva} podle skutečně použité symbols*.xml —
+    pro obarvení VectorPreview stejně jako finální PNG/OOM."""
+    job = _read_job(job_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail="Job nenalezen.")
+    if job["status"] != "done":
+        raise HTTPException(status_code=425, detail="Job ještě není hotový.")
+    colors_path = job.get("colors_path")
+    if not colors_path or not os.path.exists(colors_path):
+        raise HTTPException(status_code=404, detail="Barevná mapa nenalezena.")
+    return FileResponse(colors_path, media_type="application/json")
+
+
 class RenderRequest(BaseModel):
     selected_codes: list[str] | None = None
 

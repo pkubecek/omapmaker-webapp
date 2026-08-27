@@ -14,6 +14,24 @@ def _oom_isom_code(sym_key: str) -> str | None:
     return m.group(1) if m else None
 
 
+def build_color_map(sym_library) -> dict:
+    """Sestaví mapu {ISOM kód: hex barva} ze SymbolLibrary pro klientský
+    live náhled (VectorPreview), ať odpovídá skutečným ISOM barvám místo
+    hrubého odhadu podle skupiny.
+    Priorita per symbol: color (linie) → facecolor (plocha/bod) → edgecolor.
+    Pokud má kód víc sym_keys (např. 105-1a/105-1b), bere se první nalezená barva."""
+    colors: dict = {}
+    for sym_key, data in sym_library.items():
+        code = _oom_isom_code(sym_key)
+        if code is None or code in colors:
+            continue
+        props = data.get("props", {}) or {}
+        color = props.get("color") or props.get("facecolor") or props.get("edgecolor")
+        if color and color != "none":
+            colors[code] = color
+    return colors
+
+
 class OomCollector:
     """Sbírá GeoDataFramy podle ISOM kódů pro pozdější export do GPKG.
     Nově navíc drží lehký paralelní store (`_geojson_rows`) pro GeoJSON

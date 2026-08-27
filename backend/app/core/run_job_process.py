@@ -55,6 +55,7 @@ def main():
             "png_path": result.get("png_path"),
             "gpkg_path": result.get("gpkg_path"),
             "vectors_path": result.get("vectors_path"),
+            "colors_path": result.get("colors_path"),
         })
     except Exception as e:
         traceback.print_exc()

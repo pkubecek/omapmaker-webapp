@@ -18,8 +18,8 @@ function ringToPoints(ring, project) {
   return ring.map(([x, y]) => project(x, y).join(',')).join(' ');
 }
 
-function geomToElements(geom, code, group, project, key) {
-  const color = GROUP_COLOR[group] || '#555';
+function geomToElements(geom, code, group, colorFn, project, key) {
+  const color = colorFn(code, group);
   switch (geom.type) {
     case 'Point':
       { const [x, y] = project(...geom.coordinates); return <circle key={key} cx={x} cy={y} r={1.2} fill={color} />; }
@@ -48,8 +48,14 @@ function geomToElements(geom, code, group, project, key) {
 /**
  * vectorData: GeoJSON FeatureCollection (v mapových metrech, ne WGS84)
  * selectedCodes: Set<string> | null (null = zobrazit vše)
+ * symbolColors: {ISOM kód: hex barva} ze serveru (skutečné ISOM barvy) — když
+ *   chybí (starší job / fetch selhal), spadne se zpět na hrubou paletu podle skupiny.
  */
-export default function VectorPreview({ vectorData, selectedCodes }) {
+export default function VectorPreview({ vectorData, selectedCodes, symbolColors }) {
+  const colorFn = useMemo(() => {
+    return (code, group) => (symbolColors && symbolColors[code]) || GROUP_COLOR[group] || '#555';
+  }, [symbolColors]);
+
   const { elements, viewBox } = useMemo(() => {
     if (!vectorData?.features?.length) return { elements: null, viewBox: '0 0 100 100' };
 
@@ -75,12 +81,12 @@ export default function VectorPreview({ vectorData, selectedCodes }) {
     vectorData.features.forEach((f, i) => {
       const { code, group } = f.properties || {};
       if (selectedCodes !== null && !selectedCodes.has(code)) return;
-      const el = geomToElements(f.geometry, code, group, project, i);
+      const el = geomToElements(f.geometry, code, group, colorFn, project, i);
       if (el) els.push(el);
     });
 
     return { elements: els, viewBox: `0 0 ${W} ${H}` };
-  }, [vectorData, selectedCodes]);
+  }, [vectorData, selectedCodes, colorFn]);
 
   if (!elements) return null;
 

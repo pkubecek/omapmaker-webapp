@@ -33,6 +33,10 @@ export function getVectorsUrl(jobId) {
   return `${BASE}/api/jobs/${jobId}/vectors`;
 }
 
+export function getColorsUrl(jobId) {
+  return `${BASE}/api/jobs/${jobId}/colors`;
+}
+
 export async function renderCustomPng(jobId, selectedCodes) {
   const res = await api.post(`/api/jobs/${jobId}/render`, {
     selected_codes: selectedCodes,

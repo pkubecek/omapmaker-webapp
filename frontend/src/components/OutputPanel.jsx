@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { getPngUrl, getGpkgUrl, getVectorsUrl, renderCustomPng } from '../api';
+import { getPngUrl, getGpkgUrl, getVectorsUrl, getColorsUrl, renderCustomPng } from '../api';
 import LayerSelector from './LayerSelector';
 import VectorPreview from './VectorPreview';
 
@@ -207,6 +207,7 @@ export default function OutputPanel({ job, logLines, canRun, running, onRun, isM
   const [lightbox, setLightbox] = useState(false);
   const [viewMode, setViewMode] = useState('png'); // 'png' | 'vectors'
   const [vectorData, setVectorData] = useState(null);
+  const [symbolColors, setSymbolColors] = useState(null);
   const [selectedCodes, setSelectedCodes] = useState(null); // null = vše
   const [exporting, setExporting] = useState(false);
   const [customPngUrl, setCustomPngUrl] = useState(null);
@@ -228,13 +229,17 @@ export default function OutputPanel({ job, logLines, canRun, running, onRun, isM
 
   // Stáhni vektorová data pro live náhled, jakmile je job hotový
   useEffect(() => {
-    if (!isDone || !jobId) { setVectorData(null); return; }
+    if (!isDone || !jobId) { setVectorData(null); setSymbolColors(null); return; }
     setSelectedCodes(null);
     setCustomPngUrl(null);
     fetch(getVectorsUrl(jobId))
       .then((r) => (r.ok ? r.json() : null))
       .then(setVectorData)
       .catch(() => setVectorData(null));
+    fetch(getColorsUrl(jobId))
+      .then((r) => (r.ok ? r.json() : null))
+      .then(setSymbolColors)
+      .catch(() => setSymbolColors(null));
   }, [isDone, jobId]);
 
   const panelStyle = {
@@ -346,7 +351,7 @@ export default function OutputPanel({ job, logLines, canRun, running, onRun, isM
           title={isDone && jobId && viewMode === 'png' ? 'Kliknutím zvětšit' : undefined}
         >
           {isDone && jobId && viewMode === 'vectors' ? (
-            <VectorPreview vectorData={vectorData} selectedCodes={selectedCodes} />
+            <VectorPreview vectorData={vectorData} selectedCodes={selectedCodes} symbolColors={symbolColors} />
           ) : isDone && jobId ? (
             <>
               <img

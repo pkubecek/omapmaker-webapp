@@ -112,6 +112,9 @@ class SymbolLibrary:
     def has(self, key: str) -> bool:
         return key in self._lib
 
+    def items(self):
+        return self._lib.items()
+
 
 def plot_symbol(ax, sym_key: str, gdf: gpd.GeoDataFrame,
                 zorder: float, sym_library: SymbolLibrary,

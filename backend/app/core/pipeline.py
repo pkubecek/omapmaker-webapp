@@ -246,7 +246,7 @@ def _process_tile(
         if not gdf_c.empty:
             contour_layers[k] = gdf_c.set_crs(CURRENT_CRS, allow_override=True)
 
-    tcb("Mikrotvary...")
+    tcb("Kupky a prohlubně...")
     depressions = find_depressions(
         grid_x, grid_y, dmr_grid_linear_viz,
         pixel_size=FIXED_PIXEL_SIZE, current_crs=CURRENT_CRS,
@@ -722,6 +722,19 @@ def run_pipeline(job_id: str, params: dict, file_paths: dict,
         print(f"[pipeline] GeoJSON preview export chyba: {e}")
         vectors_path = None
 
+    # Barevná mapa ISOM kódů pro live náhled (VectorPreview) — nezávislé
+    # na GeoJSON exportu výše, ať pád jednoho nesrazí druhé.
+    colors_path = None
+    try:
+        colors_path = os.path.join(output_dir, f"{job_id}_colors.json")
+        from .exporter import build_color_map
+        import json as _json
+        with open(colors_path, "w", encoding="utf-8") as f:
+            _json.dump(build_color_map(sym_library), f, ensure_ascii=False)
+    except Exception as e:
+        print(f"[pipeline] Barevná mapa export chyba: {e}")
+        colors_path = None
+
     # GPKG export
     gpkg_path = None
     cb(95, "Exportuji GPKG...")
@@ -742,6 +755,7 @@ def run_pipeline(job_id: str, params: dict, file_paths: dict,
         "gpkg_path": gpkg_path,
         "world_file_path": render_result.get("world_file_path"),
         "vectors_path": vectors_path,
+        "colors_path": colors_path,
     }
 
     release_memory()
