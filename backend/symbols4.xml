@@ -168,6 +168,12 @@
         <style facecolor="none" edgecolor="none" linewidth="0" linestyle="solid" dotdistance="3.5" dotsize="1.2" dotcolor="#000000" marker_shape="triangle" />
     </symbol>
 
+    <!-- 209: Otevřené balvanové pole -->
+    <!-- OVĚŘIT: DOPLNĚNO, jen odhad z 208 (řidší, čitelnější rozmístění) -->
+    <symbol id="sym209" type="area">
+        <style facecolor="none" edgecolor="none" linewidth="0" linestyle="solid" dotdistance="4.5" dotsize="1.0" dotcolor="#000000" marker_shape="triangle" />
+    </symbol>
+
     <!-- 210: Kamenitý povrch -->
     <symbol id="sym210" type="area">
         <style facecolor="none" edgecolor="none" linewidth="0" linestyle="solid" dotdistance="2.0" dotsize="0.6" dotcolor="#000000" />
@@ -181,6 +187,19 @@
     <!-- 214: Holá skála (35% černá) -->
     <symbol id="sym214" type="area">
         <style facecolor="#b3b3b3" edgecolor="none" linewidth="0" linestyle="solid" />
+    </symbol>
+
+
+    <!-- 215: Příkop / zákop -->
+    <!-- OVĚŘIT: DOPLNĚNO, značka v ISOM/ISSprOM oficiálně neexistuje pod
+         tímto číslem - jde o rozšíření pro OSM barrier=ditch / military=
+         trench. Vzor podle 105.1 (val), ale bez terénní hnědé, protože
+         kód řadí sekci do skupiny "rocks". -->
+    <symbol id="sym215a" type="line">
+        <style color="#000000" linewidth="0.3" linestyle="solid" />
+    </symbol>
+    <symbol id="sym215b" type="line">
+        <style color="#000000" linewidth="0.6" linestyle="(0, (0.00667, 5.67))" solid_capstyle="round" />
     </symbol>
 
 
@@ -202,6 +221,14 @@
     <symbol id="sym303" type="point">
         <path d="M 2.5 0 A 2.5 2.5 0 0 2.5 -2.5 0 A 2.5 2.5 0 0 2.5 2.5 0 Z" />
         <style facecolor="#21d1ff" edgecolor="#21d1ff" linewidth="0" />
+    </symbol>
+
+    <!-- 304: Řeka (nepřekonatelný vodní tok) -->
+    <!-- DOPLNĚNO: kód volá pm("sym304", ...) pro reálná data (OSM
+         waterway=river/canal, ZABAGED VodniTok), značka v XML úplně
+         chyběla -> řeky se nevykreslovaly. Širší než 305 (splavný/velký tok). -->
+    <symbol id="sym304" type="line">
+        <style color="#21d1ff" linewidth="1.2" linestyle="solid" />
     </symbol>
 
     <!-- 305: Malý překonatelný vodní tok -->
@@ -297,6 +324,14 @@
         <style facecolor="#3dff17" edgecolor="none" linewidth="0" />
     </symbol>
 
+    <!-- 408l: Živý plot / alej (liniová vegetace) -->
+    <!-- DOPLNĚNO: kód volá pm("sym408l", ...) pro reálná data (OSM
+         natural=tree_row, ZABAGED LiniovaVegetace), značka v XML úplně
+         chyběla -> živé ploty/aleje se nevykreslovaly. -->
+    <symbol id="sym408l" type="line">
+        <style color="#0e990e" linewidth="1.0" linestyle="solid" />
+    </symbol>
+
     <!-- 409: Vegetace: chůze, dobrá viditelnost -->
     <symbol id="sym409" type="area">
         <style facecolor="none" edgecolor="none" linewidth="0" linestyle="solid" hatchcolor="#0e990e" hatchdistance="1.26" hatchwidth="0.42" hatchstyle="solid" />
@@ -332,6 +367,14 @@
 
     <!-- 415: Zřetelná hranice obdělávané půdy -->
     <symbol id="sym415" type="line">
+        <style color="#000000" linewidth="0.4252" linestyle="(0, (4.2525, 1.063125))" />
+    </symbol>
+
+    <!-- 216l: Hranice kultivace (alias pro 415 v předpočítané ISOM vrstvě) -->
+    <!-- DOPLNĚNO: kód pro předpočítaná ISOM data (isom("415")) volá
+         pm("sym216l", ...) - historický název ze symbols10/15.xml -
+         zatímco na "sym415" výše nic needkazuje. Stejný styl jako sym415. -->
+    <symbol id="sym216l" type="line">
         <style color="#000000" linewidth="0.4252" linestyle="(0, (4.2525, 1.063125))" />
     </symbol>
 
@@ -457,11 +500,12 @@
     </symbol>
 
     <!-- 505: Nezpevněná pěšina nebo cesta -->
-    <symbol id="sym505a" type="line">
+    <!-- OPRAVENO: kód volá pm("sym505", ...) jako JEDNU značku (na rozdíl
+         od 502/502D, kde se přes více volání skládá vícebarevná silnice) -
+         dřívější rozdělení na sym505a/sym505b se nikde nepoužívalo, a proto
+         se cesta vůbec nevykreslovala. -->
+    <symbol id="sym505" type="line">
         <style color="#000000" linewidth="1.0" linestyle="solid" />
-    </symbol>
-    <symbol id="sym505b" type="line">
-        <style color="#e8ae80" linewidth="0.5" linestyle="solid" />
     </symbol>
 
     <!-- 506: Malá nezpevněná pěšina nebo cesta -->
@@ -485,6 +529,17 @@
     </symbol>
     <symbol id="sym509b" type="line">
         <style color="#ffffff" linewidth="1.0" linestyle="(0, (2.8353, 4.2529))" />
+    </symbol>
+
+    <!-- 509.1B: Železniční most (podkladová dvojlinka pod sym509a/b) -->
+    <!-- DOPLNĚNO: kód volá pm("sym509Ba"/"sym509Bb", ...) pro most, značky
+         v XML chyběly -> most se nevykresloval. Poměr odvozen ze vztahu
+         mezi 502Ba/b a 502a (silniční most), aplikováno na šířku 509a=1.7. -->
+    <symbol id="sym509Ba" type="line">
+        <style color="#000000" linewidth="4.4" linestyle="solid" />
+    </symbol>
+    <symbol id="sym509Bb" type="line">
+        <style color="#ffffff" linewidth="3.2" linestyle="solid" />
     </symbol>
 
     <!-- 509.2: Tramvajová trať (50% černá, tenká) -->
@@ -523,7 +578,14 @@
     </symbol>
 
     <!-- 513.1: Překonatelná zeď -->
-    <symbol id="sym513-1" type="line">
+    <!-- OPRAVENO: kód volá pm("sym513-1a") + pm("sym513-1b") (stejný vzor
+         jako 513.2), ale existovala jen "sym513-1" (navíc to byla jen
+         tiková část bez základní linky) -> nikdy se nevykreslilo.
+         Poměr a/b odvozen z 513.2 (a=0.6, b=1.2 -> poloviční šířka). -->
+    <symbol id="sym513-1a" type="line">
+        <style color="#000000" linewidth="0.3" linestyle="solid" />
+    </symbol>
+    <symbol id="sym513-1b" type="line">
         <style color="#000000" linewidth="0.6" linestyle="(0, (0.00667, 5.67))" solid_capstyle="round" />
     </symbol>
 
@@ -580,6 +642,14 @@
     <symbol id="sym522-1" type="point">
         <path d="M -0.5 -0.5 L 0.5 -0.5 L 0.5 0.5 L -0.5 0.5 Z" />
         <style facecolor="#000000" edgecolor="none" linewidth="0" />
+    </symbol>
+
+    <!-- 523: Zřícenina / bunkr -->
+    <!-- DOPLNĚNO: kód volá pm("sym523", ...) pro reálná data (ZABAGED
+         RozvalinaZricenina/Bunkr, OSM building=ruins/historic=ruins/
+         military=bunker), značka v XML úplně chyběla -> nevykreslovalo se. -->
+    <symbol id="sym523" type="area">
+        <style facecolor="none" edgecolor="none" linewidth="0" linestyle="solid" hatchcolor="#000000" hatchdistance="1.8" hatchwidth="0.4" hatchstyle="(0, (1.8, 1.8))" />
     </symbol>
 
     <!-- 524: Vysoká věž (Stopa 8.4m diam -> r=4.2, kříž o stejném poloměru) -->

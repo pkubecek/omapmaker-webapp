@@ -590,7 +590,7 @@ def add_vector_layers(
 
         # 505 - Pěší cesta
         cgdf = isom("505")
-        mask_footway = (c("highway").isin(["road", "track", "bridleway"]) |
+        mask_footway = (c("highway").isin(["road", "bridleway"]) |
                         ((c("highway") == "cycleway") & (~c("surface").isin(["concrete", "asphalt"])) &
                         (c("tracktype") != "grade1")) &
                         (c("bridge") != "yes") & (c("access") != "private"))
@@ -776,7 +776,7 @@ def add_vector_layers(
                 pm("sym521", 50, None, zab("BudovaJednotlivaNeboBlokBudov"), to_mask=False)
             else:
                 pm("sym521", 50,
-                   c("building").notna() & (c("building") != "") & ~c("building").isin(["roof", "ruins"]),
+                   c("building").notna() & (c("building") != "") & ~c("building").isin(["roof"]),
                    gdf_polys)
 
         # 522 - Zastřešení
