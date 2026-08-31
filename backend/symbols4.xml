@@ -517,8 +517,10 @@
     <symbol id="sym505" type="line">
         <style color="#e8ae80" linewidth="0.99" linestyle="solid" />
     </symbol>
+    <!-- OPRAVENO na žádost: poměr mezera:linie = 1:8, perioda 2.0mm
+         (mezera 0.2222mm, čárka 1.7778mm). -->
     <symbol id="sym505b" type="line">
-        <style color="#000000" linewidth="0.34" linestyle="(0, (0.7087, 4.9606))" solid_capstyle="butt" />
+        <style color="#000000" linewidth="0.34" linestyle="(0, (5.0394, 0.6299))" solid_capstyle="butt" />
     </symbol>
 
     <!-- 506: Malá nezpevněná pěšina nebo cesta -->
