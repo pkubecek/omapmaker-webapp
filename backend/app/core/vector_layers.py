@@ -30,6 +30,7 @@ def add_vector_layers(
     visibility, isom_gdfs, sym_library: SymbolLibrary, current_crs: str,
     collector=None,
     selected_codes: set | None = None,
+    scale: float = 10_000,
 ):
     print(f"[vector_layers] extent={extent}")
     print(f"[vector_layers] ZABAGED klíče: {list(zabaged_gdfs.keys())}")
@@ -81,9 +82,9 @@ def add_vector_layers(
         if should_draw:
             if sym_key in _CLIFF_SYMS:
                 plot_symbol(ax, sym_key, subset, zorder, sym_library, current_crs,
-                            dmr_grid=dmr_grid, grid_x=grid_x, grid_y=grid_y)
+                            dmr_grid=dmr_grid, grid_x=grid_x, grid_y=grid_y, scale=scale)
             else:
-                plot_symbol(ax, sym_key, subset, zorder, sym_library, current_crs)
+                plot_symbol(ax, sym_key, subset, zorder, sym_library, current_crs, scale=scale)
 
         # Sbírá se VŽDY, nezávisle na výběru — vektorová data pro GPKG a pro
         # GeoJSON preview musí obsahovat kompletní sadu, filtruje se jen

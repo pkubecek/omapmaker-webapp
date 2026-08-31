@@ -261,7 +261,7 @@ def add_magnetic_north_lines(ax, extent, scale, rotation=0.0, spacing_mm=30,
     gdf = gpd.GeoDataFrame(geometry=visible)
 
     if sym_library and sym_library.has("sym601"):
-        plot_symbol(ax, "sym601", gdf, zorder, sym_library, current_crs)
+        plot_symbol(ax, "sym601", gdf, zorder, sym_library, current_crs, scale=scale)
     else:
         gdf.plot(ax=ax, color="#21d1ff", linewidth=0.35, zorder=zorder)
 
@@ -270,7 +270,8 @@ def add_magnetic_north_lines(ax, extent, scale, rotation=0.0, spacing_mm=30,
 # Main render function
 # ---------------------------------------------------------------------------
 
-def _plot_symbol_rotated(ax, sym_key, gdf, zorder, sym_library, current_crs, rotate_deg=0):
+def _plot_symbol_rotated(ax, sym_key, gdf, zorder, sym_library, current_crs, rotate_deg=0,
+                          scale: float = 10_000):
     """Vykreslí bodový symbol s rotací — používá se pro prohlubně (180°)."""
     from .symbols import _strip_custom_keys
     from matplotlib.patches import PathPatch
@@ -278,7 +279,7 @@ def _plot_symbol_rotated(ax, sym_key, gdf, zorder, sym_library, current_crs, rot
 
     sym_data = sym_library.get(sym_key) if sym_library else None
     if sym_data is None or sym_data.get("type") != "point" or sym_data.get("path") is None:
-        plot_symbol(ax, sym_key, gdf, zorder, sym_library, current_crs)
+        plot_symbol(ax, sym_key, gdf, zorder, sym_library, current_crs, scale=scale)
         return
 
     sym_path = sym_data["path"]
@@ -390,7 +391,7 @@ def render_map(
                     sub = veg_clipped[mask]
                     if not sub.empty:
                         plot_symbol(ax, sym_key, sub, 1.0 + list(VEG_MAP).index(class_name) * 0.1,
-                                    sym_library, current_crs)
+                                    sym_library, current_crs, scale=scale)
         except Exception as e:
             print(f"[renderer] Chyba vegetace: {e}")
 
@@ -415,7 +416,7 @@ def render_map(
                 continue
             gdf_c = contour_layers.get(layer_key)
             if gdf_c is not None and not gdf_c.empty:
-                plot_symbol(ax, sym_key, gdf_c, zo, sym_library, current_crs)
+                plot_symbol(ax, sym_key, gdf_c, zo, sym_library, current_crs, scale=scale)
 
     # Terénní mikrotvary
     if layer_visibility.get("contours", True):
@@ -423,11 +424,12 @@ def render_map(
             _cb("Kreslím prohlubně...")
             dep_gdf = gpd.GeoDataFrame(geometry=depressions, crs=current_crs)
             # Prohlubně (sym111) se kreslí otočené o 180° — stejně jako v originálu
-            _plot_symbol_rotated(ax, "sym111", dep_gdf, 21, sym_library, current_crs, rotate_deg=180)
+            _plot_symbol_rotated(ax, "sym111", dep_gdf, 21, sym_library, current_crs, rotate_deg=180,
+                                 scale=scale)
         if knolls and (selected_codes is None or "109" in selected_codes):
             _cb("Kreslím kupky...")
             kno_gdf = gpd.GeoDataFrame(geometry=knolls, crs=current_crs)
-            plot_symbol(ax, "sym109", kno_gdf, 21, sym_library, current_crs)
+            plot_symbol(ax, "sym109", kno_gdf, 21, sym_library, current_crs, scale=scale)
 
     # Vektorové vrstvy (OSM + ZABAGED + ISOM)
     # Volá se vždy — add_vector_layers si poradí s prázdným gdf_osm,
@@ -447,6 +449,7 @@ def render_map(
         current_crs=current_crs,
         collector=collector,
         selected_codes=selected_codes,
+        scale=scale,
     )
 
     # Uložení PNG

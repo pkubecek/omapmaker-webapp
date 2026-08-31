@@ -119,7 +119,8 @@ class SymbolLibrary:
 def plot_symbol(ax, sym_key: str, gdf: gpd.GeoDataFrame,
                 zorder: float, sym_library: SymbolLibrary,
                 current_crs: str = "EPSG:5514",
-                dmr_grid=None, grid_x=None, grid_y=None):
+                dmr_grid=None, grid_x=None, grid_y=None,
+                scale: float = 10_000):
     """Vykreslí GeoDataFrame pomocí ISOM symbolu ze sym_library."""
     if gdf is None or gdf.empty:
         return
@@ -160,12 +161,12 @@ def plot_symbol(ax, sym_key: str, gdf: gpd.GeoDataFrame,
 
     # Hatch fill (dashed)
     if "hatchdistance" in sym_props:
-        _plot_dashed_hatch(ax, gdf, sym_props, zorder)
+        _plot_dashed_hatch(ax, gdf, sym_props, zorder, scale=scale)
         return
 
     # Dot fill
     if "dotdistance" in sym_props:
-        _plot_dotted_hatch(ax, gdf, sym_props, zorder)
+        _plot_dotted_hatch(ax, gdf, sym_props, zorder, scale=scale)
         return
 
     # sym510 — elektrické vedení: kolmé tiky ve vertexech
@@ -189,7 +190,7 @@ def plot_symbol(ax, sym_key: str, gdf: gpd.GeoDataFrame,
         print(f"[symbols] Chyba kreslení {sym_key}: {e}")
 
 
-def _plot_dashed_hatch(ax, gdf, style_props, zorder):
+def _plot_dashed_hatch(ax, gdf, style_props, zorder, scale: float = 10_000):
     hatch_distance = style_props.pop("hatchdistance")
     hatch_color = style_props.pop("hatchcolor")
     hatch_width = style_props.pop("hatchwidth")
@@ -203,7 +204,7 @@ def _plot_dashed_hatch(ax, gdf, style_props, zorder):
     if all_geoms.is_empty:
         return
     minx, miny, maxx, maxy = all_geoms.bounds
-    step = pt2m(hatch_distance)
+    step = pt2m(hatch_distance, scale)
     if not step:
         return
     y_coords = np.arange(np.floor(miny / step) * step, maxy, step)
@@ -218,7 +219,7 @@ def _plot_dashed_hatch(ax, gdf, style_props, zorder):
         )
 
 
-def _plot_dotted_hatch(ax, gdf, style_props, zorder):
+def _plot_dotted_hatch(ax, gdf, style_props, zorder, scale: float = 10_000):
     dot_distance = style_props.pop("dotdistance")
     dot_size = style_props.pop("dotsize")
     dot_color = style_props.pop("dotcolor")
@@ -231,7 +232,7 @@ def _plot_dotted_hatch(ax, gdf, style_props, zorder):
     if all_geoms.is_empty:
         return
     minx, miny, maxx, maxy = all_geoms.bounds
-    step = pt2m(dot_distance)
+    step = pt2m(dot_distance, scale)
     if not step:
         return
     x_coords = np.arange(np.floor(minx / step) * step, maxx, step)
