@@ -1,938 +1,831 @@
-"""
-vector_layers.py — mapování OSM / ZABAGED® / vlastních ISOM vrstev na symboly.
-Přepsáno z OMapMaker_v7.py — logika filtrování odpovídá originálu.
-"""
-import geopandas as gpd
-import pandas as pd
-from shapely.geometry import box
-
-from .symbols import SymbolLibrary, plot_symbol
-from .exporter import _oom_isom_code
-
-
-def _get_col(df, col):
-    if col in df.columns:
-        return df[col].fillna("")
-    return pd.Series([""] * len(df), index=df.index)
-
-
-def _clip(gdf, extent):
-    if gdf is None or gdf.empty:
-        return gdf
-    try:
-        return gpd.clip(gdf, box(extent[0], extent[2], extent[1], extent[3]))
-    except Exception:
-        return gdf
-
-
-def add_vector_layers(
-    ax, gdf, extent, zabaged_gdfs, dmr_grid, grid_x, grid_y,
-    visibility, isom_gdfs, sym_library: SymbolLibrary, current_crs: str,
-    collector=None,
-    selected_codes: set | None = None,
-    scale: float = 10_000,
-):
-    print(f"[vector_layers] extent={extent}")
-    print(f"[vector_layers] ZABAGED klíče: {list(zabaged_gdfs.keys())}")
-    for k, v in zabaged_gdfs.items():
-        if v is not None:
-            print(f"[vector_layers]   {k}: {len(v)} prvků, CRS={v.crs}, bounds={v.total_bounds}")
-        else:
-            print(f"[vector_layers]   {k}: None")
-    print(f"[vector_layers] visibility={visibility}")
-
-    gdf = _clip(gdf, extent)
-    for k in list(zabaged_gdfs.keys()):
-        before = len(zabaged_gdfs[k]) if zabaged_gdfs[k] is not None else 0
-        zabaged_gdfs[k] = _clip(zabaged_gdfs[k], extent)
-        after = len(zabaged_gdfs[k]) if zabaged_gdfs[k] is not None and not zabaged_gdfs[k].empty else 0
-        print(f"[vector_layers]   clip {k}: {before} → {after} prvků")
-
-    if (gdf is None or gdf.empty) and not zabaged_gdfs and not isom_gdfs:
-        return
-
-    _CLIFF_SYMS = {"sym104", "sym201", "sym202"}
-
-    _current_group = {"name": None}
-
-    def _section(name, default=True):
-        """Označí aktuální sekci (kvůli group tagu do collectoru) a vrátí
-        stejnou hodnotu jako dřívější `visibility.get(name, default)`."""
-        _current_group["name"] = name
-        return visibility.get(name, default)
-
-    def _mask_subset(mask, src_gdf, to_mask=True):
-        """Stejná logika výběru jako na začátku pm() - použito pro 505, kde
-        potřebujeme z vybraného podmnožiny navíc odvodit posunuté hranové
-        linie, ale bez toho, aby se posunuté (synteticky vytvořené) geometrie
-        sbíraly do GPKG/preview."""
-        if src_gdf is None or src_gdf.empty:
-            return None
-        if to_mask:
-            if mask is None:
-                return None
-            if isinstance(mask, (pd.Series, gpd.GeoSeries)):
-                mask = mask.reindex(src_gdf.index).fillna(False)
-            subset = src_gdf[mask].copy()
-        else:
-            subset = src_gdf.copy()
-        return subset if not subset.empty else None
-
-    def _offset_border_lines(subset, offset_m):
-        """Pro 505 (nezpevněná pěšina): vrátí GeoDataFrame se dvěma
-        rovnoběžnými liniemi posunutými o `offset_m` na obě strany od
-        původní linie - pro černé čárkované okraje po stranách plné hnědé
-        linie."""
-        if subset is None or subset.empty or not offset_m:
-            return None
-        out_geoms = []
-        for geom in subset.geometry:
-            if geom is None or geom.is_empty:
-                continue
-            parts = [geom] if geom.geom_type == "LineString" else list(getattr(geom, "geoms", [geom]))
-            for line in parts:
-                if not hasattr(line, "offset_curve"):
-                    continue
-                for side in (offset_m, -offset_m):
-                    try:
-                        off = line.offset_curve(side)
-                        if off is not None and not off.is_empty:
-                            out_geoms.append(off)
-                    except Exception:
-                        continue
-        if not out_geoms:
-            return None
-        return gpd.GeoDataFrame(geometry=out_geoms, crs=subset.crs)
-
-    def pm(sym_key, zorder, mask, src_gdf, to_mask=True):
-        if src_gdf is None or src_gdf.empty:
-            return
-        if to_mask:
-            if mask is None:
-                return
-            if isinstance(mask, (pd.Series, gpd.GeoSeries)):
-                mask = mask.reindex(src_gdf.index).fillna(False)
-            subset = src_gdf[mask].copy()
-        else:
-            subset = src_gdf.copy()
-        if subset.empty:
-            return
-
-        code = _oom_isom_code(sym_key)
-        should_draw = ax is not None and (selected_codes is None or code in selected_codes)
-
-        # Pro cliff symboly předej DMR grid pro správný směr fousku
-        if should_draw:
-            if sym_key in _CLIFF_SYMS:
-                plot_symbol(ax, sym_key, subset, zorder, sym_library, current_crs,
-                            dmr_grid=dmr_grid, grid_x=grid_x, grid_y=grid_y, scale=scale)
-            else:
-                plot_symbol(ax, sym_key, subset, zorder, sym_library, current_crs, scale=scale)
-
-        # Sbírá se VŽDY, nezávisle na výběru — vektorová data pro GPKG a pro
-        # GeoJSON preview musí obsahovat kompletní sadu, filtruje se jen
-        # samotné kreslení do PNG.
-        if collector is not None:
-            collector.collect(sym_key, subset, group=_current_group["name"])
-
-    def pm_border(sym_key, zorder, mask, src_gdf, offset_m, to_mask=True):
-        """Jako pm(), ale místo původní geometrie vykreslí dvě rovnoběžné
-        linie posunuté o offset_m na obě strany - pro 505 (černé čárkované
-        okraje po stranách plné hnědé linie). Nekolektuje se do GPKG/preview,
-        protože jde jen o vizuální efekt, ne o reálnou geometrii prvku."""
-        if ax is None or (selected_codes is not None and _oom_isom_code(sym_key) not in selected_codes):
-            return
-        subset = _mask_subset(mask, src_gdf, to_mask=to_mask)
-        border_gdf = _offset_border_lines(subset, offset_m)
-        if border_gdf is not None and not border_gdf.empty:
-            plot_symbol(ax, sym_key, border_gdf, zorder, sym_library, current_crs, scale=scale)
-
-    if gdf is not None and not gdf.empty:
-        gdf = gdf.reset_index(drop=True)
-
-    _c = {col: _get_col(gdf, col) for col in [
-        "access", "amenity", "barrier", "bridge", "building", "covered",
-        "emergency", "geological", "highway", "historic", "intermittent",
-        "landuse", "leisure", "man_made", "military", "natural", "parking",
-        "place", "power", "railway", "surface", "tracktype", "tunnel",
-        "water", "waterway", "wetland", "aerialway", "trail_visibility",
-    ]} if gdf is not None and not gdf.empty else {}
-
-    def c(col):
-        return _c.get(col, pd.Series(dtype=str))
-
-    if gdf is not None and not gdf.empty:
-        geom_type = gdf.geometry.geom_type
-        gdf_pts       = gdf[geom_type == "Point"].copy()
-        gdf_lines     = gdf[geom_type.isin(["LineString", "MultiLineString"])].copy()
-        gdf_polys     = gdf[geom_type.isin(["Polygon", "MultiPolygon"])].copy()
-        gdf_centroids = gdf.copy()
-        gdf_centroids["geometry"] = gdf_centroids.geometry.centroid
-    else:
-        gdf_pts = gdf_lines = gdf_polys = gdf_centroids = gpd.GeoDataFrame()
-
-    def zab(key):
-        gdf_z = zabaged_gdfs.get(key)
-        if gdf_z is None or gdf_z.empty:
-            return None
-        return gdf_z
-
-    def isom(key):
-        gdf_i = isom_gdfs.get(key)
-        if gdf_i is None or gdf_i.empty:
-            return None
-        return gdf_i
-
-    def zab_in(*keys):
-        return any(zab(k) is not None for k in keys)
-
-    # ----------------------------------------------------------------
-    # TERRAIN
-    # ----------------------------------------------------------------
-    if _section("contours"):
-        # 104 - Zemní sráz
-        cgdf = isom("104")
-        if cgdf is not None:
-            pm("sym104", 21, None, cgdf, to_mask=False)
-        elif zab("StupenSraz") is not None:
-            pm("sym104", 21, None, zab("StupenSraz"), to_mask=False)
-        else:
-            pm("sym104", 21, c("man_made") == "embankment", gdf_lines)
-
-        # 105 - Zemní val
-        cgdf = isom("105")
-        if cgdf is not None:
-            pm("sym105-1a", 21, None, cgdf, to_mask=False)
-            pm("sym105-1b", 21, None, cgdf, to_mask=False)
-        elif zab("HradbaValBastaOpevneni") is not None:
-            pm("sym105-1a", 30, None, zab("HradbaValBastaOpevneni"), to_mask=False)
-            pm("sym105-1b", 30, None, zab("HradbaValBastaOpevneni"), to_mask=False)
-
-        # 107 - Rokle / výmol
-        cgdf = isom("107")
-        if cgdf is not None:
-            pm("sym107", 20, None, cgdf, to_mask=False)
-        elif zab("RokleVymol") is not None:
-            pm("sym107", 20, None, zab("RokleVymol"), to_mask=False)
-
-        # 108, 109, 111, 112 - jen ISOM
-        for code, sym, zo in [("108", "sym108", 21), ("109", "sym109", 21),
-                               ("111", "sym111", 21), ("112", "sym112", 21)]:
-            cgdf = isom(code)
-            if cgdf is not None:
-                pm(sym, zo, None, cgdf, to_mask=False)
-
-    # ----------------------------------------------------------------
-    # ROCKS
-    # ----------------------------------------------------------------
-    if _section("rocks"):
-        # 203-1 - Jeskyně
-        cgdf = isom("203.1")
-        if cgdf is not None:
-            pm("sym203-1", 56, None, cgdf, to_mask=False)
-        if zab("VstupDoJeskyne") is not None:
-            pm("sym203-1", 56, None, zab("VstupDoJeskyne"), to_mask=False)
-        else:
-            pm("sym203-1", 56,
-               c("natural").isin(["cave_entrance"]) | (c("man_made") == "adit"),
-               gdf_centroids)
-
-        # 203-2
-        cgdf = isom("203.2")
-        if cgdf is not None:
-            pm("sym203-2", 56, None, cgdf, to_mask=False)
-
-        # 204 - Malý balvan
-        cgdf = isom("204")
-        if cgdf is not None:
-            pm("sym204", 56, None, cgdf, to_mask=False)
-
-        # 205 - Balvan
-        cgdf = isom("205")
-        if cgdf is not None:
-            pm("sym205", 56, None, cgdf, to_mask=False)
-        elif zab("OsamelyBalvanSkalaSkalniSuk") is not None:
-            pm("sym205", 56, None, zab("OsamelyBalvanSkalaSkalniSuk"), to_mask=False)
-        else:
-            pm("sym205", 56,
-               c("natural").isin(["stone", "rock"]) | (c("geological") == "glacial_erratic"),
-               gdf_centroids)
-
-        # 207 - Skupina balvanů
-        cgdf = isom("207")
-        if cgdf is not None:
-            pm("sym207", 56, None, cgdf, to_mask=False)
-        elif zab("SkupinaBalvanu_b") is not None:
-            pm("sym207", 56, None, zab("SkupinaBalvanu_b"), to_mask=False)
-
-        # 208, 209
-        for code, sym in [("208", "sym208"), ("209", "sym209")]:
-            cgdf = isom(code)
-            if cgdf is not None:
-                pm(sym, 18, None, cgdf, to_mask=False)
-
-        # 210 - Suťoviště
-        cgdf = isom("210")
-        if cgdf is not None:
-            pm("sym210", 18, None, cgdf, to_mask=False)
-        else:
-            pm("sym210", 18, c("natural") == "blockfield", gdf_polys)
-
-        # 211, 212 → sym210
-        for code in ["211", "212"]:
-            cgdf = isom(code)
-            if cgdf is not None:
-                pm("sym210", 18, None, cgdf, to_mask=False)
-
-        # 213 - Písek
-        cgdf = isom("213")
-        if cgdf is not None:
-            pm("sym213", 15, None, cgdf, to_mask=False)
-        else:
-            pm("sym213", 15, c("natural").isin(["sand", "dune"]), gdf_polys)
-
-        # 215 - Příkop
-        cgdf = isom("215")
-        mask_ditch = (c("barrier") == "ditch") | (c("military") == "trench")
-        if cgdf is not None:
-            pm("sym215a", 21, None, cgdf, to_mask=False)
-            pm("sym215b", 21, None, cgdf, to_mask=False)
-        else:
-            pm("sym215a", 21, mask_ditch, gdf_lines)
-            pm("sym215b", 21, mask_ditch, gdf_lines)
-
-    # ----------------------------------------------------------------
-    # WATER
-    # ----------------------------------------------------------------
-    if _section("water"):
-        # 301 - Vodní plocha
-        cgdf = isom("301")
-        if cgdf is not None:
-            pm("sym301", 27, None, cgdf, to_mask=False)
-        elif zab_in("VodniPlocha", "PozemniNadrz"):
-            for zk in ["VodniPlocha", "PozemniNadrz"]:
-                if zab(zk) is not None:
-                    pm("sym301", 27, None, zab(zk), to_mask=False)
-        else:
-            pm("sym301", 27,
-               c("natural").isin(["lake", "water", "canal"]) |
-               c("water").isin(["lake", "river", "basin", "bay", "reservoir"]) |
-               (c("landuse") == "basin") | (c("leisure") == "swimming_pool"),
-               gdf_polys)
-
-        # 302 - Mělká voda
-        cgdf = isom("302")
-        if cgdf is not None:
-            pm("sym302", 27, None, cgdf, to_mask=False)
-        else:
-            pm("sym302", 27, c("water") == "stream", gdf_polys)
-
-        # 303
-        cgdf = isom("303")
-        if cgdf is not None:
-            pm("sym303", 27, None, cgdf, to_mask=False)
-
-        # 304 - Řeka
-        cgdf = isom("304")
-        if cgdf is not None:
-            pm("sym304", 26, None, cgdf, to_mask=False)
-        elif zab("VodniTok") is not None:
-            mask = (_get_col(zab("VodniTok"), "typtoku_p").isin(["povrchový splavný"]) &
-                    _get_col(zab("VodniTok"), "vydattok_p").isin(["stálý"]))
-            pm("sym304", 26, mask, zab("VodniTok"))
-        else:
-            pm("sym304", 26,
-               (c("waterway").isin(["river", "canal"])) &
-               (~c("tunnel").isin(["culvert", "yes", "pipe", "covered", "cave"])) &
-               (~c("intermittent").isin(["yes", "dry"])),
-               gdf_lines)
-
-        # 305 - Potok
-        cgdf = isom("305")
-        if cgdf is not None:
-            pm("sym305", 26, None, cgdf, to_mask=False)
-        elif zab("VodniTok") is not None:
-            mask = (_get_col(zab("VodniTok"), "typtoku_p").isin(["povrchový nesplavný"]) &
-                    _get_col(zab("VodniTok"), "vydattok_p").isin(["stálý"]))
-            pm("sym305", 26, mask, zab("VodniTok"))
-        else:
-            pm("sym305", 26,
-               (c("waterway").isin(["stream", "ditch"])) &
-               (~c("tunnel").isin(["culvert", "yes", "pipe", "covered", "cave"])) &
-               (~c("intermittent").isin(["yes", "dry"])),
-               gdf_lines)
-
-        # 306 - Občasný tok
-        cgdf = isom("306")
-        if cgdf is not None:
-            pm("sym306", 26, None, cgdf, to_mask=False)
-        elif zab("VodniTok") is not None:
-            mask = (_get_col(zab("VodniTok"), "typtoku_p").isin(["povrchový splavný", "povrchový nesplavný"]) &
-                    _get_col(zab("VodniTok"), "vydattok_p").isin(["občasný"]))
-            pm("sym306", 26, mask, zab("VodniTok"))
-        else:
-            pm("sym306", 26,
-               ((c("waterway") == "drain") |
-                (c("waterway").isin(["stream", "ditch"]) & c("intermittent").isin(["yes", "dry"]))) &
-               (~c("tunnel").isin(["culvert", "yes", "pipe", "covered", "cave"])),
-               gdf_lines)
-
-        # 307 - Neprůchodná bažina
-        cgdf = isom("307")
-        if cgdf is not None:
-            pm("sym307", 25, None, cgdf, to_mask=False)
-        elif zab("Raseliniste") is not None:
-            pm("sym307", 25, None, zab("Raseliniste"), to_mask=False)
-        else:
-            pm("sym307", 25, c("wetland") == "reedbed", gdf_polys)
-
-        # 308 - Bažina
-        cgdf = isom("308")
-        if cgdf is not None:
-            pm("sym308", 25, None, cgdf, to_mask=False)
-        elif zab("BazinaMocal") is not None:
-            pm("sym308", 25, None, zab("BazinaMocal"), to_mask=False)
-        else:
-            pm("sym308", 25,
-               (c("natural") == "wetland") & (~c("wetland").isin(["marsh", "wet_meadow", "reedbed"])),
-               gdf_polys)
-
-        # 309
-        cgdf = isom("309")
-        if cgdf is not None:
-            pm("sym309", 25, None, cgdf, to_mask=False)
-
-        # 310 - Nezřetelná bažina
-        cgdf = isom("310")
-        if cgdf is not None:
-            pm("sym308", 25, None, cgdf, to_mask=False)
-        else:
-            pm("sym308", 25,
-               (c("wetland") == "marsh") | (c("water") == "wet_meadow"),
-               gdf_polys)
-
-        # 311 - Studna / nádrž
-        cgdf = isom("311")
-        if cgdf is not None:
-            pm("sym311", 52, None, cgdf, to_mask=False)
-        else:
-            pm("sym311", 52,
-               (c("man_made") == "water_well") | (c("amenity") == "fountain") |
-               (c("natural") == "geyser"),
-               gdf_centroids)
-
-        # 312 - Pramen
-        cgdf = isom("312")
-        if cgdf is not None:
-            pm("sym312", 52, None, cgdf, to_mask=False)
-        elif zab("ZdrojPodzemnichVod") is not None:
-            pm("sym312", 52, None, zab("ZdrojPodzemnichVod"), to_mask=False)
-        else:
-            pm("sym312", 52,
-               (c("natural") == "spring") & (c("covered") != "yes"),
-               gdf_centroids)
-
-        # 313
-        cgdf = isom("313")
-        if cgdf is not None:
-            pm("sym312", 52, None, cgdf, to_mask=False)
-
-    # ----------------------------------------------------------------
-    # VEGETATION
-    # ----------------------------------------------------------------
-    if _section("vegetation"):
-        # 401 - Otevřený prostor
-        cgdf = isom("401")
-        if cgdf is not None:
-            pm("sym401", 1.0, None, cgdf, to_mask=False)
-        elif zab("TrvalyTravniPorost") is not None:
-            pm("sym401", 1.0, None, zab("TrvalyTravniPorost"), to_mask=False)
-        else:
-            pm("sym401", 1.0,
-               c("landuse").isin(["grassland", "grass", "meadow"]) |
-               c("natural").isin(["grassland", "fell", "heath"]),
-               gdf_polys)
-
-        # 402 - Park
-        cgdf = isom("402")
-        if cgdf is not None:
-            pm("sym402", 1.0, None, cgdf, to_mask=False)
-        elif zab("OkrasnaZahradaPark") is not None:
-            pm("sym402", 1.0, None, zab("OkrasnaZahradaPark"), to_mask=False)
-        else:
-            pm("sym402", 1.0, c("leisure") == "park", gdf_polys)
-
-        # 403, 404 - jen ISOM
-        for code, sym in [("403", "sym403"), ("404", "sym404")]:
-            cgdf = isom(code)
-            if cgdf is not None:
-                pm(sym, 1.0, None, cgdf, to_mask=False)
-
-        # 408 - Živý plot / alej
-        cgdf = isom("408")
-        if cgdf is not None:
-            pm("sym408l", 19, None, cgdf, to_mask=False)
-        elif zab("LiniovaVegetace") is not None:
-            mask = _get_col(zab("LiniovaVegetace"), "typveg_p").isin(["živý plot"])
-            pm("sym408l", 19, mask, zab("LiniovaVegetace"))
-        else:
-            pm("sym408l", 19, c("natural") == "tree_row", gdf_polys)
-
-        # 412 - Orná půda
-        cgdf = isom("412")
-        if cgdf is not None:
-            pm("sym412a", 1.9, None, cgdf, to_mask=False)
-            pm("sym412b", 15, None, cgdf, to_mask=False)
-        elif zab("OrnaPudaAOstatniDaleNespecifikovanePlochy") is not None:
-            mask = _get_col(zab("OrnaPudaAOstatniDaleNespecifikovanePlochy"), "typ_pudy_p").isin(["orná půda"])
-            pm("sym412a", 1.9, mask, zab("OrnaPudaAOstatniDaleNespecifikovanePlochy"))
-            pm("sym412b", 15, mask, zab("OrnaPudaAOstatniDaleNespecifikovanePlochy"))
-        else:
-            pm("sym412a", 1.9, c("landuse") == "farmland", gdf_polys)
-            pm("sym412b", 15, c("landuse") == "farmland", gdf_polys)
-
-        # 413 - Sad
-        cgdf = isom("413")
-        if cgdf is not None:
-            pm("sym413", 1.9, None, cgdf, to_mask=False)
-        else:
-            pm("sym413", 1.9, c("landuse") == "orchard", gdf_polys)
-
-        # 414 - Vinice / Chmelnice
-        cgdf = isom("414")
-        if cgdf is not None:
-            pm("sym414", 1.9, None, cgdf, to_mask=False)
-        elif zab_in("Vinice", "Chmelnice"):
-            for zk in ["Vinice", "Chmelnice"]:
-                if zab(zk) is not None:
-                    pm("sym414", 1.9, None, zab(zk), to_mask=False)
-        else:
-            pm("sym414", 1.9, c("landuse").isin(["plant_nursery", "vineyard"]), gdf_polys)
-
-        # 415 - Hranice kultivace
-        cgdf = isom("415")
-        if cgdf is not None:
-            pm("sym216l", 15, None, cgdf, to_mask=False)
-
-        # 416 - Hranice vegetace
-        cgdf = isom("416")
-        if cgdf is not None:
-            pm("sym416p", 1.8, None, cgdf, to_mask=False)
-        elif zab("LesniPudaSeStromyKategorizovana") is not None:
-            mask = (_get_col(zab("LesniPudaSeStromyKategorizovana"), "druh_k").isin(["J"]) &
-                    _get_col(zab("LesniPudaSeStromyKategorizovana"), "vyska_k").isin(["3"]))
-            pm("sym416p", 1.8, mask, zab("LesniPudaSeStromyKategorizovana"))
-
-        # 417 - Výrazný strom
-        cgdf = isom("417")
-        if cgdf is not None:
-            pm("sym417a", 54, None, cgdf, to_mask=False)
-            pm("sym417b", 54, None, cgdf, to_mask=False)
-        elif zab("VyznamnyNeboOsamelyStromLesik") is not None:
-            pm("sym417a", 54, None, zab("VyznamnyNeboOsamelyStromLesik"), to_mask=False)
-            pm("sym417b", 54, None, zab("VyznamnyNeboOsamelyStromLesik"), to_mask=False)
-        else:
-            pm("sym417a", 54, c("natural") == "tree", gdf_centroids)
-            pm("sym417b", 55, c("natural") == "tree", gdf_centroids)
-
-        # 418 - Výrazný keř
-        cgdf = isom("418")
-        if cgdf is not None:
-            pm("sym418a", 54, None, cgdf, to_mask=False)
-            pm("sym418b", 54, None, cgdf, to_mask=False)
-        else:
-            pm("sym418a", 54, c("natural") == "shrub", gdf_centroids)
-            pm("sym418b", 55, c("natural") == "shrub", gdf_centroids)
-
-        # 419 - Výrazný vegetační objekt
-        cgdf = isom("419")
-        if cgdf is not None:
-            pm("sym419", 54, None, cgdf, to_mask=False)
-        else:
-            pm("sym419", 54, c("natural") == "tree_stump", gdf_centroids)
-
-    # ----------------------------------------------------------------
-    # ROADS
-    # ----------------------------------------------------------------
-    if _section("roads"):
-        # 501 - Parkoviště
-        cgdf = isom("501")
-        if cgdf is not None:
-            pm("sym501", 49, None, cgdf, to_mask=False)
-        elif zab_in("ParkovisteOdpocivka", "ArealUceloveZastavby"):
-            if zab("ParkovisteOdpocivka") is not None:
-                pm("sym501", 49, None, zab("ParkovisteOdpocivka"), to_mask=False)
-            if zab("ArealUceloveZastavby") is not None:
-                mask = _get_col(zab("ArealUceloveZastavby"), "typzast_k").isin(["408"])
-                pm("sym501", 49, mask, zab("ArealUceloveZastavby"))
-        else:
-            pm("sym501", 49,
-               (c("amenity") == "parking") | (c("place") == "square") | c("highway").isin(["pedestrian", "footway"]) | (c("man_made") == "bridge"),
-               gdf_polys)
-
-        # 502D - Dálnice
-        cgdf = isom("502D")
-        mask_motorway = (c("highway").isin(["motorway", "trunk"]) &
-                         ~c("tunnel").isin(["yes", "avalanche_protector", "building_passage"]) &
-                         (c("bridge") != "yes") & (c("access") != "private"))
-        for sym, z in [("sym502Da", 45), ("sym502Db", 47), ("sym502Dc", 48)]:
-            if cgdf is not None:
-                pm(sym, z, None, cgdf, to_mask=False)
-            elif zab("SilniceDalnice") is not None:
-                mask = _get_col(zab("SilniceDalnice"), "typsil_k").isin(["D1", "D2", "M"])
-                pm(sym, z, mask, zab("SilniceDalnice"))
-            else:
-                pm(sym, z, mask_motorway, gdf_lines)
-
-        # 502 - Hlavní silnice
-        cgdf = isom("502")
-        mask_road = (c("highway").isin(["highway_link", "trunk_link", "primary", "primary_link",
-                                          "secondary", "secondary_link", "residential", "tertiary",
-                                          "living_street"]) &
-                     ~c("tunnel").isin(["yes", "avalanche_protector", "building_passage"]) &
-                     (c("bridge") != "yes") & (c("access") != "private"))
-        for sym, z in [("sym502a", 45), ("sym502b", 47)]:
-            if cgdf is not None:
-                pm(sym, z, None, cgdf, to_mask=False)
-            elif zab_in("SilniceDalnice", "Ulice", "SilniceVeVastavbe"):
-                if zab("SilniceDalnice") is not None:
-                    mask = ~_get_col(zab("SilniceDalnice"), "typsil_k").isin(["D1", "D2", "M"])
-                    pm(sym, z, mask, zab("SilniceDalnice"))
-                if zab("Ulice") is not None:
-                    mask = _get_col(zab("Ulice"), "typulice_k").isin(["026", "926"])
-                    pm(sym, z, mask, zab("Ulice"))
-                if zab("SilniceVeVastavbe") is not None:
-                    pm(sym, z, None, zab("SilniceVeVastavbe"), to_mask=False)
-            else:
-                pm(sym, z, mask_road, gdf_lines)
-
-        # 503 - Silnice / zpevněná cesta
-        cgdf = isom("503")
-        mask_service = (c("highway").isin(["tertiary_link", "service", "residential", "living_street"]) | c("highway").isin(["track", "road", "cycleway", "unclassified"]) &
-                        (c("surface").isin(["concrete", "asphalt"])) | (c("tracktype") == "grade1") &
-                        ~c("tunnel").isin(["yes", "avalanche_protector", "building_passage"]) &
-                        (c("bridge") != "yes") & (c("access") != "private"))
-        if cgdf is not None:
-            pm("sym503", 45, None, cgdf, to_mask=False)
-        elif zab_in("SilniceNeevidovana", "Cesta", "LyzarskyMustek"):
-            if zab("SilniceNeevidovana") is not None:
-                pm("sym503", 45, None, zab("SilniceNeevidovana"), to_mask=False)
-            if zab("Cesta") is not None:
-                mask = (_get_col(zab("Cesta"), "povrch_p").isin(
-                    ["zpevněný (panel, dlažba)", "zpevněný (asfalt, beton)"]) &
-                        _get_col(zab("Cesta"), "typcesty_p").isin(["cesta udržovaná"]))
-                pm("sym503", 45, mask, zab("Cesta"))
-            if zab("LyzarskyMustek") is not None:
-                pm("sym503", 46, None, zab("LyzarskyMustek"), to_mask=False)
-        else:
-            pm("sym503", 45, mask_service, gdf_lines)
-
-        # 504 - Vozová cesta
-        cgdf = isom("504")
-        mask_track = (c("highway").isin(["cycleway", "unclassified"]) &
-                      (~c("surface").isin(["concrete", "asphalt"])) & (c("tracktype") != "grade1") &
-                      ~c("tunnel").isin(["yes", "avalanche_protector", "building_passage"]) &
-                      (c("bridge") != "yes") & (c("access") != "private"))
-        if cgdf is not None:
-            pm("sym504", 45, None, cgdf, to_mask=False)
-        elif zab("Cesta") is not None:
-            mask = (_get_col(zab("Cesta"), "povrch_p").isin([
-                "zpevněný (nosný terén, štěrk, kalený povrch)",
-                "nedostatečně zpevněný (tráva, hlína, písek, kamení)", "neurčeno", "NULL"]) &
-                    _get_col(zab("Cesta"), "typcesty_p").isin(["cesta udržovaná"]))
-            pm("sym504", 45, mask, zab("Cesta"))
-        else:
-            pm("sym504", 45, mask_track, gdf_lines)
-
-        # 505 - Pěší cesta
-        cgdf = isom("505")
-        # OPRAVENO: "footway" chybělo úplně - OSM linie s highway=footway se
-        # tak nikdy nedostaly do žádné masky pro linie (byly jen v masce pro
-        # 501, ale ta se aplikuje na gdf_polys, takže běžná linie footway
-        # tam nikdy nespadla) -> pěší cesty se vůbec nevykreslovaly.
-        mask_footway = (c("highway").isin(["road", "bridleway", "footway"]) |
-                        ((c("highway") == "cycleway") & (~c("surface").isin(["concrete", "asphalt"])) &
-                        (c("tracktype") != "grade1")) &
-                        (c("bridge") != "yes") & (c("access") != "private"))
-        # 505 = plná hnědá linie + černě čárkované okraje po stranách
-        # (posunuté rovnoběžné linie, ne dash uvnitř jedné linie).
-        # offset_m = poloviční šířka pruhu (0.35mm/2) přepočtená na mapové
-        # metry pro aktuální tiskové měřítko.
-        offset_505_m = (0.35 / 2) / 1000 * scale
-        if cgdf is not None:
-            pm("sym505", 45, None, cgdf, to_mask=False)
-            pm_border("sym505b", 45.5, None, cgdf, offset_505_m, to_mask=False)
-        elif zab_in("Ulice", "Cesta"):
-            if zab("Ulice") is not None:
-                mask = ~_get_col(zab("Ulice"), "typulice_k").isin(["925", "025"])
-                pm("sym505", 45, mask, zab("Ulice"))
-                pm_border("sym505b", 45.5, mask, zab("Ulice"), offset_505_m)
-            if zab("Cesta") is not None:
-                mask = _get_col(zab("Cesta"), "typcesty_p").isin(["cesta neudržovaná"])
-                pm("sym505", 45, mask, zab("Cesta"))
-                pm_border("sym505b", 45.5, mask, zab("Cesta"), offset_505_m)
-        else:
-            pm("sym505", 45, mask_footway, gdf_lines)
-            pm_border("sym505b", 45.5, mask_footway, gdf_lines, offset_505_m)
-
-        # 506 - Pěšina
-        cgdf = isom("506")
-        mask_path = ((c("highway") == "path") &
-                     ~c("trail_visibility").isin(["low", "poor", "bad", "very_bad", "horrible", "no"]) &
-                     (c("bridge") != "yes") & (c("access") != "private"))
-        if cgdf is not None:
-            pm("sym506", 45, None, cgdf, to_mask=False)
-        elif zab("Pesina") is not None:
-            pm("sym506", 45, None, zab("Pesina"), to_mask=False)
-        else:
-            pm("sym506", 45, mask_path, gdf_lines)
-
-        # 507 - Nezřetelná pěšina
-        cgdf = isom("507")
-        if cgdf is not None:
-            pm("sym507", 45, None, cgdf, to_mask=False)
-        else:
-            pm("sym507", 45,
-               (c("highway") == "path") &
-               c("trail_visibility").isin(["low", "poor", "bad", "very_bad", "horrible"]) &
-               (c("bridge") != "yes"),
-               gdf_lines)
-
-        # 508 - Průsek
-        cgdf = isom("508")
-        if cgdf is not None:
-            pm("sym508", 38, None, cgdf, to_mask=False)
-        elif zab("LesniPrusek") is not None:
-            pm("sym508", 38, None, zab("LesniPrusek"), to_mask=False)
-        else:
-            pm("sym508", 38, c("man_made") == "cutline", gdf_lines)
-
-        # Mosty - dálnice
-        mask_bridge_double = (c("highway").isin(["motorway", "trunk"]) &
-                              ~c("tunnel").isin(["yes", "avalanche_protector", "building_passage"]) &
-                              (c("bridge") == "yes") & (c("access") != "private"))
-        for sym, z in zip(["sym502DBa", "sym502DBb", "sym502Da", "sym502Db", "sym502Dc"],
-                          [65, 66, 67, 68, 69]):
-            pm(sym, z, mask_bridge_double, gdf_lines)
-
-        # Mosty - hlavní silnice
-        mask_bridge_major = (c("highway").isin(["highway_link", "trunk_link", "primary", "primary_link",
-                                                 "secondary", "secondary_link", "residential", "tertiary",
-                                                 "living_street"]) &
-                             ~c("tunnel").isin(["yes", "avalanche_protector", "building_passage"]) &
-                             (c("bridge") == "yes") & (c("access") != "private"))
-        for sym, z in zip(["sym502Ba", "sym502Bb", "sym502a", "sym502b"], [65, 66, 67, 68]):
-            pm(sym, z, mask_bridge_major, gdf_lines)
-
-        # Mosty - vedlejší silnice
-        mask_bridge_minor = (c("highway").isin(["tertiary_link", "service", "track", "road", "unclassified"]) &
-                             ~c("tunnel").isin(["yes", "avalanche_protector", "building_passage"]) &
-                             (c("bridge") == "yes") & (c("access") != "private"))
-        for sym, z in zip(["sym503Ba", "sym503Bb", "sym503"], [65, 66, 67]):
-            pm(sym, z, mask_bridge_minor, gdf_lines)
-
-        # Lávka
-        if zab("Lavka") is not None:
-            pm("sym503", 40, None, zab("Lavka"), to_mask=False)
-        else:
-            pm("sym503", 67,
-               c("highway").isin(["path", "cycleway", "footway", "bridleway"]) &
-               (c("bridge") == "yes") & (c("access") != "private"),
-               gdf_lines)
-
-        # 509 - Železnice
-        cgdf = isom("509")
-        mask_railway = (c("railway").isin(["rail", "disused", "funicular", "narrow_gauge"]) &
-                        ~c("tunnel").isin(["yes", "avalanche_protector", "building_passage"]) &
-                        (c("bridge") != "yes"))
-        for sym, z in [("sym509a", 40), ("sym509b", 41)]:
-            if cgdf is not None:
-                pm(sym, z, None, cgdf, to_mask=False)
-            elif zab_in("ZeleznicniTrat", "ZeleznicniVlecka"):
-                for zk in ["ZeleznicniTrat", "ZeleznicniVlecka"]:
-                    if zab(zk) is not None:
-                        pm(sym, z, None, zab(zk), to_mask=False)
-            else:
-                pm(sym, z, mask_railway, gdf_lines)
-
-        # Železniční most
-        mask_bridge_railway = (c("railway").isin(["rail", "disused", "funicular", "narrow_gauge"]) &
-                               ~c("tunnel").isin(["yes", "avalanche_protector", "building_passage"]) &
-                               (c("bridge") == "yes"))
-        for sym, z in zip(["sym509Ba", "sym509Bb", "sym509a", "sym509b"], [60, 61, 62, 63]):
-            pm(sym, z, mask_bridge_railway, gdf_lines)
-
-    # ----------------------------------------------------------------
-    # MAN MADE
-    # ----------------------------------------------------------------
-    if _section("man_made"):
-        # 510 - El. vedení (nízké napětí / lanovky)
-        cgdf = isom("510")
-        if cgdf is not None:
-            pm("sym510", 70, None, cgdf, to_mask=False)
-        elif zab("ElektrickeVedeni") is not None:
-            mask = ~_get_col(zab("ElektrickeVedeni"), "napeti").isin(["400", "110"])
-            pm("sym510", 70, mask, zab("ElektrickeVedeni"))
-        elif zab("LanovaDrahaLyzarskyVlek") is not None:
-            pm("sym510", 70, None, zab("LanovaDrahaLyzarskyVlek"), to_mask=False)
-        else:
-            pm("sym510", 70,
-               c("power").isin(["line", "minor_line"]) | c("aerialway").isin([
-                   "cable_car", "gondola", "chair_lift", "drag_lift", "t-bar", "j-bar"]),
-               gdf_lines)
-
-        # 511 - VVN (vysoké napětí)
-        if zab("ElektrickeVedeni") is not None:
-            mask = _get_col(zab("ElektrickeVedeni"), "napeti").isin(["400", "110"])
-            pm("sym510", 70, mask, zab("ElektrickeVedeni"))
-        else:
-            pm("sym510", 70, c("power").isin(["line"]), gdf_lines)
-
-        # 513.1 - Zeď
-        cgdf = isom("513.1")
-        if cgdf is not None:
-            pm("sym513-1a", 30, None, cgdf, to_mask=False)
-            pm("sym513-1b", 30, None, cgdf, to_mask=False)
-        elif zab_in("Zed", "NasupisteHraze"):
-            for zk in ["Zed", "NasupisteHraze"]:
-                if zab(zk) is not None:
-                    pm("sym513-1a", 30, None, zab(zk), to_mask=False)
-                    pm("sym513-1b", 30, None, zab(zk), to_mask=False)
-        else:
-            pm("sym513-1a", 30, c("barrier") == "wall", gdf_lines)
-
-        # 515 - Nepřekonatelná zeď
-        cgdf = isom("515")
-        if cgdf is not None:
-            pm("sym515a", 30, None, cgdf, to_mask=False)
-            pm("sym515b", 30, None, cgdf, to_mask=False)
-        elif zab("Zed") is not None:
-            mask = _get_col(zab("Zed"), "typzed_p").isin(
-                ["protihluková stěna", "zeď vodního díla", "zeď ostatní"])
-            pm("sym515a", 30, mask, zab("Zed"))
-        elif zab("HradbaValBastaOpevneni") is not None:
-            pm("sym515b", 30, None, zab("HradbaValBastaOpevneni"), to_mask=False)
-        else:
-            pm("sym515a", 30, c("barrier").isin(["city_wall", "retaining_wall", "wall"]), gdf_lines)
-
-        # 520 - Privátní oblast
-        if _section("private"):
-            cgdf = isom("520")
-            if cgdf is not None:
-                pm("sym520", 1.5, None, cgdf, to_mask=False)
-            else:
-                garden_layers = ["Hrbitov", "Letiste", "OvocnySadZahrada",
-                                 "PovrchTezbaLom", "ArealUceloveZastavby", "Skladka"]
-                found = False
-                for gl in garden_layers:
-                    if zab(gl) is not None:
-                        pm("sym520", 1.5, None, zab(gl), to_mask=False)
-                        found = True
-                if not found:
-                    pm("sym520", 1.5,
-                       c("landuse").isin([
-                           "residential", "allotments", "military", "commercial",
-                           "construction", "industrial", "cemetery", "landfill", "quarry"
-                       ]) | c("leisure").isin(["pitch", "sports_centre"]),
-                       gdf_polys)
-
-        # 521 - Budova
-        if _section("buildings"):
-            cgdf = isom("521")
-            if cgdf is not None:
-                pm("sym521", 50, None, cgdf, to_mask=False)
-            elif zab("BudovaJednotlivaNeboBlokBudov") is not None:
-                pm("sym521", 50, None, zab("BudovaJednotlivaNeboBlokBudov"), to_mask=False)
-            else:
-                pm("sym521", 50,
-                   c("building").notna() & (c("building") != "") & ~c("building").isin(["roof"]),
-                   gdf_polys)
-
-        # 522 - Zastřešení
-        cgdf = isom("522")
-        if cgdf is not None:
-            pm("sym522", 36, None, cgdf, to_mask=False)
-        else:
-            pm("sym522", 36, c("building") == "roof", gdf_polys)
-
-        # 523 - Zřícenina / Bunkr
-        cgdf = isom("523")
-        if cgdf is not None:
-            pm("sym523", 35, None, cgdf, to_mask=False)
-        elif zab("RozvalinaZricenina") is not None:
-            pm("sym523", 35, None, zab("RozvalinaZricenina"), to_mask=False)
-        elif zab("Bunkr") is not None:
-            pm("sym523", 56, None, zab("Bunkr"), to_mask=False)
-        else:
-            pm("sym523", 35,
-               (c("building") == "ruins") | (c("historic") == "ruins") | (c("military") == "bunker"),
-               gdf_polys)
-
-        # 524 - Věž
-        cgdf = isom("524")
-        if cgdf is not None:
-            pm("sym524a", 56, None, cgdf, to_mask=False)
-            pm("sym524b", 56, None, cgdf, to_mask=False)
-        else:
-            tower_layers = ["Silo", "TezniVez", "TovarniKomin", "VetrnyMotor",
-                            "VetrnyMlyn", "VodojemVezovy", "VezovitaStavba"]
-            found = False
-            for tl in tower_layers:
-                if zab(tl) is not None:
-                    pm("sym524a", 56, None, zab(tl), to_mask=False)
-                    pm("sym524b", 56, None, zab(tl), to_mask=False)
-                    found = True
-            if not found:
-                pm("sym524a", 56,
-                   c("man_made").isin(["tower", "water_tower", "communications_tower",
-                                       "mast", "chimney", "crane"]) |
-                   (c("building") == "clock_tower"),
-                   gdf_pts)
-                pm("sym524b", 56,
-                   c("man_made").isin(["tower", "water_tower", "communications_tower",
-                                       "mast", "chimney", "crane"]) |
-                   (c("building") == "clock_tower"),
-                   gdf_pts)
-
-        # 525 - Malá věž / Posed
-        cgdf = isom("525")
-        if cgdf is not None:
-            pm("sym525", 56, None, cgdf, to_mask=False)
-        else:
-            pm("sym525", 56, c("amenity") == "hunting_stand", gdf_pts)
-
-        # 526 - Pomník
-        cgdf = isom("526")
-        if cgdf is not None:
-            pm("sym526a", 56, None, cgdf, to_mask=False)
-            pm("sym526b", 56, None, cgdf, to_mask=False)
-        elif zab("MohylaPomnikNahrobek") is not None:
-            pm("sym526a", 56, None, zab("MohylaPomnikNahrobek"), to_mask=False)
-            pm("sym526b", 56, None, zab("MohylaPomnikNahrobek"), to_mask=False)
-        else:
-            pm("sym526a", 56,
-               c("historic").isin(["boundary_stone", "memorial", "wayside_cross"]) |
-               c("man_made").isin(["cross", "survey_point", "obelisk"]),
-               gdf_centroids)
-            pm("sym526b", 56,
-               c("historic").isin(["boundary_stone", "memorial", "wayside_cross"]) |
-               c("man_made").isin(["cross", "survey_point", "obelisk"]),
-               gdf_centroids)
-
-        # 531 - Výrazný umělý objekt / Kříž
-        cgdf = isom("531")
-        if cgdf is not None:
-            pm("sym531", 56, None, cgdf, to_mask=False)
-        elif zab("KrizSloupKulturnihoVyznamu") is not None:
-            pm("sym531", 56, None, zab("KrizSloupKulturnihoVyznamu"), to_mask=False)
-        else: 
-            pm("sym531", 56, c("man_made").isin(["insect_hotel", "street_cabinet"]), gdf_centroids)
-
-        # 532 - Schody
-        cgdf = isom("532")
-        if cgdf is not None:
-            for sym, z in [("sym532a", 49), ("sym532b", 50), ("sym532c", 51)]:
-                pm(sym, z, None, cgdf, to_mask=False)
-        else:
-            for sym, z in [("sym532a", 49), ("sym532b", 50), ("sym532c", 51)]:
-                pm(sym, z, c("highway") == "steps", gdf_lines)
+<?xml version='1.0' encoding='utf-8'?>
+<!--
+  symbols4.xml — ISSprOM 2019-2 (rev. 6, leden 2024), tiskové měřítko 1:4000.
+  Rozměry převedeny přímo ze specifikace (mm -> pt, 1pt = 0.352778mm),
+  BEZ dalšího škálování podle scale (na rozdíl od symbols10/15.xml, kde
+  je bazovou hodnotou ISOM 1:15000) - ISSprOM už je definované pro 1:4000.
+
+  Barvy: hnědá #d15c00, černá #000000, modrá #21d1ff/#90e8ff,
+  zelená #0e990e/#3dff17, žlutá #f7f2c2/#ffba35, fialová #c800c8
+  (přetisková/spodní) a #a000a0 (výpalová/horní) - PŘIBLIŽNÉ odstíny,
+  ověř proti oficiální IOF barevné definici (Print and Colour Definition).
+
+  Značky beze shody v ISOM (nový tvar, jen odhad z textového popisu):
+  105.2, 501.2, 512.3, 533 - označeny poznámkou OVĚŘIT u definice,
+  zkontroluj vizuálně v OOM oproti referenční šabloně před použitím
+  na ostré mapě.
+
+  Path definice pro zbytek přejaty z symbols10.xml/symbols15.xml
+  (tvar je dle ISSprOM shodný s ISOM 2017-2), jen přepočtené linewidth.
+
+  DŮLEŽITÉ - jednotky bodových značek (type="point"):
+  Souřadnice v <path d="..."> jsou dle symbols.py PŘÍMO V MAPOVÝCH METRECH,
+  ne v pt ani mm přepočtených přes měřítko. Použito: radius = "Stopa"
+  (průměr dle ISSprOM) / 2, u obdélníkových stop poloviční rozměr jako
+  semi-osa. Pokud po vyzkoušení budou značky pořád příliš velké/malé,
+  jde jen o jednotný multiplikátor - stačí přepočítat všechny path
+  souřadnice stejným poměrem.
+-->
+<root>
+
+    <!-- ============================================================ -->
+    <!-- 4.1 TERÉNNÍ TVARY (hnědá #d15c00)                             -->
+    <!-- ============================================================ -->
+
+    <!-- 101: Základní vrstevnice -->
+    <symbol id="sym101" type="line">
+        <style color="#d15c00" linewidth="0.4252" linestyle="solid" />
+    </symbol>
+
+    <!-- 102: Zdůrazněná vrstevnice -->
+    <symbol id="sym102" type="line">
+        <style color="#d15c00" linewidth="0.8505" linestyle="solid" />
+    </symbol>
+
+    <!-- 103: Doplňková vrstevnice -->
+    <symbol id="sym103" type="line">
+        <style color="#d15c00" linewidth="0.3402" linestyle="(0, (5.67, 0.567))" />
+    </symbol>
+
+    <!-- 104: Zemní sráz (min. výška 1m, spádovky) -->
+    <symbol id="sym104" type="line">
+        <style color="#d15c00" linewidth="0.7" linestyle="solid" capstyle="butt" />
+        <style_ticks length="4" spacing="5" linewidth="0.4536" color="#d15c00" />
+    </symbol>
+
+    <!-- 105.1: Malý zemní val -->
+    <symbol id="sym105-1a" type="line">
+        <style color="#d15c00" linewidth="0.6" linestyle="solid" />
+    </symbol>
+    <symbol id="sym105-1b" type="line">
+        <style color="#d15c00" linewidth="1.4" linestyle="(0, (0.00667, 5.67))" solid_capstyle="round" />
+    </symbol>
+
+    <!-- 105.2: Opěrný zemní val viditelný z jedné strany -->
+    <!-- OVĚŘIT: nová značka, poloviční příčky směřující na nižší úroveň -->
+    <symbol id="sym105-2" type="line">
+        <style color="#d15c00" linewidth="0.6" linestyle="solid" />
+        <style_ticks length="2" spacing="3" linewidth="0.4536" color="#d15c00" angle="45" />
+    </symbol>
+
+    <!-- 107: Erozní rýha -->
+    <symbol id="sym107" type="line">
+        <style color="#d15c00" linewidth="0.8" linestyle="solid" />
+    </symbol>
+
+    <!-- 108: Malá erozní rýha -->
+    <symbol id="sym108" type="line">
+        <style color="#d15c00" linewidth="0.8" linestyle="(0, (0.00667, 3))" solid_capstyle="round" />
+    </symbol>
+
+    <!-- 109: Malá kupka (Stopa 3m diam -> r=1.5) -->
+    <symbol id="sym109" type="point">
+        <path d="M 1.5 0 A 1.5 1.5 0 0 1.5 -1.5 0 A 1.5 1.5 0 0 1.5 1.5 0 Z" />
+        <style facecolor="#d15c00" edgecolor="#d15c00" linewidth="0" />
+    </symbol>
+
+    <!-- 110: Malá protáhlá kupka (Stopa 4.8x2.4m -> semi 2.4/1.2) -->
+    <symbol id="sym110" type="point">
+        <path d="M 0 -1.2 C 0.66 -1.2 1.2 -0.663 1.2 0 C 1.2 0.663 0.66 1.2 0 1.2 C -0.66 1.2 -1.2 0.663 -1.2 0 C -1.2 -0.663 -0.66 -1.2 0 -1.2 Z" />
+        <style facecolor="#d15c00" edgecolor="none" linewidth="0" />
+    </symbol>
+
+    <!-- 111: Malá prohlubeň (Stopa 4.8x2.4m -> r=1.2 půlkružnice) -->
+    <symbol id="sym111" type="point">
+        <path d="M -1.2 0 A 1.2 1.2 0 0 1.2 1.2 0" />
+        <style facecolor="none" edgecolor="#d15c00" linewidth="0.35" />
+    </symbol>
+
+    <!-- 112: Jáma nebo díra (Stopa 4.4x5.0m -> semi 2.2/2.5) -->
+    <symbol id="sym112" type="point">
+        <path d="M -2.2 -1.9 L 0 2.5 L 2.2 -1.9" />
+        <style facecolor="none" edgecolor="#d15c00" linewidth="0.35" />
+    </symbol>
+
+    <!-- 113: Rozbitý povrch -->
+    <symbol id="sym113" type="area">
+        <style facecolor="none" edgecolor="none" linewidth="0" linestyle="solid" dotdistance="2.2" dotsize="0.85" dotcolor="#d15c00" />
+    </symbol>
+
+    <!-- 115: Výrazný terénní objekt (Stopa 5.4x4.6m -> semi 2.7/2.3) -->
+    <symbol id="sym115" type="point">
+        <path d="M -2.7 0 L 0 -2.3 L 2.7 0 L 0 2.3 Z" />
+        <style facecolor="none" edgecolor="#d15c00" linewidth="0.35" />
+    </symbol>
+
+
+    <!-- ============================================================ -->
+    <!-- 4.2 SKÁLY A BALVANY (černá #000000)                           -->
+    <!-- ============================================================ -->
+
+    <!-- 201: Nepřekonatelný sráz -->
+    <symbol id="sym201" type="line">
+        <style color="#000000" linewidth="1.0" linestyle="solid" capstyle="butt" />
+        <style_ticks length="4" spacing="5" linewidth="0.4536" color="#000000" />
+    </symbol>
+
+    <!-- 202: Překonatelný sráz -->
+    <symbol id="sym202" type="line">
+        <style color="#000000" linewidth="0.6" linestyle="solid" capstyle="butt" />
+        <style_ticks length="3.33333" spacing="4.33333" linewidth="0.4536" color="#000000" />
+    </symbol>
+
+    <!-- 203: Kamenná jáma nebo jeskyně (Stopa 4.4x5.0m -> semi 2.2/2.5) -->
+    <symbol id="sym203-1" type="point">
+        <path d="M -2.2 -1.9 L 0 2.5 L 2.2 -1.9" />
+        <style facecolor="none" edgecolor="#000000" linewidth="0.3" solid_capstyle="round" />
+    </symbol>
+    <symbol id="sym203-2" type="point">
+        <path d="M -2.2 -1.9 L 0 2.5 L 2.2 -1.9" />
+        <style facecolor="none" edgecolor="#000000" linewidth="0.3" solid_capstyle="round" />
+    </symbol>
+
+    <!-- 204: Balvan (Stopa 2.4m diam -> r=1.2) -->
+    <symbol id="sym204" type="point">
+        <path d="M 1.2 0 A 1.2 1.2 0 0 1.2 -1.2 0 A 1.2 1.2 0 0 1.2 1.2 0 Z" />
+        <style facecolor="#000000" edgecolor="#000000" linewidth="0" />
+    </symbol>
+
+    <!-- 205: Velký balvan (Stopa 3.6m diam -> r=1.8) -->
+    <symbol id="sym205" type="point">
+        <path d="M 1.8 0 A 1.8 1.8 0 0 1.8 -1.8 0 A 1.8 1.8 0 0 1.8 1.8 0 Z" />
+        <style facecolor="#000000" edgecolor="#000000" linewidth="0" />
+    </symbol>
+
+    <!-- 206: Obrovský balvan nebo skalní věž (kreslí se skutečným půdorysem) -->
+    <symbol id="sym206" type="area">
+        <style facecolor="#000000" edgecolor="none" linewidth="0" />
+    </symbol>
+
+    <!-- 207: Shluk balvanů (Stopa 4.8x4.0m -> semi 2.4/2.0) -->
+    <symbol id="sym207" type="point">
+        <path d="M 0 -2.0 L 2.4 2.0 L -2.4 2.0 Z" />
+        <style facecolor="#000000" edgecolor="#000000" linewidth="0" />
+    </symbol>
+
+    <!-- 208: Balvanové pole - trojúhelníky, náhodně rozmístěné (viz renderer) -->
+    <symbol id="sym208" type="area">
+        <style facecolor="none" edgecolor="none" linewidth="0" linestyle="solid" dotdistance="3.5" dotsize="1.2" dotcolor="#000000" marker_shape="triangle" />
+    </symbol>
+
+    <!-- 209: Otevřené balvanové pole -->
+    <!-- OVĚŘIT: DOPLNĚNO, jen odhad z 208 (řidší, čitelnější rozmístění) -->
+    <symbol id="sym209" type="area">
+        <style facecolor="none" edgecolor="none" linewidth="0" linestyle="solid" dotdistance="4.5" dotsize="1.0" dotcolor="#000000" marker_shape="triangle" />
+    </symbol>
+
+    <!-- 210: Kamenitý povrch -->
+    <symbol id="sym210" type="area">
+        <style facecolor="none" edgecolor="none" linewidth="0" linestyle="solid" dotdistance="2.0" dotsize="0.6" dotcolor="#000000" />
+    </symbol>
+
+    <!-- 213: Otevřený písčitý povrch -->
+    <symbol id="sym213" type="area">
+        <style facecolor="#f7f2c2" edgecolor="none" linewidth="0" linestyle="solid" dotdistance="2.0" dotsize="0.6" dotcolor="#000000" />
+    </symbol>
+
+    <!-- 214: Holá skála (35% černá) -->
+    <symbol id="sym214" type="area">
+        <style facecolor="#b3b3b3" edgecolor="none" linewidth="0" linestyle="solid" />
+    </symbol>
+
+
+    <!-- 215: Příkop / zákop -->
+    <!-- OVĚŘIT: DOPLNĚNO, značka v ISOM/ISSprOM oficiálně neexistuje pod
+         tímto číslem - jde o rozšíření pro OSM barrier=ditch / military=
+         trench. Vzor podle 105.1 (val), ale bez terénní hnědé, protože
+         kód řadí sekci do skupiny "rocks". -->
+    <symbol id="sym215a" type="line">
+        <style color="#000000" linewidth="0.3" linestyle="solid" />
+    </symbol>
+    <symbol id="sym215b" type="line">
+        <style color="#000000" linewidth="0.6" linestyle="(0, (0.00667, 5.67))" solid_capstyle="round" />
+    </symbol>
+
+
+    <!-- ============================================================ -->
+    <!-- 4.3 VODA A BAŽINY (modrá #21d1ff)                             -->
+    <!-- ============================================================ -->
+
+    <!-- 301: Nepřekonatelné vodní těleso -->
+    <symbol id="sym301" type="area">
+        <style facecolor="#21d1ff" edgecolor="#000000" linewidth="0.4" />
+    </symbol>
+
+    <!-- 302: Mělké vodní těleso -->
+    <symbol id="sym302" type="area">
+        <style facecolor="#90e8ff" edgecolor="#21d1ff" linewidth="0.4" />
+    </symbol>
+
+    <!-- 303: Jáma s vodou (Stopa 4.4x5.0m -> semi 2.2/2.5) -->
+    <symbol id="sym303" type="point">
+        <path d="M 2.5 0 A 2.5 2.5 0 0 2.5 -2.5 0 A 2.5 2.5 0 0 2.5 2.5 0 Z" />
+        <style facecolor="#21d1ff" edgecolor="#21d1ff" linewidth="0" />
+    </symbol>
+
+    <!-- 304: Řeka (nepřekonatelný vodní tok) -->
+    <!-- DOPLNĚNO: kód volá pm("sym304", ...) pro reálná data (OSM
+         waterway=river/canal, ZABAGED VodniTok), značka v XML úplně
+         chyběla -> řeky se nevykreslovaly. Širší než 305 (splavný/velký tok). -->
+    <symbol id="sym304" type="line">
+        <style color="#21d1ff" linewidth="1.2" linestyle="solid" />
+    </symbol>
+
+    <!-- 305: Malý překonatelný vodní tok -->
+    <symbol id="sym305" type="line">
+        <style color="#21d1ff" linewidth="0.85" />
+    </symbol>
+
+    <!-- 306: Malý / sezónní vodní tok -->
+    <symbol id="sym306" type="line">
+        <style color="#21d1ff" linewidth="0.6" linestyle="(0, (3.54375, 0.70875))" />
+    </symbol>
+
+    <!-- 307: Nepřekonatelná bažina -->
+    <symbol id="sym307" type="area">
+        <style facecolor="none" edgecolor="#000000" linewidth="0.4" linestyle="solid" hatchcolor="#21d1ff" hatchdistance="1.8" hatchwidth="0.5" hatchstyle="solid" />
+    </symbol>
+
+    <!-- 308: Bažina -->
+    <symbol id="sym308" type="area">
+        <style facecolor="none" edgecolor="none" linewidth="0" linestyle="solid" hatchcolor="#21d1ff" hatchdistance="1.8" hatchwidth="0.5" hatchstyle="solid" />
+    </symbol>
+
+    <!-- 309: Úzká bažina -->
+    <symbol id="sym309" type="area">
+        <style facecolor="none" edgecolor="none" linewidth="0" linestyle="solid" dotdistance="2.0" dotsize="0.6" dotcolor="#21d1ff" />
+    </symbol>
+
+    <!-- 310: Nezřetelná bažina -->
+    <symbol id="sym310" type="area">
+        <style facecolor="none" edgecolor="none" linewidth="0" linestyle="solid" hatchcolor="#21d1ff" hatchdistance="2.6" hatchwidth="0.35" hatchstyle="(0, (1.8, 1.8))" />
+    </symbol>
+
+    <!-- 311: Malá fontána nebo studna (Stopa 3.6x3.6m -> semi 1.8) -->
+    <symbol id="sym311" type="point">
+        <path d="M -1.8 -1.8 L 1.8 1.8 M -1.8 1.8 L 1.8 -1.8" />
+        <style facecolor="none" edgecolor="#21d1ff" linewidth="0.35" />
+    </symbol>
+
+    <!-- 312: Pramen (Stopa 4.8x2.4m -> semi 2.4/1.2) -->
+    <symbol id="sym312" type="point">
+        <path d="M -1.2 0 A 1.2 1.2 0 0 0 1.2 0" />
+        <style facecolor="none" edgecolor="#21d1ff" linewidth="0.35" />
+    </symbol>
+
+    <!-- 313: Výrazný vodní objekt (Stopa 4.8m diam -> r=2.4) -->
+    <symbol id="sym313" type="point">
+        <path d="M 2.4 0 A 2.4 2.4 0 0 2.4 -2.4 0 A 2.4 2.4 0 0 2.4 2.4 0 Z" />
+        <style facecolor="none" edgecolor="#21d1ff" linewidth="0.35" />
+    </symbol>
+
+
+    <!-- ============================================================ -->
+    <!-- 4.4 VEGETACE (bílá/žlutá/zelená)                              -->
+    <!-- ============================================================ -->
+
+    <!-- 401: Otevřený prostor -->
+    <symbol id="sym401" type="area">
+        <style facecolor="#ffba35" edgecolor="none" linewidth="0" />
+    </symbol>
+
+    <!-- 402: Otevřený prostor s rozptýlenými stromy -->
+    <!-- OPRAVENO: dotsize 0.85 → 8 (tečky stromů byly stejně malé jako jemná
+         texturní tečka u 210/213 - podle symbols10/15.xml má tato "velká"
+         kategorie (roztroušené stromy) mít řádově vyšší dotsize než jemná
+         textura, ne stejnou). -->
+    <symbol id="sym402" type="area">
+        <style facecolor="#ffba35" edgecolor="none" linewidth="0" linestyle="solid" dotdistance="3.1" dotsize="8" dotcolor="#ffffff" />
+    </symbol>
+
+    <!-- 403: Divoký otevřený prostor -->
+    <symbol id="sym403" type="area">
+        <style facecolor="#ffd685" edgecolor="none" linewidth="0" />
+    </symbol>
+
+    <!-- 404: Divoký otevřený prostor s rozptýlenými stromy -->
+    <!-- OPRAVENO: dotsize 0.85 → 6 (stejný důvod jako u 402) -->
+    <symbol id="sym404" type="area">
+        <style facecolor="#ffd685" edgecolor="none" linewidth="0" linestyle="solid" dotdistance="3.4" dotsize="6" dotcolor="#ffffff" />
+    </symbol>
+
+    <!-- 405: Les (bílá = žádná plocha; vykresli jako "díru" v jiné vrstvě) -->
+    <symbol id="sym405" type="area">
+        <style facecolor="#ffffff" edgecolor="none" linewidth="0" />
+    </symbol>
+
+    <!-- 406: Vegetace: pomalý běh -->
+    <symbol id="sym406" type="area">
+        <style facecolor="#a8f090" edgecolor="none" linewidth="0" />
+    </symbol>
+
+    <!-- 407: Vegetace: pomalý běh, dobrá viditelnost (šrafy) -->
+    <symbol id="sym407" type="area">
+        <style facecolor="none" edgecolor="none" linewidth="0" linestyle="solid" hatchcolor="#0e990e" hatchdistance="1.6" hatchwidth="0.5" hatchstyle="solid" />
+    </symbol>
+
+    <!-- 408: Vegetace: chůze -->
+    <symbol id="sym408" type="area">
+        <style facecolor="#3dff17" edgecolor="none" linewidth="0" />
+    </symbol>
+
+    <!-- 408l: Živý plot / alej (liniová vegetace) -->
+    <!-- DOPLNĚNO: kód volá pm("sym408l", ...) pro reálná data (OSM
+         natural=tree_row, ZABAGED LiniovaVegetace), značka v XML úplně
+         chyběla -> živé ploty/aleje se nevykreslovaly. -->
+    <symbol id="sym408l" type="line">
+        <style color="#0e990e" linewidth="1.0" linestyle="solid" />
+    </symbol>
+
+    <!-- 409: Vegetace: chůze, dobrá viditelnost -->
+    <symbol id="sym409" type="area">
+        <style facecolor="none" edgecolor="none" linewidth="0" linestyle="solid" hatchcolor="#0e990e" hatchdistance="1.26" hatchwidth="0.42" hatchstyle="solid" />
+    </symbol>
+
+    <!-- 410: Vegetace: prodírání -->
+    <symbol id="sym410" type="area">
+        <style facecolor="#0e990e" edgecolor="none" linewidth="0" />
+    </symbol>
+
+    <!-- 411: Nepřekonatelná vegetace -->
+    <symbol id="sym411" type="area">
+        <style facecolor="#006600" edgecolor="#000000" linewidth="0.4" />
+    </symbol>
+
+    <!-- 412: Obdělávaná půda -->
+    <symbol id="sym412a" type="area">
+        <style facecolor="#ffba35" edgecolor="none" linewidth="0" />
+    </symbol>
+    <symbol id="sym412b" type="line">
+        <style color="#000000" linewidth="0.85" linestyle="(0, (2.5, 2.5, 2.5, 8.5))" />
+    </symbol>
+
+    <!-- 413: Sad -->
+    <!-- OPRAVENO: dotsize 0.9 → 6 (stejný důvod jako u 402/404) -->
+    <symbol id="sym413" type="area">
+        <style facecolor="#ffba35" edgecolor="none" linewidth="0" linestyle="solid" dotdistance="3.2" dotsize="6" dotcolor="#0e990e" />
+    </symbol>
+
+    <!-- 414: Vinice nebo podobné kultury -->
+    <symbol id="sym414" type="area">
+        <style facecolor="#ffba35" edgecolor="none" linewidth="0" linestyle="solid" hatchcolor="#0e990e" hatchdistance="3.2" hatchwidth="0.6" hatchstyle="(0, (3.6859, 1.7012))" />
+    </symbol>
+
+    <!-- 415: Zřetelná hranice obdělávané půdy -->
+    <symbol id="sym415" type="line">
+        <style color="#000000" linewidth="0.4252" linestyle="(0, (4.2525, 1.063125))" />
+    </symbol>
+
+    <!-- 216l: Hranice kultivace (alias pro 415 v předpočítané ISOM vrstvě) -->
+    <!-- DOPLNĚNO: kód pro předpočítaná ISOM data (isom("415")) volá
+         pm("sym216l", ...) - historický název ze symbols10/15.xml -
+         zatímco na "sym415" výše nic needkazuje. Stejný styl jako sym415. -->
+    <symbol id="sym216l" type="line">
+        <style color="#000000" linewidth="0.4252" linestyle="(0, (4.2525, 1.063125))" />
+    </symbol>
+
+    <!-- 416: Zřetelná hranice vegetace -->
+    <symbol id="sym416p" type="area">
+        <style facecolor="none" edgecolor="#000000" linewidth="0.4252" linestyle="(0, (0.8505, 0.567))" />
+    </symbol>
+    <symbol id="sym416l" type="line">
+        <style color="#000000" linewidth="0.4252" linestyle="(0, (0.8505, 0.567))" />
+    </symbol>
+
+    <!-- 417: Výrazný velký strom (Stopa 4.8m diam, maska OM 5.6m -> r=2.4/2.8) -->
+    <symbol id="sym417a" type="point">
+        <path d="M 2.8 0 A 2.8 2.8 0 0 2.8 -2.8 0 A 2.8 2.8 0 0 2.8 2.8 0 Z" />
+        <style facecolor="#ffffff" edgecolor="#ffffff" linewidth="0" />
+    </symbol>
+    <symbol id="sym417b" type="point">
+        <path d="M 2.4 0 A 2.4 2.4 0 0 2.4 -2.4 0 A 2.4 2.4 0 0 2.4 2.4 0 Z" />
+        <style facecolor="none" edgecolor="#0e990e" linewidth="0.35" />
+    </symbol>
+
+    <!-- 418: Výrazný keř nebo malý strom (Stopa 3.2m diam -> r=1.6) -->
+    <symbol id="sym418a" type="point">
+        <path d="M 1.6 0 A 1.6 1.6 0 0 1.6 -1.6 0 A 1.6 1.6 0 0 1.6 1.6 0 Z" />
+        <style facecolor="#0e990e" edgecolor="none" linewidth="0" />
+    </symbol>
+    <symbol id="sym418b" type="point">
+        <path d="M 0.5 0 A 0.5 0.5 0 0 0.5 -0.5 0 A 0.5 0.5 0 0 0.5 0.5 0 Z" />
+        <style facecolor="#ffffff" edgecolor="none" linewidth="0" />
+    </symbol>
+
+    <!-- 419: Výrazný vegetační objekt (Stopa 4.8x4.8m, maska OM 7.1x7.1 -> polovina 2.4/3.55) -->
+    <symbol id="sym419mask" type="point">
+        <path d="M -3.55 -3.55 L 3.55 3.55 M -3.55 3.55 L 3.55 -3.55" />
+        <style facecolor="none" edgecolor="#ffffff" linewidth="0.7" />
+    </symbol>
+    <symbol id="sym419" type="point">
+        <path d="M -2.4 -2.4 L 2.4 2.4 M -2.4 2.4 L 2.4 -2.4" />
+        <style facecolor="none" edgecolor="#0e990e" linewidth="0.35" />
+    </symbol>
+
+
+    <!-- ============================================================ -->
+    <!-- 4.5 UMĚLÉ OBJEKTY (černá, hnědá 30/50%)                       -->
+    <!-- ============================================================ -->
+
+    <!-- 501: Zpevněná plocha -->
+    <symbol id="sym501" type="area">
+        <style facecolor="#e8ae80" edgecolor="none" linewidth="0" />
+    </symbol>
+
+    <!-- 501.1: Schod nebo okraj zpevněné plochy -->
+    <symbol id="sym501-1" type="line">
+        <style color="#000000" linewidth="0.4" linestyle="solid" />
+    </symbol>
+
+    <!-- 501.2: Schod/okraj zpevněné plochy ve spodní úrovni -->
+    <!-- OVĚŘIT: nová značka, mezera 0.15mm na koncích -->
+    <symbol id="sym501-2" type="line">
+        <style color="#000000" linewidth="0.4" linestyle="solid" />
+    </symbol>
+
+    <!-- 501.3: Zpevněná plocha s rozptýlenými stromy -->
+    <!-- OPRAVENO: dotsize 0.85 → 8 (stejný důvod jako u 402, stejný styl
+         "roztroušené stromy") -->
+    <symbol id="sym501-3" type="area">
+        <style facecolor="#e8ae80" edgecolor="none" linewidth="0" linestyle="solid" dotdistance="3.1" dotsize="8" dotcolor="#ffffff" />
+    </symbol>
+
+    <!-- ============================================================ -->
+    <!-- CESTY/SILNICE - NENÍ V OFICIÁLNÍ ISSprOM SPECIFIKACI          -->
+    <!-- ISSprOM oficiálně kreslí cesty jako skutečný půdorys (501),   -->
+    <!-- ale OSM/ZABAGED data neobsahují reálnou šířku vozovky, takže  -->
+    <!-- jako pragmatické řešení používáme klasifikované liniové       -->
+    <!-- symboly stejně jako ISOM (stejné klíče, co volá                -->
+    <!-- vector_layers.py), o cca 30% širší než ISOM ekvivalent pro    -->
+    <!-- lepší čitelnost při chybějící šířce dat.                     -->
+    <!-- ============================================================ -->
+
+    <!-- 502D: Široká silnice (dvojitá) -->
+    <symbol id="sym502Da" type="line">
+        <style color="#000000" linewidth="5.64" linestyle="solid" />
+    </symbol>
+    <symbol id="sym502Db" type="line">
+        <style color="#e8ae80" linewidth="4.09" linestyle="solid" />
+    </symbol>
+    <symbol id="sym502Dc" type="line">
+        <style color="#000000" linewidth="0.77" linestyle="solid" />
+    </symbol>
+    <symbol id="sym502DBa" type="line">
+        <style color="#000000" linewidth="8.24" linestyle="solid" />
+    </symbol>
+    <symbol id="sym502DBb" type="line">
+        <style color="#ffffff" linewidth="7.59" linestyle="solid" />
+    </symbol>
+
+    <!-- 502: Silnice (standardní) -->
+    <symbol id="sym502a" type="line">
+        <style color="#000000" linewidth="2.76" linestyle="solid" />
+    </symbol>
+    <symbol id="sym502b" type="line">
+        <style color="#e8ae80" linewidth="1.66" linestyle="solid" />
+    </symbol>
+    <symbol id="sym502Ba" type="line">
+        <style color="#000000" linewidth="7.11" linestyle="solid" />
+    </symbol>
+    <symbol id="sym502Bb" type="line">
+        <style color="#ffffff" linewidth="5.16" linestyle="solid" />
+    </symbol>
+
+    <!-- 503: Silnice -->
+    <symbol id="sym503" type="line">
+        <style color="#000000" linewidth="1.93" linestyle="solid" />
+    </symbol>
+    <symbol id="sym503Ba" type="line">
+        <style color="#000000" linewidth="5.84" linestyle="solid" />
+    </symbol>
+    <symbol id="sym503Bb" type="line">
+        <style color="#ffffff" linewidth="3.89" linestyle="solid" />
+    </symbol>
+
+    <!-- 504: Vozová cesta -->
+    <symbol id="sym504" type="line">
+        <style color="#000000" linewidth="1.93" linestyle="(0, (12.7575, 1.063125))" />
+    </symbol>
+
+    <!-- 505: Nezpevněná pěšina nebo cesta -->
+    <!-- OPRAVENO podle upřesnění: plná béžová (hnědá 30%) linie šířky
+         0.35mm (IM), po OBOU stranách černě čárkovaný okraj (ne dash uvnitř
+         jedné linie). Okrajové linie se generují za běhu jako rovnoběžný
+         posun (offset_curve) v vector_layers.py (pm_border), sym505b se
+         aplikuje na tyto posunuté geometrie. Dash pattern: úsečka 0.25mm,
+         mezera 1.75mm (perioda 2.0mm), tloušťka 0.12mm - dle ISSprOM 4.8. -->
+    <symbol id="sym505" type="line">
+        <style color="#e8ae80" linewidth="0.99" linestyle="solid" />
+    </symbol>
+    <!-- OPRAVENO na žádost: delší obrysové čárky (0.25mm -> 0.5mm), perioda
+         zůstává 2.0mm, mezera se úměrně zkrátila (1.75mm -> 1.5mm). -->
+    <symbol id="sym505b" type="line">
+        <style color="#000000" linewidth="0.34" linestyle="(0, (1.4173, 4.252))" solid_capstyle="butt" />
+    </symbol>
+
+    <!-- 506: Malá nezpevněná pěšina nebo cesta -->
+    <symbol id="sym506" type="line">
+        <style color="#000000" linewidth="0.7" linestyle="(0, (4.2525, 1.063125))" />
+    </symbol>
+
+    <!-- 507: Nezřetelná pěšina -->
+    <symbol id="sym507" type="line">
+        <style color="#000000" linewidth="0.5" linestyle="(0, (2.835, 0.7088, 2.835, 2.268))" />
+    </symbol>
+
+    <!-- 508: Průsek -->
+    <symbol id="sym508" type="line">
+        <style color="#000000" linewidth="0.4" linestyle="(0, (8.505, 0.7088))" />
+    </symbol>
+
+    <!-- 509.1: Železnice -->
+    <symbol id="sym509a" type="line">
+        <style color="#000000" linewidth="1.7" linestyle="solid" />
+    </symbol>
+    <symbol id="sym509b" type="line">
+        <style color="#ffffff" linewidth="1.0" linestyle="(0, (2.8353, 4.2529))" />
+    </symbol>
+
+    <!-- 509.1B: Železniční most (podkladová dvojlinka pod sym509a/b) -->
+    <!-- DOPLNĚNO: kód volá pm("sym509Ba"/"sym509Bb", ...) pro most, značky
+         v XML chyběly -> most se nevykresloval. Poměr odvozen ze vztahu
+         mezi 502Ba/b a 502a (silniční most), aplikováno na šířku 509a=1.7. -->
+    <symbol id="sym509Ba" type="line">
+        <style color="#000000" linewidth="4.4" linestyle="solid" />
+    </symbol>
+    <symbol id="sym509Bb" type="line">
+        <style color="#ffffff" linewidth="3.2" linestyle="solid" />
+    </symbol>
+
+    <!-- 509.2: Tramvajová trať (50% černá, tenká) -->
+    <symbol id="sym509-2" type="line">
+        <style color="#808080" linewidth="0.23" linestyle="solid" />
+    </symbol>
+
+    <!-- 510: Elektrické vedení, lanovka nebo lyžařský vlek -->
+    <symbol id="sym510" type="line">
+        <style color="#000000" linewidth="0.5" linestyle="solid" />
+    </symbol>
+
+    <!-- 511: Hlavní elektrické vedení -->
+    <symbol id="sym511a" type="line">
+        <style color="#000000" linewidth="0.3" linestyle="solid" />
+    </symbol>
+    <symbol id="sym511P" type="point">
+        <path d="M -2 -2 L 2 -2 L 2 2 L -2 2 Z" />
+        <style facecolor="#000000" edgecolor="none" linewidth="0" />
+    </symbol>
+
+    <!-- 512.1: Vstup pod most nebo do tunelu (trojúhelníky) -->
+    <symbol id="sym512-1" type="line">
+        <style color="#000000" linewidth="1.0" linestyle="solid" />
+    </symbol>
+
+    <!-- 512.2: Podchod nebo tunel -->
+    <symbol id="sym512-2" type="line">
+        <style color="#000000" linewidth="1.0" linestyle="solid" />
+    </symbol>
+
+    <!-- 512.3: Oblast průběžná v nižší úrovni (bílé šrafy 45°) -->
+    <!-- OVĚŘIT: nová značka, kombinovatelná s mnoha dalšími -->
+    <symbol id="sym512-3" type="area">
+        <style facecolor="none" edgecolor="none" linewidth="0" linestyle="solid" hatchcolor="#ffffff" hatchdistance="2.5" hatchwidth="0.3" hatchstyle="solid" />
+    </symbol>
+
+    <!-- 513.1: Překonatelná zeď -->
+    <!-- OPRAVENO: kód volá pm("sym513-1a") + pm("sym513-1b") (stejný vzor
+         jako 513.2), ale existovala jen "sym513-1" (navíc to byla jen
+         tiková část bez základní linky) -> nikdy se nevykreslilo.
+         Poměr a/b odvozen z 513.2 (a=0.6, b=1.2 -> poloviční šířka). -->
+    <symbol id="sym513-1a" type="line">
+        <style color="#000000" linewidth="0.3" linestyle="solid" />
+    </symbol>
+    <symbol id="sym513-1b" type="line">
+        <style color="#000000" linewidth="0.6" linestyle="(0, (0.00667, 5.67))" solid_capstyle="round" />
+    </symbol>
+
+    <!-- 513.2: Překonatelná opěrná zeď -->
+    <symbol id="sym513-2a" type="line">
+        <style color="#000000" linewidth="0.6" linestyle="solid" />
+    </symbol>
+    <symbol id="sym513-2b" type="line">
+        <style color="#000000" linewidth="1.2" linestyle="(0, (0.00667, 5.67))" solid_capstyle="round" />
+    </symbol>
+
+    <!-- 515: Nepřekonatelná zeď -->
+    <symbol id="sym515a" type="line">
+        <style color="#000000" linewidth="0.8" linestyle="solid" />
+    </symbol>
+    <symbol id="sym515b" type="line">
+        <style color="#000000" linewidth="1.8" linestyle="(0, (0.06667, 8.505, 0.00667, 2.28))" solid_capstyle="round" />
+    </symbol>
+
+    <!-- 516: Překonatelný plot nebo zábradlí -->
+    <symbol id="sym516" type="line">
+        <style color="#000000" linewidth="0.3" linestyle="solid" />
+        <style_ticks length="2" spacing="2.835" linewidth="0.3" color="#000000" angle="45" />
+    </symbol>
+
+    <!-- 518: Nepřekonatelný plot nebo zábradlí -->
+    <symbol id="sym518" type="line">
+        <style color="#000000" linewidth="2.8" linestyle="solid" />
+        <style_ticks length="6.66667" spacing="4.16833" linewidth="0.56" color="#000000" angle="45" />
+    </symbol>
+
+    <!-- 519: Průchod (volitelné) -->
+    <symbol id="sym519" type="point">
+        <path d="M -2 -3 L -2 3 M 2 -3 L 2 3" />
+        <style facecolor="none" edgecolor="#000000" linewidth="0.4" />
+    </symbol>
+
+    <!-- 520: Oblast se zákazem vstupu -->
+    <symbol id="sym520" type="area">
+        <style facecolor="#9eba1d" edgecolor="#000000" linewidth="0.28" />
+    </symbol>
+
+    <!-- 521: Budova -->
+    <symbol id="sym521" type="area">
+        <style facecolor="#808080" edgecolor="#000000" linewidth="0.4" />
+    </symbol>
+
+    <!-- 522: Zastřešení -->
+    <symbol id="sym522" type="area">
+        <style facecolor="#cccccc" edgecolor="#000000" linewidth="0.3" />
+    </symbol>
+
+    <!-- 522.1: Pilíř (min. rozměr ~1x1m -> semi 0.5) -->
+    <symbol id="sym522-1" type="point">
+        <path d="M -0.5 -0.5 L 0.5 -0.5 L 0.5 0.5 L -0.5 0.5 Z" />
+        <style facecolor="#000000" edgecolor="none" linewidth="0" />
+    </symbol>
+
+    <!-- 523: Zřícenina / bunkr -->
+    <!-- DOPLNĚNO: kód volá pm("sym523", ...) pro reálná data (ZABAGED
+         RozvalinaZricenina/Bunkr, OSM building=ruins/historic=ruins/
+         military=bunker), značka v XML úplně chyběla -> nevykreslovalo se. -->
+    <symbol id="sym523" type="area">
+        <style facecolor="none" edgecolor="none" linewidth="0" linestyle="solid" hatchcolor="#000000" hatchdistance="1.8" hatchwidth="0.4" hatchstyle="(0, (1.8, 1.8))" />
+    </symbol>
+
+    <!-- 524: Vysoká věž (Stopa 8.4m diam -> r=4.2, kříž o stejném poloměru) -->
+    <symbol id="sym524a" type="point">
+        <path d="M 0 -4.2 L 0 4.2 M -4.2 0 L 4.2 0" />
+        <style facecolor="none" edgecolor="#000000" linewidth="0.25" />
+    </symbol>
+    <symbol id="sym524b" type="point">
+        <path d="M 2.5 0 A 2.5 2.5 0 0 2.5 -2.5 0 A 2.5 2.5 0 0 2.5 2.5 0 Z" />
+        <style facecolor="#000000" edgecolor="none" linewidth="0" />
+    </symbol>
+
+    <!-- 525: Malá věž / posed (Stopa 6x6m -> semi 3) -->
+    <symbol id="sym525" type="point">
+        <path d="M -3 -3 L 3 -3 M 0 -3 L 0 3" />
+        <style facecolor="none" edgecolor="#000000" linewidth="0.35" />
+    </symbol>
+
+    <!-- 526: Mohyla, pomník atd. (Stopa 4m diam -> r=2) -->
+    <symbol id="sym526a" type="point">
+        <path d="M 2 0 A 2 2 0 0 2 -2 0 A 2 2 0 0 2 2 0 Z" />
+        <style facecolor="none" edgecolor="#000000" linewidth="0.35" />
+    </symbol>
+    <symbol id="sym526b" type="point">
+        <path d="M 0.3 0 A 0.3 0.3 0 0 1 -0.3 0 A 0.3 0.3 0 0 1 0.3 0 Z" />
+        <style facecolor="#000000" edgecolor="none" linewidth="0" />
+    </symbol>
+
+    <!-- 527: Krmelec (Stopa 6x6m -> semi 3) -->
+    <symbol id="sym527" type="point">
+        <path d="M -3 -3 L 3 -3 L 3 3 L -3 3 Z M -3 -3 L 3 3 M -3 3 L 3 -3" />
+        <style facecolor="none" edgecolor="#000000" linewidth="0.25" />
+    </symbol>
+
+    <!-- 528: Výrazný liniový objekt -->
+    <symbol id="sym528" type="line">
+        <style color="#000000" linewidth="0.4" linestyle="solid" />
+    </symbol>
+
+    <!-- 529: Výrazný nepřekonatelný liniový objekt -->
+    <symbol id="sym529" type="line">
+        <style color="#000000" linewidth="0.7" linestyle="solid" />
+    </symbol>
+
+    <!-- 530: Výrazný umělý objekt - kroužek (Stopa 4m diam -> r=2) -->
+    <symbol id="sym530" type="point">
+        <path d="M 2 0 A 2 2 0 0 2 -2 0 A 2 2 0 0 2 2 0 Z" />
+        <style facecolor="none" edgecolor="#000000" linewidth="0.2" />
+    </symbol>
+
+    <!-- 531: Výrazný umělý objekt - křížek (Stopa 4.8x4.8m -> polovina 2.4) -->
+    <symbol id="sym531" type="point">
+        <path d="M -2.4 -2.4 L 2.4 2.4 M -2.4 2.4 L 2.4 -2.4" />
+        <style facecolor="none" edgecolor="#000000" linewidth="0.35" />
+    </symbol>
+
+    <!-- 532: Schodiště -->
+    <!-- ROZŠÍŘENO na žádost (širší schody, +50 % oproti předchozí verzi) -->
+    <symbol id="sym532a" type="line">
+        <style color="#000000" linewidth="1.8" linestyle="solid" />
+    </symbol>
+    <symbol id="sym532b" type="line">
+        <style color="#e8ae80" linewidth="1.35" linestyle="solid" />
+    </symbol>
+    <symbol id="sym532c" type="line">
+        <style color="#000000" linewidth="1.7" linestyle="(0, (0.237, 0.369))" solid_capstyle="butt" />
+    </symbol>
+
+    <!-- 533: Oblast s překážkami (50% černá) -->
+    <!-- OVĚŘIT: nová značka -->
+    <symbol id="sym533" type="area">
+        <style facecolor="#808080" edgecolor="none" linewidth="0" />
+    </symbol>
+
+
+    <!-- ============================================================ -->
+    <!-- 4.6 TECHNICKÉ ZNAČKY                                          -->
+    <!-- ============================================================ -->
+
+    <!-- 601: Magnetický poledník -->
+    <symbol id="sym601" type="line">
+        <style color="#000000" linewidth="0.3" linestyle="solid" />
+    </symbol>
+
+
+    <!-- ============================================================ -->
+    <!-- 4.7 ZNAČKY STAVBY TRATĚ (fialová)                             -->
+    <!-- spodní fialová (přetisková) = #c800c8, horní fialová          -->
+    <!-- (výpalová) = #a000a0 - PŘIBLIŽNÉ, ověř oficiální CMYK/RGB      -->
+    <!-- ============================================================ -->
+
+    <!-- 701: Start (trojúhelník) -->
+    <symbol id="sym701" type="point">
+        <path d="M 0 -8.5 L 7.36 4.25 L -7.36 4.25 Z" />
+        <style facecolor="none" edgecolor="#c800c8" linewidth="1.0" />
+    </symbol>
+
+    <!-- 702: Místo výdeje map -->
+    <symbol id="sym702" type="point">
+        <path d="M -3 -3 L 3 -3 L 3 3 L -3 3 Z" />
+        <style facecolor="none" edgecolor="#a000a0" linewidth="0.8" />
+    </symbol>
+
+    <!-- 703: Kontrola (Stopa 24m diam -> r=12) -->
+    <symbol id="sym703" type="point">
+        <path d="M 12 0 A 12 12 0 0 12 -12 0 A 12 12 0 0 12 12 0 Z" />
+        <style facecolor="none" edgecolor="#c800c8" linewidth="1.0" />
+    </symbol>
+
+    <!-- 704: Číslo kontroly - vykresleno jako text, ne symbol XML -->
+
+    <!-- 705: Spojnice -->
+    <symbol id="sym705" type="line">
+        <style color="#c800c8" linewidth="0.7" linestyle="solid" />
+    </symbol>
+
+    <!-- 706: Cíl (dvě soustředné kružnice) -->
+    <symbol id="sym706a" type="point">
+        <path d="M 6 0 A 6 6 0 0 6 -6 0 A 6 6 0 0 6 6 0 Z" />
+        <style facecolor="none" edgecolor="#c800c8" linewidth="1.0" />
+    </symbol>
+    <symbol id="sym706b" type="point">
+        <path d="M 9 0 A 9 9 0 0 9 -9 0 A 9 9 0 0 9 9 0 Z" />
+        <style facecolor="none" edgecolor="#c800c8" linewidth="1.0" />
+    </symbol>
+
+    <!-- 707: Značený úsek -->
+    <symbol id="sym707" type="line">
+        <style color="#a000a0" linewidth="1.0" linestyle="(0, (4, 2))" />
+    </symbol>
+
+    <!-- 708: Nepřekonatelná hranice -->
+    <symbol id="sym708" type="line">
+        <style color="#c800c8" linewidth="0.7" linestyle="(0, (1.5, 1.5))" />
+    </symbol>
+
+    <!-- 709: Nepřístupná oblast (šrafy) -->
+    <symbol id="sym709" type="area">
+        <style facecolor="none" edgecolor="none" linewidth="0" linestyle="solid" hatchcolor="#a000a0" hatchdistance="3.4" hatchwidth="0.57" hatchstyle="solid" />
+    </symbol>
+
+    <!-- 710.1: Bod přechodu -->
+    <symbol id="sym710-1" type="point">
+        <path d="M -6.4 -3.2 A 3.2 3.2 0 0 1 -3.2 -6.4 M 6.4 3.2 A 3.2 3.2 0 0 1 3.2 6.4" />
+        <style facecolor="none" edgecolor="#c800c8" linewidth="1.4" />
+    </symbol>
+
+    <!-- 710.2: Úsek přechodu -->
+    <symbol id="sym710-2" type="line">
+        <style color="#a000a0" linewidth="1.0" linestyle="solid" />
+    </symbol>
+
+    <!-- 714: Dočasná stavba nebo uzavřená oblast -->
+    <symbol id="sym714" type="area">
+        <style facecolor="#c869c8" edgecolor="#a000a0" linewidth="0.5" />
+    </symbol>
+
+    <!-- 715: Bod pokračování po výměně mapy -->
+    <symbol id="sym715" type="point">
+        <path d="M 0 -8.5 L 7.36 4.25 L -7.36 4.25 Z" />
+        <style facecolor="none" edgecolor="#c800c8" linewidth="1.0" />
+    </symbol>
+
+</root>

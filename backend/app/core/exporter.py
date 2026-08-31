@@ -9,6 +9,21 @@ import pandas as pd
 
 
 def _oom_isom_code(sym_key: str) -> str | None:
+    # Historicky pojmenované sym_keys, kde vedoucí číslo v NÁZVU symbolu
+    # neodpovídá skutečnému ISOM/ISSprOM kódu prvku (viz komentáře v
+    # symbols*.xml) - bez tohoto přepisu by GPKG export i CRT párování se
+    # symboly v OOM dostaly špatný nebo neexistující kód:
+    #  - sym216l: historický název ze symbols10/15.xml pro "216l", ve
+    #    skutečnosti jde o ISOM 415 (Zřetelná hranice obdělávané půdy)
+    #  - sym203-1 / sym203-2: obyčejný regex níže by z pomlčky "-1"/"-2"
+    #    udělal jen "203" pro oba (ISOM ale rozlišuje 203.1 vs 203.2)
+    overrides = {
+        "sym216l": "415",
+        "sym203-1": "203.1",
+        "sym203-2": "203.2",
+    }
+    if sym_key in overrides:
+        return overrides[sym_key]
     raw = sym_key[3:] if sym_key.startswith("sym") else sym_key
     m = re.match(r"^(\d+)", raw)
     return m.group(1) if m else None
@@ -81,7 +96,7 @@ class OomCollector:
         SUFFIX = {"Point": "_point", "Line": "_line", "Polygon": "_poly"}
         written = 0
 
-        for code in sorted(self._layers.keys(), key=lambda x: int(x)):
+        for code in sorted(self._layers.keys(), key=lambda x: float(x)):
             buckets = self._layers[code]
             non_empty = {k: v for k, v in buckets.items() if v}
             if not non_empty:
