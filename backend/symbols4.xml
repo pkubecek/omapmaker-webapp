@@ -290,8 +290,12 @@
     </symbol>
 
     <!-- 402: Otevřený prostor s rozptýlenými stromy -->
+    <!-- OPRAVENO: dotsize 0.85 → 8 (tečky stromů byly stejně malé jako jemná
+         texturní tečka u 210/213 - podle symbols10/15.xml má tato "velká"
+         kategorie (roztroušené stromy) mít řádově vyšší dotsize než jemná
+         textura, ne stejnou). -->
     <symbol id="sym402" type="area">
-        <style facecolor="#ffba35" edgecolor="none" linewidth="0" linestyle="solid" dotdistance="3.1" dotsize="0.85" dotcolor="#ffffff" />
+        <style facecolor="#ffba35" edgecolor="none" linewidth="0" linestyle="solid" dotdistance="3.1" dotsize="8" dotcolor="#ffffff" />
     </symbol>
 
     <!-- 403: Divoký otevřený prostor -->
@@ -300,8 +304,9 @@
     </symbol>
 
     <!-- 404: Divoký otevřený prostor s rozptýlenými stromy -->
+    <!-- OPRAVENO: dotsize 0.85 → 6 (stejný důvod jako u 402) -->
     <symbol id="sym404" type="area">
-        <style facecolor="#ffd685" edgecolor="none" linewidth="0" linestyle="solid" dotdistance="3.4" dotsize="0.85" dotcolor="#ffffff" />
+        <style facecolor="#ffd685" edgecolor="none" linewidth="0" linestyle="solid" dotdistance="3.4" dotsize="6" dotcolor="#ffffff" />
     </symbol>
 
     <!-- 405: Les (bílá = žádná plocha; vykresli jako "díru" v jiné vrstvě) -->
@@ -356,8 +361,9 @@
     </symbol>
 
     <!-- 413: Sad -->
+    <!-- OPRAVENO: dotsize 0.9 → 6 (stejný důvod jako u 402/404) -->
     <symbol id="sym413" type="area">
-        <style facecolor="#ffba35" edgecolor="none" linewidth="0" linestyle="solid" dotdistance="3.2" dotsize="0.9" dotcolor="#0e990e" />
+        <style facecolor="#ffba35" edgecolor="none" linewidth="0" linestyle="solid" dotdistance="3.2" dotsize="6" dotcolor="#0e990e" />
     </symbol>
 
     <!-- 414: Vinice nebo podobné kultury -->
@@ -438,8 +444,10 @@
     </symbol>
 
     <!-- 501.3: Zpevněná plocha s rozptýlenými stromy -->
+    <!-- OPRAVENO: dotsize 0.85 → 8 (stejný důvod jako u 402, stejný styl
+         "roztroušené stromy") -->
     <symbol id="sym501-3" type="area">
-        <style facecolor="#e8ae80" edgecolor="none" linewidth="0" linestyle="solid" dotdistance="3.1" dotsize="0.85" dotcolor="#ffffff" />
+        <style facecolor="#e8ae80" edgecolor="none" linewidth="0" linestyle="solid" dotdistance="3.1" dotsize="8" dotcolor="#ffffff" />
     </symbol>
 
     <!-- ============================================================ -->
@@ -713,8 +721,14 @@
     <symbol id="sym532b" type="line">
         <style color="#e8ae80" linewidth="0.9" linestyle="solid" />
     </symbol>
+    <!-- OPRAVENO: sym532c byla plná bílá čára (proto to nevypadalo jako
+         schody). Ve fungujících symbols10/15.xml je "c" vrstva černá,
+         kreslená přes a/b s velmi těsným čárkováním (skoro na šířku
+         základní čáry) - tím vzniknou příčky schodů. Poměr šířka/tečka
+         odvozen ze symbols15.xml (c_width/a_width, on/a_width, off/a_width)
+         aplikovaný na zdejší sym532a linewidth=1.2. -->
     <symbol id="sym532c" type="line">
-        <style color="#ffffff" linewidth="0.6" linestyle="solid" />
+        <style color="#000000" linewidth="1.15" linestyle="(0, (0.158, 0.246))" solid_capstyle="butt" />
     </symbol>
 
     <!-- 533: Oblast s překážkami (50% černá) -->
