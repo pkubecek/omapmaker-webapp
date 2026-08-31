@@ -508,18 +508,17 @@
     </symbol>
 
     <!-- 505: Nezpevněná pěšina nebo cesta -->
-    <!-- OPRAVENO podle přesné grafické definice ISSprOM 4.8 (Přesná definice
-         značek): hnědý (30%) pruh šířky 0.35mm (IM), perioda 2.0mm = úsečka
-         1.75mm + mezera 0.25mm, v mezeře černá příčka šířky 0.12mm vycentrovaná
-         (offset 1.815mm). Realizováno jako dvě překryté linie stejné tloušťky -
-         černá "b" vrstva má fázově posunutý dash tak, aby padl přesně do mezery
-         hnědé "a" vrstvy. Kód volá pm() pro OBĚ (sym505 = hnědý základ,
-         sym505b = černá příčka) na stejné masce/zdroji. -->
+    <!-- OPRAVENO podle upřesnění: plná béžová (hnědá 30%) linie šířky
+         0.35mm (IM), po OBOU stranách černě čárkovaný okraj (ne dash uvnitř
+         jedné linie). Okrajové linie se generují za běhu jako rovnoběžný
+         posun (offset_curve) v vector_layers.py (pm_border), sym505b se
+         aplikuje na tyto posunuté geometrie. Dash pattern: úsečka 0.25mm,
+         mezera 1.75mm (perioda 2.0mm), tloušťka 0.12mm - dle ISSprOM 4.8. -->
     <symbol id="sym505" type="line">
-        <style color="#e8ae80" linewidth="0.99" linestyle="(0, (4.9606, 0.7087))" solid_capstyle="butt" />
+        <style color="#e8ae80" linewidth="0.99" linestyle="solid" />
     </symbol>
     <symbol id="sym505b" type="line">
-        <style color="#000000" linewidth="0.99" linestyle="(5.1449, (0.3402, 5.3291))" solid_capstyle="butt" />
+        <style color="#000000" linewidth="0.34" linestyle="(0, (0.7087, 4.9606))" solid_capstyle="butt" />
     </symbol>
 
     <!-- 506: Malá nezpevněná pěšina nebo cesta -->

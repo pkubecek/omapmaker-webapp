@@ -61,6 +61,49 @@ def add_vector_layers(
         _current_group["name"] = name
         return visibility.get(name, default)
 
+    def _mask_subset(mask, src_gdf, to_mask=True):
+        """Stejná logika výběru jako na začátku pm() - použito pro 505, kde
+        potřebujeme z vybraného podmnožiny navíc odvodit posunuté hranové
+        linie, ale bez toho, aby se posunuté (synteticky vytvořené) geometrie
+        sbíraly do GPKG/preview."""
+        if src_gdf is None or src_gdf.empty:
+            return None
+        if to_mask:
+            if mask is None:
+                return None
+            if isinstance(mask, (pd.Series, gpd.GeoSeries)):
+                mask = mask.reindex(src_gdf.index).fillna(False)
+            subset = src_gdf[mask].copy()
+        else:
+            subset = src_gdf.copy()
+        return subset if not subset.empty else None
+
+    def _offset_border_lines(subset, offset_m):
+        """Pro 505 (nezpevněná pěšina): vrátí GeoDataFrame se dvěma
+        rovnoběžnými liniemi posunutými o `offset_m` na obě strany od
+        původní linie - pro černé čárkované okraje po stranách plné hnědé
+        linie."""
+        if subset is None or subset.empty or not offset_m:
+            return None
+        out_geoms = []
+        for geom in subset.geometry:
+            if geom is None or geom.is_empty:
+                continue
+            parts = [geom] if geom.geom_type == "LineString" else list(getattr(geom, "geoms", [geom]))
+            for line in parts:
+                if not hasattr(line, "offset_curve"):
+                    continue
+                for side in (offset_m, -offset_m):
+                    try:
+                        off = line.offset_curve(side)
+                        if off is not None and not off.is_empty:
+                            out_geoms.append(off)
+                    except Exception:
+                        continue
+        if not out_geoms:
+            return None
+        return gpd.GeoDataFrame(geometry=out_geoms, crs=subset.crs)
+
     def pm(sym_key, zorder, mask, src_gdf, to_mask=True):
         if src_gdf is None or src_gdf.empty:
             return
@@ -91,6 +134,18 @@ def add_vector_layers(
         # samotné kreslení do PNG.
         if collector is not None:
             collector.collect(sym_key, subset, group=_current_group["name"])
+
+    def pm_border(sym_key, zorder, mask, src_gdf, offset_m, to_mask=True):
+        """Jako pm(), ale místo původní geometrie vykreslí dvě rovnoběžné
+        linie posunuté o offset_m na obě strany - pro 505 (černé čárkované
+        okraje po stranách plné hnědé linie). Nekolektuje se do GPKG/preview,
+        protože jde jen o vizuální efekt, ne o reálnou geometrii prvku."""
+        if ax is None or (selected_codes is not None and _oom_isom_code(sym_key) not in selected_codes):
+            return
+        subset = _mask_subset(mask, src_gdf, to_mask=to_mask)
+        border_gdf = _offset_border_lines(subset, offset_m)
+        if border_gdf is not None and not border_gdf.empty:
+            plot_symbol(ax, sym_key, border_gdf, zorder, sym_library, current_crs, scale=scale)
 
     if gdf is not None and not gdf.empty:
         gdf = gdf.reset_index(drop=True)
@@ -599,21 +654,26 @@ def add_vector_layers(
                         ((c("highway") == "cycleway") & (~c("surface").isin(["concrete", "asphalt"])) &
                         (c("tracktype") != "grade1")) &
                         (c("bridge") != "yes") & (c("access") != "private"))
+        # 505 = plná hnědá linie + černě čárkované okraje po stranách
+        # (posunuté rovnoběžné linie, ne dash uvnitř jedné linie).
+        # offset_m = poloviční šířka pruhu (0.35mm/2) přepočtená na mapové
+        # metry pro aktuální tiskové měřítko.
+        offset_505_m = (0.35 / 2) / 1000 * scale
         if cgdf is not None:
             pm("sym505", 45, None, cgdf, to_mask=False)
-            pm("sym505b", 45.5, None, cgdf, to_mask=False)
+            pm_border("sym505b", 45.5, None, cgdf, offset_505_m, to_mask=False)
         elif zab_in("Ulice", "Cesta"):
             if zab("Ulice") is not None:
                 mask = ~_get_col(zab("Ulice"), "typulice_k").isin(["925", "025"])
                 pm("sym505", 45, mask, zab("Ulice"))
-                pm("sym505b", 45.5, mask, zab("Ulice"))
+                pm_border("sym505b", 45.5, mask, zab("Ulice"), offset_505_m)
             if zab("Cesta") is not None:
                 mask = _get_col(zab("Cesta"), "typcesty_p").isin(["cesta neudržovaná"])
                 pm("sym505", 45, mask, zab("Cesta"))
-                pm("sym505b", 45.5, mask, zab("Cesta"))
+                pm_border("sym505b", 45.5, mask, zab("Cesta"), offset_505_m)
         else:
             pm("sym505", 45, mask_footway, gdf_lines)
-            pm("sym505b", 45.5, mask_footway, gdf_lines)
+            pm_border("sym505b", 45.5, mask_footway, gdf_lines, offset_505_m)
 
         # 506 - Pěšina
         cgdf = isom("506")
