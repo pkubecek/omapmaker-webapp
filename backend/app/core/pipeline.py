@@ -510,8 +510,34 @@ def run_pipeline(job_id: str, params: dict, file_paths: dict,
             "tracktype": True, "trail_visibility": True, "geological": True,
             "intermittent": True, "covered": True, "place": True, "emergency": True,
         }
-        gdf_osm = ox.features_from_bbox((mn_lon, mn_lat, mx_lon, mx_lat), tags=tags)
-        cb(8, f"OSM staženo: {len(gdf_osm)} prvků")
+
+        # Hlavní instance overpass-api.de u cloudových IP adres (Railway, AWS, ...)
+        # občas tvrdě odmítá spojení ("Connection refused") kvůli ochraně proti
+        # zahlcení. Zkusíme postupně i veřejná zrcadla, než to celé vzdáme.
+        OVERPASS_MIRRORS = [
+            "https://overpass-api.de/api",
+            "https://overpass.kumi.systems/api",
+            "https://overpass.osm.ch/api",
+            "https://overpass.openstreetmap.ru/api",
+        ]
+        last_err = None
+        for mirror in OVERPASS_MIRRORS:
+            ox.settings.overpass_url = mirror
+            try:
+                cb(7, f"OSM: zkouším {mirror} ...")
+                gdf_osm = ox.features_from_bbox((mn_lon, mn_lat, mx_lon, mx_lat), tags=tags)
+                cb(8, f"OSM staženo přes {mirror}: {len(gdf_osm)} prvků")
+                last_err = None
+                break
+            except Exception as mirror_err:
+                last_err = mirror_err
+                cb(7, f"OSM: {mirror} selhalo ({mirror_err}), zkouším další zrcadlo...")
+                gdf_osm = None
+                continue
+
+        if gdf_osm is None:
+            raise last_err if last_err is not None else RuntimeError("OSM: všechna zrcadla selhala")
+
         cb(8, f"OSM bbox WGS84: {mn_lat:.4f}N {mn_lon:.4f}E .. {mx_lat:.4f}N {mx_lon:.4f}E")
         gdf_osm = gdf_osm.to_crs(CURRENT_CRS)
         cb(8, f"OSM bounds po to_crs({CURRENT_CRS}): {gdf_osm.total_bounds}")
