@@ -139,8 +139,16 @@ def add_vector_layers(
         """Jako pm(), ale místo původní geometrie vykreslí dvě rovnoběžné
         linie posunuté o offset_m na obě strany - pro 505 (černé čárkované
         okraje po stranách plné hnědé linie). Nekolektuje se do GPKG/preview,
-        protože jde jen o vizuální efekt, ne o reálnou geometrii prvku."""
+        protože jde jen o vizuální efekt, ne o reálnou geometrii prvku.
+
+        Pokud aktuální sym_library (symbols10/15.xml) tenhle "b" symbol vůbec
+        nedefinuje - typicky proto, že ISOM 505 se kreslí jako jedna prostá
+        čárkovaná čára bez odsazených okrajů - přeskočí se úplně, ať se
+        nekreslí nestylovaná výchozí čára. Základní sym505 se nakreslí
+        normálně přes pm() bez ohledu na tohle."""
         if ax is None or (selected_codes is not None and _oom_isom_code(sym_key) not in selected_codes):
+            return
+        if not sym_library or not sym_library.has(sym_key):
             return
         subset = _mask_subset(mask, src_gdf, to_mask=to_mask)
         border_gdf = _offset_border_lines(subset, offset_m)
