@@ -515,12 +515,12 @@
          aplikuje na tyto posunuté geometrie. Dash pattern: úsečka 0.25mm,
          mezera 1.75mm (perioda 2.0mm), tloušťka 0.12mm - dle ISSprOM 4.8. -->
     <symbol id="sym505" type="line">
-        <style color="#e8ae80" linewidth="0.99" linestyle="solid" />
+        <style color="#e8ae80" linewidth="1.1" linestyle="solid" />
     </symbol>
     <!-- OPRAVENO na žádost: poměr mezera:linie = 1:8, perioda 2.0mm
          (mezera 0.2222mm, čárka 1.7778mm). -->
     <symbol id="sym505b" type="line">
-        <style color="#000000" linewidth="0.34" linestyle="(0, (5.0394, 0.6299))" solid_capstyle="butt" />
+        <style color="#000000" linewidth="0.4" linestyle="(0, (5.0394, 0.6299))" solid_capstyle="butt" />
     </symbol>
 
     <!-- 506: Malá nezpevněná pěšina nebo cesta -->

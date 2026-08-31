@@ -666,7 +666,7 @@ def add_vector_layers(
         # (posunuté rovnoběžné linie, ne dash uvnitř jedné linie).
         # offset_m = poloviční šířka pruhu (0.35mm/2) přepočtená na mapové
         # metry pro aktuální tiskové měřítko.
-        offset_505_m = (0.35 / 2) / 1000 * scale
+        offset_505_m = (0.4 / 2) / 1000 * scale
         if cgdf is not None:
             pm("sym505", 45, None, cgdf, to_mask=False)
             pm_border("sym505b", 45.5, None, cgdf, offset_505_m, to_mask=False)
