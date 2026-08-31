@@ -508,12 +508,18 @@
     </symbol>
 
     <!-- 505: Nezpevněná pěšina nebo cesta -->
-    <!-- OPRAVENO: kód volá pm("sym505", ...) jako JEDNU značku (na rozdíl
-         od 502/502D, kde se přes více volání skládá vícebarevná silnice) -
-         dřívější rozdělení na sym505a/sym505b se nikde nepoužívalo, a proto
-         se cesta vůbec nevykreslovala. -->
+    <!-- OPRAVENO podle přesné grafické definice ISSprOM 4.8 (Přesná definice
+         značek): hnědý (30%) pruh šířky 0.35mm (IM), perioda 2.0mm = úsečka
+         1.75mm + mezera 0.25mm, v mezeře černá příčka šířky 0.12mm vycentrovaná
+         (offset 1.815mm). Realizováno jako dvě překryté linie stejné tloušťky -
+         černá "b" vrstva má fázově posunutý dash tak, aby padl přesně do mezery
+         hnědé "a" vrstvy. Kód volá pm() pro OBĚ (sym505 = hnědý základ,
+         sym505b = černá příčka) na stejné masce/zdroji. -->
     <symbol id="sym505" type="line">
-        <style color="#000000" linewidth="1.0" linestyle="solid" />
+        <style color="#e8ae80" linewidth="0.99" linestyle="(0, (4.9606, 0.7087))" solid_capstyle="butt" />
+    </symbol>
+    <symbol id="sym505b" type="line">
+        <style color="#000000" linewidth="0.99" linestyle="(5.1449, (0.3402, 5.3291))" solid_capstyle="butt" />
     </symbol>
 
     <!-- 506: Malá nezpevněná pěšina nebo cesta -->
@@ -715,20 +721,15 @@
     </symbol>
 
     <!-- 532: Schodiště -->
+    <!-- ROZŠÍŘENO na žádost (širší schody, +50 % oproti předchozí verzi) -->
     <symbol id="sym532a" type="line">
-        <style color="#000000" linewidth="1.2" linestyle="solid" />
+        <style color="#000000" linewidth="1.8" linestyle="solid" />
     </symbol>
     <symbol id="sym532b" type="line">
-        <style color="#e8ae80" linewidth="0.9" linestyle="solid" />
+        <style color="#e8ae80" linewidth="1.35" linestyle="solid" />
     </symbol>
-    <!-- OPRAVENO: sym532c byla plná bílá čára (proto to nevypadalo jako
-         schody). Ve fungujících symbols10/15.xml je "c" vrstva černá,
-         kreslená přes a/b s velmi těsným čárkováním (skoro na šířku
-         základní čáry) - tím vzniknou příčky schodů. Poměr šířka/tečka
-         odvozen ze symbols15.xml (c_width/a_width, on/a_width, off/a_width)
-         aplikovaný na zdejší sym532a linewidth=1.2. -->
     <symbol id="sym532c" type="line">
-        <style color="#000000" linewidth="1.15" linestyle="(0, (0.158, 0.246))" solid_capstyle="butt" />
+        <style color="#000000" linewidth="1.7" linestyle="(0, (0.237, 0.369))" solid_capstyle="butt" />
     </symbol>
 
     <!-- 533: Oblast s překážkami (50% černá) -->

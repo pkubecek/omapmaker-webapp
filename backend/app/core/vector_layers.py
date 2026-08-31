@@ -591,21 +591,29 @@ def add_vector_layers(
 
         # 505 - Pěší cesta
         cgdf = isom("505")
-        mask_footway = (c("highway").isin(["road", "bridleway"]) |
+        # OPRAVENO: "footway" chybělo úplně - OSM linie s highway=footway se
+        # tak nikdy nedostaly do žádné masky pro linie (byly jen v masce pro
+        # 501, ale ta se aplikuje na gdf_polys, takže běžná linie footway
+        # tam nikdy nespadla) -> pěší cesty se vůbec nevykreslovaly.
+        mask_footway = (c("highway").isin(["road", "bridleway", "footway"]) |
                         ((c("highway") == "cycleway") & (~c("surface").isin(["concrete", "asphalt"])) &
                         (c("tracktype") != "grade1")) &
                         (c("bridge") != "yes") & (c("access") != "private"))
         if cgdf is not None:
             pm("sym505", 45, None, cgdf, to_mask=False)
+            pm("sym505b", 45.5, None, cgdf, to_mask=False)
         elif zab_in("Ulice", "Cesta"):
             if zab("Ulice") is not None:
                 mask = ~_get_col(zab("Ulice"), "typulice_k").isin(["925", "025"])
                 pm("sym505", 45, mask, zab("Ulice"))
+                pm("sym505b", 45.5, mask, zab("Ulice"))
             if zab("Cesta") is not None:
                 mask = _get_col(zab("Cesta"), "typcesty_p").isin(["cesta neudržovaná"])
                 pm("sym505", 45, mask, zab("Cesta"))
+                pm("sym505b", 45.5, mask, zab("Cesta"))
         else:
             pm("sym505", 45, mask_footway, gdf_lines)
+            pm("sym505b", 45.5, mask_footway, gdf_lines)
 
         # 506 - Pěšina
         cgdf = isom("506")
