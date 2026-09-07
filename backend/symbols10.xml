@@ -384,6 +384,9 @@
     <symbol id="sym501" type="area">
         <style facecolor="#e8ae80" edgecolor="#000000" linewidth="0.42525" />
     </symbol>
+    <symbol id="sym501l" type="line">
+        <style color="#e8ae80" linewidth="1.4173" linestyle="solid" />
+    </symbol>
 
     <!-- 502: Wide road (double/D variant) -->
     <symbol id="sym502Da" type="line">
