@@ -384,6 +384,7 @@
     <symbol id="sym501" type="area">
         <style facecolor="#e8ae80" edgecolor="#000000" linewidth="0.42525" />
     </symbol>
+    <!--linie pro pedestrian tag-->
     <symbol id="sym501l" type="line">
         <style color="#e8ae80" linewidth="1.4173" linestyle="solid" />
     </symbol>
