@@ -123,7 +123,7 @@ def _tif_to_laz(tif_path: str, output_laz: str, progress_cb=None) -> bool:
             x = np.array(xs)[valid]
             y = np.array(ys)[valid]
             z = zs[valid]
-            src_crs_wkt = src.crs.to_wkt() if src.crs else None
+            src_crs = src.crs
 
         if len(x) == 0:
             print("[it_downloader] Po filtraci nezůstaly žádné platné body.")
@@ -133,16 +133,23 @@ def _tif_to_laz(tif_path: str, output_laz: str, progress_cb=None) -> bool:
         header.scales = np.array([0.01, 0.01, 0.01])
         header.offsets = np.array([x.min(), y.min(), z.min()])
 
-        if src_crs_wkt:
+        # DŮLEŽITÉ: dřívější zápis CRS přes neexistující
+        # `laspy.LasAppender.make_vlr(...)` vždy spadl do except a CRS se
+        # do LAZ hlavičky nikdy nezapsal. processor.load_dmr_grid() pak bez
+        # CRS ve VLR spadl na fallback EPSG:5514, a protože sicilské
+        # souřadnice (EPSG:25833) mají x_min > 0 stejně jako polské
+        # (heuristika "GUGiK bez CRS"), omylem se přehodily na EPSG:2180 -
+        # transformace z (chybného) 2180 do 25833 poslala všechny body
+        # úplně jinam, takže se po ořezu na bbox nevešel do mapy žádný bod.
+        # `LasHeader.add_crs()` je jediné veřejné, funkční API laspy pro
+        # zápis CRS (WKT/GeoTIFF VLR podle point formátu) - parse_crs() ho
+        # pak už najde normálně, žádná heuristika se nespustí.
+        if src_crs:
             try:
-                header.vlrs.append(laspy.LasAppender.make_vlr(
-                    user_id="LASF_Projection",
-                    record_id=2112,
-                    description="OGC Coordinate System WKT",
-                    record_data=src_crs_wkt.encode("utf-8"),
-                ))
-            except Exception:
-                pass
+                from pyproj import CRS as PyprojCRS
+                header.add_crs(PyprojCRS.from_user_input(src_crs.to_wkt()))
+            except Exception as e:
+                print(f"[it_downloader] Zápis CRS do LAZ selhal: {e}")
 
         las = laspy.LasData(header=header)
         las.x = x
