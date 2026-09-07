@@ -25,6 +25,53 @@
   semi-osa. Pokud po vyzkoušení budou značky pořád příliš velké/malé,
   jde jen o jednotný multiplikátor - stačí přepočítat všechny path
   souřadnice stejným poměrem.
+
+  =======================================================================
+  OPRAVA VELIKOSTÍ (na základě oficiální šablony OOM
+  "ISSprOM_2019_4000.omap", staženo z IOF/OOM sady symbolů 1:4000):
+
+  Bodové značky (kruhy, trojúhelníky balvanů/jam atd.) byly už správně -
+  ověřeno křížovou kontrolou komentářů "Stopa AxB -> semi/r X" proti
+  "Footprint" hodnotám v oficiální šabloně. Beze změny.
+
+  Opraveny byly tloušťky čar (linewidth) a dash patterny u těch značek,
+  kde seděly na jiný zdroj než tuto šablonu - dopočteno přímo z
+  line_width/dash_length/break_length v .omap (mm -> pt, 1pt=0.352778mm):
+  101,103(+dash),104,107,201,202,305,306(+dash),415/216l(navíc byla
+  omylem čárkovaná, oficiálně SOLID),501-1,509-2,512-1,513-1a,513-2a,
+  515a,516,518,528,529,601,705,707(+dash),708(navíc byla omylem
+  čárkovaná a příliš tenká, oficiálně SOLID 2.8346pt).
+
+  Opraveny plošné výplně (dotdistance/hatchdistance/hatchwidth), dopočteno
+  ze stejného zdroje (point_distance/line_spacing/line_width v pattern
+  elementu): 113,208(!velký rozdíl, bylo 3x hustší než má být),210,213,
+  307,308. dotsize u těchto NEBYL měněn (nejde dopočítat formulí, byl by
+  potřeba vizuální odhad).
+
+  NEZMĚNĚNO ZÁMĚRNĚ (viz konverzace, ověř zvlášť):
+  - 402/404/413/501-3 (roztroušené stromy) - dotdistance/dotsize byly
+    nedávno ručně doladěny podle vzhledu, nepřepisovat bez vizuální kontroly.
+    Oficiální dotdistance by vycházelo: 402->2.126, 404->2.8346,
+    413->3.4016, 501-3->2.126 (mírně hustší než teď).
+  - 108,105-1b,513-1b,513-2b,515b (tečkovaný trik přes linestyle
+    "(0,(0.00667,X))") a style_ticks u 104/201/202/516/518 - potřebují
+    přepočet z OOM mid_symbol/dash_symbol, ne jen linewidth. TODO.
+  - 105 (Malý zemní val): oficiální šablona ho nově kreslí jako JEDNU
+    linii s pravidelnými tečkami podél (mid_symbol dot), NE jako
+    val+fousky jak je teď. Vyžaduje redesign renderu, ne jen velikost.
+  - 532 (Schodiště): oficiální šablona ho kreslí jako vyplněnou cestu
+    s okrajem (podobně jako 501.x), NE jako tři paralelní linie. Taky
+    redesign, ne jen velikost.
+  - 209,215,304,408l,501-2,509Ba,512-3,523,533,715 - v oficiální
+    šabloně vůbec neexistují jako samostatné kódy (potvrzeno hledáním),
+    zůstávají odhady jak byly označené "OVĚŘIT"/"DOPLNĚNO".
+  - 309,310,414,709 - OOM je kreslí jinou technikou než náš renderer
+    (dot pattern místo hatch, nebo dvě překryté vrstvy patternu), takže
+    prosté přepsání distance/width by neodpovídalo předloze. Neřešeno.
+  - celá sekce CESTY/SILNICE (502-509 kromě dotčených 509-2/512-1/512-2)
+    zůstává záměrně o ~30% širší než ISOM/ISSprOM, viz komentář níže -
+    to je vědomé rozhodnutí kvůli chybějící šířce vozovky v datech.
+  =======================================================================
 -->
 <root>
 
@@ -34,7 +81,7 @@
 
     <!-- 101: Základní vrstevnice -->
     <symbol id="sym101" type="line">
-        <style color="#d15c00" linewidth="0.4252" linestyle="solid" />
+        <style color="#d15c00" linewidth="0.5953" linestyle="solid" />
     </symbol>
 
     <!-- 102: Zdůrazněná vrstevnice -->
@@ -44,12 +91,12 @@
 
     <!-- 103: Doplňková vrstevnice -->
     <symbol id="sym103" type="line">
-        <style color="#d15c00" linewidth="0.3402" linestyle="(0, (5.67, 0.567))" />
+        <style color="#d15c00" linewidth="0.4252" linestyle="(0, (8.5039, 0.8504))" />
     </symbol>
 
     <!-- 104: Zemní sráz (min. výška 1m, spádovky) -->
     <symbol id="sym104" type="line">
-        <style color="#d15c00" linewidth="0.7" linestyle="solid" capstyle="butt" />
+        <style color="#d15c00" linewidth="0.7654" linestyle="solid" capstyle="butt" />
         <style_ticks length="4" spacing="5" linewidth="0.4536" color="#d15c00" />
     </symbol>
 
@@ -70,7 +117,7 @@
 
     <!-- 107: Erozní rýha -->
     <symbol id="sym107" type="line">
-        <style color="#d15c00" linewidth="0.8" linestyle="solid" />
+        <style color="#d15c00" linewidth="1.0488" linestyle="solid" />
     </symbol>
 
     <!-- 108: Malá erozní rýha -->
@@ -104,7 +151,7 @@
 
     <!-- 113: Rozbitý povrch -->
     <symbol id="sym113" type="area">
-        <style facecolor="none" edgecolor="none" linewidth="0" linestyle="solid" dotdistance="2.2" dotsize="0.85" dotcolor="#d15c00" />
+        <style facecolor="none" edgecolor="none" linewidth="0" linestyle="solid" dotdistance="2.8346" dotsize="0.85" dotcolor="#d15c00" />
     </symbol>
 
     <!-- 115: Výrazný terénní objekt (Stopa 5.4x4.6m -> semi 2.7/2.3) -->
@@ -120,13 +167,13 @@
 
     <!-- 201: Nepřekonatelný sráz -->
     <symbol id="sym201" type="line">
-        <style color="#000000" linewidth="1.0" linestyle="solid" capstyle="butt" />
+        <style color="#000000" linewidth="1.4173" linestyle="solid" capstyle="butt" />
         <style_ticks length="4" spacing="5" linewidth="0.4536" color="#000000" />
     </symbol>
 
     <!-- 202: Překonatelný sráz -->
     <symbol id="sym202" type="line">
-        <style color="#000000" linewidth="0.6" linestyle="solid" capstyle="butt" />
+        <style color="#000000" linewidth="0.8504" linestyle="solid" capstyle="butt" />
         <style_ticks length="3.33333" spacing="4.33333" linewidth="0.4536" color="#000000" />
     </symbol>
 
@@ -165,7 +212,7 @@
 
     <!-- 208: Balvanové pole - trojúhelníky, náhodně rozmístěné (viz renderer) -->
     <symbol id="sym208" type="area">
-        <style facecolor="none" edgecolor="none" linewidth="0" linestyle="solid" dotdistance="3.5" dotsize="1.2" dotcolor="#000000" marker_shape="triangle" />
+        <style facecolor="none" edgecolor="none" linewidth="0" linestyle="solid" dotdistance="10.2047" dotsize="1.2" dotcolor="#000000" marker_shape="triangle" />
     </symbol>
 
     <!-- 209: Otevřené balvanové pole -->
@@ -176,12 +223,12 @@
 
     <!-- 210: Kamenitý povrch -->
     <symbol id="sym210" type="area">
-        <style facecolor="none" edgecolor="none" linewidth="0" linestyle="solid" dotdistance="2.0" dotsize="0.6" dotcolor="#000000" />
+        <style facecolor="none" edgecolor="none" linewidth="0" linestyle="solid" dotdistance="2.8346" dotsize="0.6" dotcolor="#000000" />
     </symbol>
 
     <!-- 213: Otevřený písčitý povrch -->
     <symbol id="sym213" type="area">
-        <style facecolor="#f7f2c2" edgecolor="none" linewidth="0" linestyle="solid" dotdistance="2.0" dotsize="0.6" dotcolor="#000000" />
+        <style facecolor="#f7f2c2" edgecolor="none" linewidth="0" linestyle="solid" dotdistance="1.4173" dotsize="0.6" dotcolor="#000000" />
     </symbol>
 
     <!-- 214: Holá skála (35% černá) -->
@@ -233,22 +280,22 @@
 
     <!-- 305: Malý překonatelný vodní tok -->
     <symbol id="sym305" type="line">
-        <style color="#21d1ff" linewidth="0.85" />
+        <style color="#21d1ff" linewidth="0.5953" />
     </symbol>
 
     <!-- 306: Malý / sezónní vodní tok -->
     <symbol id="sym306" type="line">
-        <style color="#21d1ff" linewidth="0.6" linestyle="(0, (3.54375, 0.70875))" />
+        <style color="#21d1ff" linewidth="0.5953" linestyle="(0, (5.3008, 1.0488))" />
     </symbol>
 
     <!-- 307: Nepřekonatelná bažina -->
     <symbol id="sym307" type="area">
-        <style facecolor="none" edgecolor="#000000" linewidth="0.4" linestyle="solid" hatchcolor="#21d1ff" hatchdistance="1.8" hatchwidth="0.5" hatchstyle="solid" />
+        <style facecolor="none" edgecolor="#000000" linewidth="0.4" linestyle="solid" hatchcolor="#21d1ff" hatchdistance="1.4173" hatchwidth="0.7087" hatchstyle="solid" />
     </symbol>
 
     <!-- 308: Bažina -->
     <symbol id="sym308" type="area">
-        <style facecolor="none" edgecolor="none" linewidth="0" linestyle="solid" hatchcolor="#21d1ff" hatchdistance="1.8" hatchwidth="0.5" hatchstyle="solid" />
+        <style facecolor="none" edgecolor="none" linewidth="0" linestyle="solid" hatchcolor="#21d1ff" hatchdistance="1.0772" hatchwidth="0.3402" hatchstyle="solid" />
     </symbol>
 
     <!-- 309: Úzká bažina -->
@@ -373,7 +420,7 @@
 
     <!-- 415: Zřetelná hranice obdělávané půdy -->
     <symbol id="sym415" type="line">
-        <style color="#000000" linewidth="0.4252" linestyle="(0, (4.2525, 1.063125))" />
+        <style color="#000000" linewidth="0.2835" linestyle="solid" />
     </symbol>
 
     <!-- 216l: Hranice kultivace (alias pro 415 v předpočítané ISOM vrstvě) -->
@@ -381,7 +428,7 @@
          pm("sym216l", ...) - historický název ze symbols10/15.xml -
          zatímco na "sym415" výše nic needkazuje. Stejný styl jako sym415. -->
     <symbol id="sym216l" type="line">
-        <style color="#000000" linewidth="0.4252" linestyle="(0, (4.2525, 1.063125))" />
+        <style color="#000000" linewidth="0.2835" linestyle="solid" />
     </symbol>
 
     <!-- 416: Zřetelná hranice vegetace -->
@@ -434,7 +481,7 @@
 
     <!-- 501.1: Schod nebo okraj zpevněné plochy -->
     <symbol id="sym501-1" type="line">
-        <style color="#000000" linewidth="0.4" linestyle="solid" />
+        <style color="#000000" linewidth="0.2835" linestyle="solid" />
     </symbol>
 
     <!-- 501.2: Schod/okraj zpevněné plochy ve spodní úrovni -->
@@ -559,7 +606,7 @@
 
     <!-- 509.2: Tramvajová trať (50% černá, tenká) -->
     <symbol id="sym509-2" type="line">
-        <style color="#808080" linewidth="0.23" linestyle="solid" />
+        <style color="#808080" linewidth="0.8504" linestyle="solid" />
     </symbol>
 
     <!-- 510: Elektrické vedení, lanovka nebo lyžařský vlek -->
@@ -578,7 +625,7 @@
 
     <!-- 512.1: Vstup pod most nebo do tunelu (trojúhelníky) -->
     <symbol id="sym512-1" type="line">
-        <style color="#000000" linewidth="1.0" linestyle="solid" />
+        <style color="#000000" linewidth="1.1339" linestyle="solid" />
     </symbol>
 
     <!-- 512.2: Podchod nebo tunel -->
@@ -598,7 +645,7 @@
          tiková část bez základní linky) -> nikdy se nevykreslilo.
          Poměr a/b odvozen z 513.2 (a=0.6, b=1.2 -> poloviční šířka). -->
     <symbol id="sym513-1a" type="line">
-        <style color="#000000" linewidth="0.3" linestyle="solid" />
+        <style color="#000000" linewidth="0.5953" linestyle="solid" />
     </symbol>
     <symbol id="sym513-1b" type="line">
         <style color="#000000" linewidth="0.6" linestyle="(0, (0.00667, 5.67))" solid_capstyle="round" />
@@ -606,7 +653,7 @@
 
     <!-- 513.2: Překonatelná opěrná zeď -->
     <symbol id="sym513-2a" type="line">
-        <style color="#000000" linewidth="0.6" linestyle="solid" />
+        <style color="#000000" linewidth="0.5953" linestyle="solid" />
     </symbol>
     <symbol id="sym513-2b" type="line">
         <style color="#000000" linewidth="1.2" linestyle="(0, (0.00667, 5.67))" solid_capstyle="round" />
@@ -614,7 +661,7 @@
 
     <!-- 515: Nepřekonatelná zeď -->
     <symbol id="sym515a" type="line">
-        <style color="#000000" linewidth="0.8" linestyle="solid" />
+        <style color="#000000" linewidth="1.1339" linestyle="solid" />
     </symbol>
     <symbol id="sym515b" type="line">
         <style color="#000000" linewidth="1.8" linestyle="(0, (0.06667, 8.505, 0.00667, 2.28))" solid_capstyle="round" />
@@ -622,13 +669,13 @@
 
     <!-- 516: Překonatelný plot nebo zábradlí -->
     <symbol id="sym516" type="line">
-        <style color="#000000" linewidth="0.3" linestyle="solid" />
+        <style color="#000000" linewidth="0.5953" linestyle="solid" />
         <style_ticks length="2" spacing="2.835" linewidth="0.3" color="#000000" angle="45" />
     </symbol>
 
     <!-- 518: Nepřekonatelný plot nebo zábradlí -->
     <symbol id="sym518" type="line">
-        <style color="#000000" linewidth="2.8" linestyle="solid" />
+        <style color="#000000" linewidth="1.1339" linestyle="solid" />
         <style_ticks length="6.66667" spacing="4.16833" linewidth="0.56" color="#000000" angle="45" />
     </symbol>
 
@@ -701,12 +748,12 @@
 
     <!-- 528: Výrazný liniový objekt -->
     <symbol id="sym528" type="line">
-        <style color="#000000" linewidth="0.4" linestyle="solid" />
+        <style color="#000000" linewidth="0.5953" linestyle="solid" />
     </symbol>
 
     <!-- 529: Výrazný nepřekonatelný liniový objekt -->
     <symbol id="sym529" type="line">
-        <style color="#000000" linewidth="0.7" linestyle="solid" />
+        <style color="#000000" linewidth="1.1339" linestyle="solid" />
     </symbol>
 
     <!-- 530: Výrazný umělý objekt - kroužek (Stopa 4m diam -> r=2) -->
@@ -746,7 +793,7 @@
 
     <!-- 601: Magnetický poledník -->
     <symbol id="sym601" type="line">
-        <style color="#000000" linewidth="0.3" linestyle="solid" />
+        <style color="#000000" linewidth="0.3969" linestyle="solid" />
     </symbol>
 
 
@@ -778,7 +825,7 @@
 
     <!-- 705: Spojnice -->
     <symbol id="sym705" type="line">
-        <style color="#c800c8" linewidth="0.7" linestyle="solid" />
+        <style color="#c800c8" linewidth="0.9921" linestyle="solid" />
     </symbol>
 
     <!-- 706: Cíl (dvě soustředné kružnice) -->
@@ -793,12 +840,12 @@
 
     <!-- 707: Značený úsek -->
     <symbol id="sym707" type="line">
-        <style color="#a000a0" linewidth="1.0" linestyle="(0, (4, 2))" />
+        <style color="#a000a0" linewidth="0.9921" linestyle="(0, (5.6693, 2.126))" />
     </symbol>
 
     <!-- 708: Nepřekonatelná hranice -->
     <symbol id="sym708" type="line">
-        <style color="#c800c8" linewidth="0.7" linestyle="(0, (1.5, 1.5))" />
+        <style color="#c800c8" linewidth="2.8346" linestyle="solid" />
     </symbol>
 
     <!-- 709: Nepřístupná oblast (šrafy) -->
