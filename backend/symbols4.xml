@@ -540,10 +540,10 @@
 
     <!-- 503: Silnice -->
     <symbol id="sym503" type="line">
-        <style color="#000000" linewidth="1.93" linestyle="solid" />
+        <style color="#e8ae80" linewidth="1.93" linestyle="solid" />
     </symbol>
     <symbol id="sym503Ba" type="line">
-        <style color="#000000" linewidth="5.84" linestyle="solid" />
+        <style color="#e8ae80" linewidth="5.84" linestyle="solid" />
     </symbol>
     <symbol id="sym503Bb" type="line">
         <style color="#ffffff" linewidth="3.89" linestyle="solid" />

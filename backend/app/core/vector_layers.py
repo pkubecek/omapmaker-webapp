@@ -576,7 +576,7 @@ def add_vector_layers(
         else:
             pm("sym501", 49,
                (c("amenity") == "parking") | (c("place") == "square") | c("highway").isin(["pedestrian", "footway"]) | (c("man_made") == "bridge"),
-               gdf_polys)
+               gdf_polys, gdf_lines)
 
         # 502D - Dálnice
         cgdf = isom("502D")
