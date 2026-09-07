@@ -325,7 +325,7 @@ def add_vector_layers(
             pm("sym301", 27,
                c("natural").isin(["lake", "water", "canal"]) |
                c("water").isin(["lake", "river", "basin", "bay", "reservoir"]) |
-               (c("landuse") == "basin") | (c("leisure") == "swimming_pool"),
+               (c("landuse") == "basin") | (c("leisure") == "swimming_pool") | (c("place") == "sea"),
                gdf_polys)
 
         # 302 - Mělká voda

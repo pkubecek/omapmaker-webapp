@@ -408,9 +408,9 @@ def render_map(
 
         _cb("Kreslím vrstevnice...")
         for sym_key, layer_key, zo in [
-            ("sym101", "base", 25),
-            ("sym102", "major", 25),
-            ("sym103", "minor", 25),
+            ("sym101", "base", 50),
+            ("sym102", "major", 50),
+            ("sym103", "minor", 50),
         ]:
             if selected_codes is not None and _oom_isom_code(sym_key) not in selected_codes:
                 continue
