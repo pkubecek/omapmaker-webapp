@@ -310,8 +310,8 @@
 
     <!-- 311: Malá fontána nebo studna (Stopa 3.6x3.6m -> semi 1.8) -->
     <symbol id="sym311" type="point">
-        <path d="M -1.8 -1.8 L 1.8 1.8 M -1.8 1.8 L 1.8 -1.8" />
-        <style facecolor="none" edgecolor="#21d1ff" linewidth="0.35" />
+        <path d="M 2.2 0 A 2.0 2.0 0 0 2.0 -2.0 0 A 2.0 2.0 0 0 2.0 2.0 0 Z" />
+        <style facecolor="none" edgecolor="#21d1ff" linewidth="0.45" />
     </symbol>
 
     <!-- 312: Pramen (Stopa 4.8x2.4m -> semi 2.4/1.2) -->
@@ -445,8 +445,8 @@
         <style facecolor="#ffffff" edgecolor="#ffffff" linewidth="0" />
     </symbol>
     <symbol id="sym417b" type="point">
-        <path d="M 2.4 0 A 2.4 2.4 0 0 2.4 -2.4 0 A 2.4 2.4 0 0 2.4 2.4 0 Z" />
-        <style facecolor="none" edgecolor="#0e990e" linewidth="0.35" />
+        <path d="M 2.2 0 A 2.2 2.2 0 0 2.2 -2.2 0 A 2.2 2.2 0 0 2.2 2.2 0 Z" />
+        <style facecolor="none" edgecolor="#0e990e" linewidth="0.55" />
     </symbol>
 
     <!-- 418: Výrazný keř nebo malý strom (Stopa 3.2m diam -> r=1.6) -->
