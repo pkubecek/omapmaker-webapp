@@ -34,12 +34,18 @@ const S = {
   },
   progressTitle: { fontSize: 12, fontWeight: 500 },
   progressPct: { fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--text-secondary)' },
+  barRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 6,
+  },
   barWrap: {
+    flex: 1,
     background: '#f0ead6',
     borderRadius: 3,
     height: 4,
     overflow: 'hidden',
-    marginBottom: 6,
   },
   barFill: {
     height: '100%',
@@ -48,6 +54,28 @@ const S = {
     transition: 'width 0.5s ease',
   },
   barFillError: { background: '#c96a3a' },
+  cancelBtn: {
+    flexShrink: 0,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 18,
+    height: 18,
+    padding: 0,
+    borderRadius: '50%',
+    border: '0.5px solid var(--panel-border)',
+    background: 'none',
+    color: 'var(--text-secondary)',
+    fontSize: 11,
+    lineHeight: 1,
+    cursor: 'pointer',
+    transition: 'background 0.15s, color 0.15s, border-color 0.15s',
+  },
+  cancelBtnHover: {
+    background: '#c96a3a',
+    color: '#fff',
+    borderColor: '#c96a3a',
+  },
   stepText: {
     fontFamily: 'var(--mono)',
     fontSize: 11,
@@ -200,9 +228,26 @@ const STATUS_LABELS = {
   running: 'Zpracovávám...',
   done: 'Hotovo ✓',
   error: 'Chyba!',
+  cancelled: 'Zrušeno',
 };
 
-export default function OutputPanel({ job, logLines, canRun, running, onRun, isMobile }) {
+// Kolečko se křížkem vedle progress baru — zruší běžící/frontou čekající job
+function CancelBtn({ onClick }) {
+  const [hovered, setHovered] = useState(false);
+  return (
+    <button
+      onClick={onClick}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      title="Zrušit job"
+      style={{ ...S.cancelBtn, ...(hovered ? S.cancelBtnHover : {}) }}
+    >
+      ✕
+    </button>
+  );
+}
+
+export default function OutputPanel({ job, logLines, canRun, running, onRun, onCancel, isMobile }) {
   const logRef = useRef(null);
   const [lightbox, setLightbox] = useState(false);
   const [viewMode, setViewMode] = useState('png'); // 'png' | 'vectors'
@@ -214,6 +259,7 @@ export default function OutputPanel({ job, logLines, canRun, running, onRun, isM
   const { status = 'idle', progress = 0, step = '', jobId = null } = job || {};
   const isDone = status === 'done';
   const isError = status === 'error';
+  const isCancelled = status === 'cancelled';
 
   // Auto-scroll log
   useEffect(() => {
@@ -286,14 +332,17 @@ export default function OutputPanel({ job, logLines, canRun, running, onRun, isM
           <span style={S.progressTitle}>{STATUS_LABELS[status] || status}</span>
           <span style={S.progressPct}>{status === 'idle' ? '—' : `${Math.round(progress)}%`}</span>
         </div>
-        <div style={S.barWrap}>
-          <div
-            style={{
-              ...S.barFill,
-              ...(isError ? S.barFillError : {}),
-              width: `${progress}%`,
-            }}
-          />
+        <div style={S.barRow}>
+          <div style={S.barWrap}>
+            <div
+              style={{
+                ...S.barFill,
+                ...(isError || isCancelled ? S.barFillError : {}),
+                width: `${progress}%`,
+              }}
+            />
+          </div>
+          {running && onCancel && <CancelBtn onClick={onCancel} />}
         </div>
         <div style={S.stepText}>
           {status === 'idle'
@@ -370,7 +419,7 @@ export default function OutputPanel({ job, logLines, canRun, running, onRun, isM
             <div style={S.previewPlaceholder}>
               <div style={S.placeholderIcon}>🗺</div>
               <div style={S.placeholderText}>
-                {isError ? 'Zpracování selhalo' : 'Výsledná mapa se zobrazí zde'}
+                {isError ? 'Zpracování selhalo' : isCancelled ? 'Job byl zrušen' : 'Výsledná mapa se zobrazí zde'}
               </div>
             </div>
           )}

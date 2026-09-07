@@ -21,6 +21,11 @@ export async function getJobStatus(jobId) {
   return res.data;
 }
 
+export async function cancelJob(jobId) {
+  const res = await api.post(`/api/jobs/${jobId}/cancel`);
+  return res.data;
+}
+
 export function getPngUrl(jobId) {
   return `${BASE}/api/jobs/${jobId}/png`;
 }

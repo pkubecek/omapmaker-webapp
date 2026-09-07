@@ -8,7 +8,7 @@ import HelpModal from './components/HelpModal';
 import MobileLayout from './components/MobileLayout';
 import TabletLayout from './components/TabletLayout';
 import { useBreakpoint } from './hooks/useBreakpoint';
-import { startJob, getJobStatus } from './api';
+import { startJob, getJobStatus, cancelJob } from './api';
 
 const DEFAULT_SETTINGS = {
   crs: 'EPSG:5514',
@@ -97,9 +97,10 @@ export default function App() {
           jobId,
         }));
         if (data.step) addLog(data.step, data.status === 'error' ? 'warn' : 'info');
-        if (data.status === 'done' || data.status === 'error') {
+        if (data.status === 'done' || data.status === 'error' || data.status === 'cancelled') {
           stopPolling();
           if (data.status === 'done') addLog('Analýza dokončena.', 'ok');
+          else if (data.status === 'cancelled') addLog('Job zrušen.', 'warn');
           else addLog('Chyba: ' + (data.error || 'Neznámá chyba'), 'warn');
         }
       } catch (err) {
@@ -185,6 +186,20 @@ export default function App() {
     }
   }, [files, settings, bbox, addLog, pollJob]);
 
+  const handleCancel = useCallback(async () => {
+    if (!job.jobId) return;
+    addLog('Ruším job...', 'info');
+    try {
+      const data = await cancelJob(job.jobId);
+      stopPolling();
+      setJob((prev) => ({ ...prev, status: data.status || 'cancelled', step: data.step || 'Zrušeno uživatelem.' }));
+      addLog('Job zrušen.', 'warn');
+    } catch (err) {
+      const msg = err.response?.data?.detail || err.message;
+      addLog('Zrušení se nezdařilo: ' + msg, 'warn');
+    }
+  }, [job.jobId, addLog]);
+
   const handleCuzkComplete = useCallback((dmrPath, dmpPath, crs, mode) => {
     if (mode === 'server_path') {
       // Serverové cesty — nepotřebujeme File objekty
@@ -217,6 +232,7 @@ export default function App() {
   else if (running) topStatus = 'Zpracovávám...';
   else if (job.status === 'done') topStatus = 'Mapa vygenerována ✓';
   else if (job.status === 'error') topStatus = 'Chyba!';
+  else if (job.status === 'cancelled') topStatus = 'Zrušeno';
   else topStatus = 'Připraveno ke spuštění';
 
   const { isMobile, isTablet } = useBreakpoint();
@@ -248,6 +264,7 @@ export default function App() {
       canRun={canRun}
       running={running}
       onRun={handleRun}
+      onCancel={handleCancel}
       isMobile={isMobile}
     />
   );

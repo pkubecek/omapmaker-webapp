@@ -20,6 +20,13 @@ router = APIRouter()
 MAX_CONCURRENT_JOBS = int(os.environ.get("MAX_CONCURRENT_JOBS", "3"))
 _job_semaphore = asyncio.Semaphore(MAX_CONCURRENT_JOBS)
 JOB_TIMEOUT_SECONDS = int(os.environ.get("JOB_TIMEOUT_SECONDS", "1800"))  # 30 min
+
+# Sledování běžících subprocessů a zrušených jobů, aby šlo job zabít
+# tlačítkem "Zrušit" z frontendu (viz endpoint /jobs/{job_id}/cancel).
+_running_procs: dict[str, asyncio.subprocess.Process] = {}
+_cancelled_jobs: set[str] = set()
+
+
 async def _run_job_subprocess(job_id: str, job_dir: str):
         position_job = _read_job(job_id) or {}
         if _job_semaphore.locked():
@@ -28,12 +35,26 @@ async def _run_job_subprocess(job_id: str, job_dir: str):
             _write_job(job_id, position_job)
  
         async with _job_semaphore:
+            # Job mohl být zrušen ještě ve frontě (než jsme vůbec spustili subprocess)
+            if job_id in _cancelled_jobs:
+                _cancelled_jobs.discard(job_id)
+                _write_job(job_id, {
+                    "status": "cancelled",
+                    "progress": 0,
+                    "step": "Zrušeno uživatelem (ve frontě).",
+                    "error": "cancelled",
+                    "png_path": None,
+                    "gpkg_path": None,
+                })
+                return
+
             proc = None
             try:
                 proc = await asyncio.create_subprocess_exec(
                     sys.executable, "-m", "app.core.run_job_process", job_id, job_dir,
                     cwd=os.getcwd(),
                 )
+                _running_procs[job_id] = proc
                 try:
                     await asyncio.wait_for(proc.wait(), timeout=JOB_TIMEOUT_SECONDS)
                 except asyncio.TimeoutError:
@@ -48,10 +69,24 @@ async def _run_job_subprocess(job_id: str, job_dir: str):
                         "gpkg_path": None,
                     })
                     return
- 
+
+                if job_id in _cancelled_jobs:
+                    # Zrušeno uživatelem během běhu — _cancel_job() proces už zabil,
+                    # jen doplníme finální stav (přepíše, co si stihl zapsat subprocess).
+                    _cancelled_jobs.discard(job_id)
+                    _write_job(job_id, {
+                        "status": "cancelled",
+                        "progress": 0,
+                        "step": "Zrušeno uživatelem.",
+                        "error": "cancelled",
+                        "png_path": None,
+                        "gpkg_path": None,
+                    })
+                    return
+
                 if proc.returncode != 0:
                     job = _read_job(job_id) or {}
-                    if job.get("status") not in ("done", "error"):
+                    if job.get("status") not in ("done", "error", "cancelled"):
                         _write_job(job_id, {
                             "status": "error",
                             "progress": 0,
@@ -72,6 +107,8 @@ async def _run_job_subprocess(job_id: str, job_dir: str):
                     "png_path": None,
                     "gpkg_path": None,
                 })
+            finally:
+                _running_procs.pop(job_id, None)
 
 
 def _save_file(upload: UploadFile, dest_dir: str) -> str:
@@ -165,6 +202,38 @@ async def get_job(job_id: str):
     if job is None:
         raise HTTPException(status_code=404, detail="Job nenalezen.")
     return {"job_id": job_id, **job}
+
+
+@router.post("/jobs/{job_id}/cancel")
+async def cancel_job(job_id: str):
+    """Zruší běžící nebo frontou čekající job. Pokud už je job hotový/chybný,
+    je to no-op (vrátí aktuální stav beze změny)."""
+    job = _read_job(job_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail="Job nenalezen.")
+
+    if job.get("status") in ("done", "error", "cancelled"):
+        return {"job_id": job_id, **job}
+
+    proc = _running_procs.get(job_id)
+    if proc is not None and proc.returncode is None:
+        # Job už běží jako subprocess — rovnou zabít. Finální zápis stavu
+        # "cancelled" udělá _run_job_subprocess(), jakmile proc.wait() vrátí.
+        _cancelled_jobs.add(job_id)
+        proc.kill()
+    else:
+        # Job ještě čeká ve frontě na semafor (subprocess vůbec nezačal) —
+        # jen si poznamenáme, že se má přeskočit, jakmile na něj dojde řada.
+        _cancelled_jobs.add(job_id)
+        _write_job(job_id, {
+            **job,
+            "status": "cancelled",
+            "step": "Zrušeno uživatelem (ve frontě).",
+            "error": "cancelled",
+        })
+
+    updated = _read_job(job_id) or job
+    return {"job_id": job_id, **updated}
 
 
 @router.get("/jobs/{job_id}/png")
