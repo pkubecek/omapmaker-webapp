@@ -497,6 +497,18 @@
         <style facecolor="#e8ae80" edgecolor="none" linewidth="0" linestyle="solid" dotdistance="3.1" dotsize="8" dotcolor="#ffffff" />
     </symbol>
 
+    <!-- 501l: Zpevněná plocha jako linie -->
+    <!-- DOPLNĚNO: OSM často mapuje chodníky/náměstíčka/mosty pro pěší jako
+         obyčejnou linii (highway=footway/pedestrian), ne jako uzavřený
+         polygon - ty se do sym501 (area, z gdf_polys) nikdy nedostanou.
+         Tenhle liniový ekvivalent je na vykreslení stejných OSM tagů,
+         když přijdou jako LineString. Šířka odhadnuta podle oficiální
+         šablony ISSprOM 501.6-501.9 (zpevněná plocha, šířka 1.4-4m),
+         zvoleno cca prostřední 2m ~ 1.4173pt, stejná barva jako plocha 501. -->
+    <symbol id="sym501l" type="line">
+        <style color="#e8ae80" linewidth="1.4173" linestyle="solid" />
+    </symbol>
+
     <!-- ============================================================ -->
     <!-- CESTY/SILNICE - NENÍ V OFICIÁLNÍ ISSprOM SPECIFIKACI          -->
     <!-- ISSprOM oficiálně kreslí cesty jako skutečný půdorys (501),   -->

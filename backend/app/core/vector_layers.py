@@ -574,9 +574,13 @@ def add_vector_layers(
                 mask = _get_col(zab("ArealUceloveZastavby"), "typzast_k").isin(["408"])
                 pm("sym501", 49, mask, zab("ArealUceloveZastavby"))
         else:
-            pm("sym501", 49,
-               (c("amenity") == "parking") | (c("place") == "square") | c("highway").isin(["pedestrian", "footway"]) | (c("man_made") == "bridge"),
-               gdf_polys)
+            mask_501 = (c("amenity") == "parking") | (c("place") == "square") | c("highway").isin(["pedestrian", "footway"]) | (c("man_made") == "bridge")
+            pm("sym501", 49, mask_501, gdf_polys)
+            # DOPLNĚNO: stejné tagy jako výše, ale pro LineString geometrii
+            # (OSM footway/pedestrian/parking/bridge často není uzavřený
+            # polygon) - gdf_polys tohle nikdy nezachytí, proto samostatně
+            # z gdf_lines, přes liniový ekvivalent sym501l.
+            pm("sym501l", 49, mask_501, gdf_lines)
 
         # 502D - Dálnice
         cgdf = isom("502D")
