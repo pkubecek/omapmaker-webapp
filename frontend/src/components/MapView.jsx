@@ -298,7 +298,7 @@ export default function MapView({ bbox, onBboxChange, onCuzkComplete, onHelp, is
       attribution: '© ČÚZK',
       maxZoom: 20,
     });
-    const mapriotApiKey = process.env.MAPRIOT_API_KEY;
+    const mapriotApiKey = process.env.REACT_APP_MAPRIOT_API_KEY;
     const mapriotLayer = L.tileLayer(
       `https://api.mapriot.com/styles/outdoor/raster/{z}/{x}/{y}?apiKey=${mapriotApiKey || ''}`,
       {
