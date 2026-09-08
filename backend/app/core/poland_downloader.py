@@ -7,13 +7,16 @@ url_do_pobrania obsahuje přímý odkaz ke stažení.
 
 DTM (NMT - Numeryczny Model Terenu):
   WFS: https://mapy.geoportal.gov.pl/wss/service/PZGIK/NumerycznyModelTerenuEVRF2007/WFS/Skorowidze
-  TypeName: gugik:SkorowidzNumerycznegoModeluTerenu{YEAR}
+  TypeName: gugik:SkorowidzNMT{YEAR}  (ověřeno přes GetCapabilities — GUGiK název zkrátil,
+            starší dokumentace/kód uváděly dlouhý tvar SkorowidzNumerycznegoModeluTerenu{YEAR},
+            který už WFS nezná)
   Formát: GeoTIFF (ARC/INFO ASCII Grid), CRS EPSG:2180
 
 DSM (NMPT - Numeryczny Model Powierzchni Terenu):
-  WFS: https://mapy.geoportal.gov.pl/wss/service/PZGIK/NumerycznyModelPowierzchniEVRF2007/WFS/Skorowidze
-  TypeName: gugik:SkorowidzNumerycznegoModeluPowierzchniTerenu{YEAR}
+  WFS: https://mapy.geoportal.gov.pl/wss/service/PZGIK/NumerycznyModelPokryciaTerenuEVRF2007/WFS/Skorowidze
+  TypeName: gugik:SkorowidzNMPT{YEAR}
   Formát: GeoTIFF, CRS EPSG:2180
+  (pozn.: v aktuálním pipeline se DSM nestahuje odsud, ale odvozuje z non-ground bodů LiDARu — viz níže)
 
 LiDAR point cloudy (alternativa k NMT):
   WFS: https://mapy.geoportal.gov.pl/wss/service/PZGIK/DanePomiaroweLidarEVRF2007/WFS/Skorowidze
@@ -52,13 +55,13 @@ _WFS_NMT_KRON86 = (
 )
 _WFS_NMPT = (
     "https://mapy.geoportal.gov.pl/wss/service/PZGIK"
-    "/NumerycznyModelPowierzchniEVRF2007/WFS/Skorowidze"
+    "/NumerycznyModelPokryciaTerenuEVRF2007/WFS/Skorowidze"
 )
 
 # Roky dostupných dat (od nejnovějšího) — WFS má vrstvy per rok
-# EVRF2007: LiDAR 2018-2022, NMT 2018-2020, NMPT 2018-2021
-_LIDAR_YEARS = [2022, 2021, 2020, 2019, 2018]
-_NMT_YEARS   = [2020, 2019, 2018]
+# EVRF2007: WFS GetCapabilities (ověřeno) nyní nabízí vrstvy až do 2026
+_LIDAR_YEARS = [2026, 2025, 2024, 2023, 2022, 2021, 2020, 2019, 2018]
+_NMT_YEARS   = [2026, 2025, 2024, 2023, 2022, 2021, 2020, 2019, 2018]
 _NMPT_YEARS  = [2021, 2020, 2019, 2018]
 # KRON86 fallback pro oblasti bez EVRF2007 pokryti (2000-2019)
 _NMT_KRON86_YEARS = [2019, 2018, 2017, 2016, 2015]
@@ -773,7 +776,7 @@ def download_poland(
         cb("Hledám NMT (rastr DTM) dlaždice [EVRF2007]...")
         nmt_tiles = _query_tiles(
             _WFS_NMT, _NMT_YEARS,
-            "SkorowidzNumerycznegoModeluTerenu",
+            "SkorowidzNMT",
             bbox_wgs84, progress_cb=cb,
         )
 
@@ -782,7 +785,7 @@ def download_poland(
             cb("EVRF2007 NMT nenalezen, zkouším KRON86 fallback...")
             nmt_tiles = _query_tiles(
                 _WFS_NMT_KRON86, _NMT_KRON86_YEARS,
-                "SkorowidzNumerycznegoModeluTerenu",
+                "SkorowidzNMT",
                 bbox_wgs84, progress_cb=cb,
             )
 
