@@ -140,12 +140,12 @@ function fmtCoord(v) { return v.toFixed(4); }
 
 // Dostupné zdroje dat
 const DATA_SOURCES = [
-  { key: 'cz',  flag: '🇨🇿', label: 'ČÚZK',   sublabel: 'Česká republika',  available: true  },
-  { key: 'pl',  flag: '🇵🇱', label: 'GUGiK',   sublabel: 'Polsko',           available: false  },
-  { key: 'it',  flag: '🇮🇹', label: 'SITR',    sublabel: 'Sicílie (pouze DMR)',   available: true  },
-  { key: 'sk',  flag: '🇸🇰', label: 'ÚGKK SR', sublabel: 'Slovensko',        available: false },
-  { key: 'at',  flag: '🇦🇹', label: 'BEV',     sublabel: 'Rakousko',         available: false },
-  { key: 'de',  flag: '🇩🇪', label: 'BKG',     sublabel: 'Německo',          available: false },
+  { key: 'cz',  flag: '🇨🇿', label: 'ČÚZK',   sublabel: 'Česká republika',     available: true  },
+  { key: 'pl',  flag: '🇵🇱', label: 'GUGiK',   sublabel: 'Polsko',             available: true  },
+  { key: 'it',  flag: '🇮🇹', label: 'SITR',    sublabel: 'Sicílie (pouze DMR)',available: true  },
+  { key: 'sk',  flag: '🇸🇰', label: 'ÚGKK SR', sublabel: 'Slovensko',          available: false },
+  { key: 'at',  flag: '🇦🇹', label: 'BEV',     sublabel: 'Rakousko',           available: false },
+  { key: 'de',  flag: '🇩🇪', label: 'BKG',     sublabel: 'Německo',            available: false },
 ];
 
 function CountryDropdown({ country, disabled, onChange }) {
