@@ -797,7 +797,7 @@ def run_pipeline(job_id: str, params: dict, file_paths: dict,
 
     elapsed = time.time() - start
     mins, secs = divmod(int(elapsed), 60)
-    cb(100, f"Hotovo! Čas: {mins} min {secs} s · {n_tiles} dlaždic")
+    cb(100, f"Hotovo! Čas: {mins} min {secs} a · {n_tiles} dlaždic")
 
     result = {
         "png_path": render_result["png_path"],
