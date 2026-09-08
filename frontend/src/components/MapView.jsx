@@ -141,7 +141,7 @@ function fmtCoord(v) { return v.toFixed(4); }
 // Dostupné zdroje dat
 const DATA_SOURCES = [
   { key: 'cz',  flag: '🇨🇿', label: 'ČÚZK',   sublabel: 'Česká republika',  available: true  },
-  { key: 'pl',  flag: '🇵🇱', label: 'GUGiK',   sublabel: 'Polsko (Beta)',           available: true  },
+  { key: 'pl',  flag: '🇵🇱', label: 'GUGiK',   sublabel: 'Polsko (Beta)',           available: false  },
   { key: 'it',  flag: '🇮🇹', label: 'SITR',    sublabel: 'Sicílie (pouze DMR)',   available: true  },
   { key: 'sk',  flag: '🇸🇰', label: 'ÚGKK SR', sublabel: 'Slovensko',        available: false },
   { key: 'at',  flag: '🇦🇹', label: 'BEV',     sublabel: 'Rakousko',         available: false },
@@ -298,7 +298,17 @@ export default function MapView({ bbox, onBboxChange, onCuzkComplete, onHelp, is
       attribution: '© ČÚZK',
       maxZoom: 20,
     });
-    baseLayersRef.current = { osm: osmLayer, ortofoto: ortofotoLayer };
+    const mapriotApiKey = process.env.MAPRIOT_API_KEY;
+    const mapriotLayer = L.tileLayer(
+      `https://api.mapriot.com/styles/outdoor/raster/{z}/{x}/{y}?apiKey=${mapriotApiKey || ''}`,
+      {
+        attribution:
+          '<a href="https://mapriot.com/copyright" target="_blank">© MapRiot.com</a> ' +
+          '<a href="https://www.openstreetmap.org/copyright" target="_blank">© OpenStreetMap contributors</a>',
+        maxZoom: 18,
+      }
+    );
+    baseLayersRef.current = { osm: osmLayer, ortofoto: ortofotoLayer, mapriot: mapriotLayer };
     osmLayer.addTo(map);
 
     const layersRef = { current: [] };
@@ -786,6 +796,10 @@ export default function MapView({ bbox, onBboxChange, onCuzkComplete, onHelp, is
               style={{ ...S.baseLayerBtn, ...(baseLayer === 'ortofoto' ? S.baseLayerBtnActive : {}) }}
               onClick={() => setBaseLayer('ortofoto')}
             >{isMobile ? '🛰' : '🛰 Ortofoto'}</button>
+            <button
+              style={{ ...S.baseLayerBtn, ...(baseLayer === 'mapriot' ? S.baseLayerBtnActive : {}) }}
+              onClick={() => setBaseLayer('mapriot')}
+            >{isMobile ? '🥾' : '🥾 MapRiot'}</button>
           </div>
 
           <div style={S.zoomCtrl}>
