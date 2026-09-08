@@ -316,13 +316,13 @@ def add_vector_layers(
         # 301 - Vodní plocha
         cgdf = isom("301")
         if cgdf is not None:
-            pm("sym301", 27, None, cgdf, to_mask=False)
+            pm("sym301", 52, None, cgdf, to_mask=False)
         elif zab_in("VodniPlocha", "PozemniNadrz"):
             for zk in ["VodniPlocha", "PozemniNadrz"]:
                 if zab(zk) is not None:
-                    pm("sym301", 27, None, zab(zk), to_mask=False)
+                    pm("sym301", 52, None, zab(zk), to_mask=False)
         else:
-            pm("sym301", 27,
+            pm("sym301", 52,
                c("natural").isin(["lake", "water", "canal"]) |
                c("water").isin(["lake", "river", "basin", "bay", "reservoir"]) |
                (c("landuse") == "basin") | (c("leisure") == "swimming_pool") | (c("place") == "sea"),
@@ -803,29 +803,29 @@ def add_vector_layers(
         # 513.1 - Zeď
         cgdf = isom("513.1")
         if cgdf is not None:
-            pm("sym513-1a", 30, None, cgdf, to_mask=False)
-            pm("sym513-1b", 30, None, cgdf, to_mask=False)
+            pm("sym513-1a", 52, None, cgdf, to_mask=False)
+            pm("sym513-1b", 52, None, cgdf, to_mask=False)
         elif zab_in("Zed", "NasupisteHraze"):
             for zk in ["Zed", "NasupisteHraze"]:
                 if zab(zk) is not None:
-                    pm("sym513-1a", 30, None, zab(zk), to_mask=False)
-                    pm("sym513-1b", 30, None, zab(zk), to_mask=False)
+                    pm("sym513-1a", 52, None, zab(zk), to_mask=False)
+                    pm("sym513-1b", 52, None, zab(zk), to_mask=False)
         else:
-            pm("sym513-1a", 30, c("barrier") == "wall", gdf_lines)
+            pm("sym513-1a", 52, c("barrier") == "wall", gdf_lines)
 
         # 515 - Nepřekonatelná zeď
         cgdf = isom("515")
         if cgdf is not None:
-            pm("sym515a", 30, None, cgdf, to_mask=False)
-            pm("sym515b", 30, None, cgdf, to_mask=False)
+            pm("sym515a", 52, None, cgdf, to_mask=False)
+            pm("sym515b", 52, None, cgdf, to_mask=False)
         elif zab("Zed") is not None:
             mask = _get_col(zab("Zed"), "typzed_p").isin(
                 ["protihluková stěna", "zeď vodního díla", "zeď ostatní"])
-            pm("sym515a", 30, mask, zab("Zed"))
+            pm("sym515a", 52, mask, zab("Zed"))
         elif zab("HradbaValBastaOpevneni") is not None:
-            pm("sym515b", 30, None, zab("HradbaValBastaOpevneni"), to_mask=False)
+            pm("sym515b", 52, None, zab("HradbaValBastaOpevneni"), to_mask=False)
         else:
-            pm("sym515a", 30, c("barrier").isin(["city_wall", "retaining_wall", "wall"]), gdf_lines)
+            pm("sym515a", 52, c("barrier").isin(["city_wall", "retaining_wall", "wall"]), gdf_lines)
 
         # 520 - Privátní oblast
         if _section("private"):
@@ -852,11 +852,11 @@ def add_vector_layers(
         if _section("buildings"):
             cgdf = isom("521")
             if cgdf is not None:
-                pm("sym521", 50, None, cgdf, to_mask=False)
+                pm("sym521", 49, None, cgdf, to_mask=False)
             elif zab("BudovaJednotlivaNeboBlokBudov") is not None:
-                pm("sym521", 50, None, zab("BudovaJednotlivaNeboBlokBudov"), to_mask=False)
+                pm("sym521", 49, None, zab("BudovaJednotlivaNeboBlokBudov"), to_mask=False)
             else:
-                pm("sym521", 50,
+                pm("sym521", 49,
                    c("building").notna() & (c("building") != "") & ~c("building").isin(["roof"]),
                    gdf_polys)
 

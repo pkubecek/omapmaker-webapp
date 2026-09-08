@@ -402,7 +402,7 @@ def render_map(
             try:
                 rocks_cl = gpd.clip(gdf_rocks, clip_box_map)
                 if not rocks_cl.empty:
-                    rocks_cl.plot(ax=ax, color="black", zorder=26)
+                    rocks_cl.plot(ax=ax, color="black", zorder=51)
             except Exception as e:
                 print(f"[renderer] Chyba skal: {e}")
 
