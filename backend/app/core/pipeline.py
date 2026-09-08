@@ -213,10 +213,15 @@ def _process_tile(
             dmr_grid_linear_viz[~clip_mask] = 0
             dmr_grid_cubic_viz = np.nan_to_num(dmr_grid_cubic, nan=0)
             dmr_grid_cubic_viz[~clip_mask] = np.nan
-        except Exception:
+            print(f"[debug-contours] clip_polygon.bounds={clip_polygon.bounds}, "
+                  f"clip_mask shape={clip_mask.shape}, pixelů uvnitř={int(np.sum(clip_mask))}/{clip_mask.size}, "
+                  f"grid extent=({grid_x.min():.0f}..{grid_x.max():.0f}, {grid_y.min():.0f}..{grid_y.max():.0f})")
+        except Exception as e:
+            print(f"[debug-contours] Clip maska selhala: {e}")
             dmr_grid_linear_viz = np.nan_to_num(dmr_grid_linear, nan=0)
             dmr_grid_cubic_viz = np.nan_to_num(dmr_grid_cubic, nan=0)
     else:
+        print("[debug-contours] clip_polygon is None — bez ořezu")
         dmr_grid_linear_viz = np.nan_to_num(dmr_grid_linear, nan=0)
         dmr_grid_cubic_viz = np.nan_to_num(dmr_grid_cubic, nan=0)
 
@@ -228,6 +233,9 @@ def _process_tile(
     gdf_vegetation = classify_vegetation(vegetation_height, BINS, transform, dmr_path)
     if gdf_vegetation is not None and not gdf_vegetation.empty:
         gdf_vegetation = gdf_vegetation.set_crs(CURRENT_CRS, allow_override=True)
+    print(f"[debug-contours] gdf_vegetation před clip_to_core: "
+          f"{0 if gdf_vegetation is None else len(gdf_vegetation)} prvků, "
+          f"bounds={None if gdf_vegetation is None or gdf_vegetation.empty else tuple(gdf_vegetation.total_bounds)}")
     del vegetation_height
     gc.collect()
 
@@ -242,6 +250,12 @@ def _process_tile(
                                               clip_polygon=clip_polygon,
                                               interval=CONTOUR_INTERVAL,
                                               detail_grid=dmr_grid_linear_viz)
+    valid_cubic = np.isfinite(dmr_grid_cubic_viz) & (dmr_grid_cubic_viz > 0)
+    print(f"[debug-contours] dmr_grid_cubic_viz: platných pixelů={int(np.sum(valid_cubic))}/{dmr_grid_cubic_viz.size}, "
+          f"min/max Z={np.nanmin(dmr_grid_cubic_viz) if np.any(valid_cubic) else 'N/A'}"
+          f"/{np.nanmax(dmr_grid_cubic_viz) if np.any(valid_cubic) else 'N/A'}")
+    print(f"[debug-contours] contour_layers PŘED clip_to_core: " +
+          ", ".join(f"{k}={0 if v is None else len(v)}" for k, v in contour_layers.items()))
     for k, gdf_c in contour_layers.items():
         if not gdf_c.empty:
             contour_layers[k] = gdf_c.set_crs(CURRENT_CRS, allow_override=True)
@@ -277,6 +291,13 @@ def _process_tile(
     gdf_rocks = clip_to_core(gdf_rocks)
     for k in contour_layers:
         contour_layers[k] = clip_to_core(contour_layers[k])
+    print(f"[debug-contours] core_box.bounds={core_box.bounds}")
+    print(f"[debug-contours] contour_layers PO clip_to_core: " +
+          ", ".join(f"{k}={0 if v is None else len(v)}" for k, v in contour_layers.items()))
+    print(f"[debug-contours] gdf_vegetation po clip_to_core: "
+          f"{0 if gdf_vegetation is None else len(gdf_vegetation)} prvků")
+    print(f"[debug-contours] gdf_rocks po clip_to_core: "
+          f"{0 if gdf_rocks is None else len(gdf_rocks)} prvků")
     if depressions:
         dep_gdf = gpd.GeoDataFrame(geometry=depressions, crs=CURRENT_CRS)
         dep_gdf = clip_to_core(dep_gdf)
