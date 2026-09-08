@@ -141,7 +141,7 @@ function fmtCoord(v) { return v.toFixed(4); }
 // Dostupné zdroje dat
 const DATA_SOURCES = [
   { key: 'cz',  flag: '🇨🇿', label: 'ČÚZK',   sublabel: 'Česká republika',  available: true  },
-  { key: 'pl',  flag: '🇵🇱', label: 'GUGiK',   sublabel: 'Polsko (Beta)',           available: false  },
+  { key: 'pl',  flag: '🇵🇱', label: 'GUGiK',   sublabel: 'Polsko (Beta)',           available: true  },
   { key: 'it',  flag: '🇮🇹', label: 'SITR',    sublabel: 'Sicílie (pouze DMR)',   available: true  },
   { key: 'sk',  flag: '🇸🇰', label: 'ÚGKK SR', sublabel: 'Slovensko',        available: false },
   { key: 'at',  flag: '🇦🇹', label: 'BEV',     sublabel: 'Rakousko',         available: false },
