@@ -789,17 +789,20 @@ export default function MapView({ bbox, onBboxChange, onCuzkComplete, onHelp, is
         <div style={S.rightStack}>
           <div style={S.baseLayerCtrl}>
             <button
+              style={{ ...S.baseLayerBtn, ...(baseLayer === 'mapriot' ? S.baseLayerBtnActive : {}) }}
+              onClick={() => setBaseLayer('mapriot')}
+            >{isMobile ? '🥾' : '🥾 MapRiot'}</button>
+            {/* Basic OSM basemap
+            <button
               style={{ ...S.baseLayerBtn, ...(baseLayer === 'osm' ? S.baseLayerBtnActive : {}) }}
               onClick={() => setBaseLayer('osm')}
             >{isMobile ? '🗺' : '🗺 Mapa'}</button>
+            */}
             <button
               style={{ ...S.baseLayerBtn, ...(baseLayer === 'ortofoto' ? S.baseLayerBtnActive : {}) }}
               onClick={() => setBaseLayer('ortofoto')}
             >{isMobile ? '🛰' : '🛰 Ortofoto'}</button>
-            <button
-              style={{ ...S.baseLayerBtn, ...(baseLayer === 'mapriot' ? S.baseLayerBtnActive : {}) }}
-              onClick={() => setBaseLayer('mapriot')}
-            >{isMobile ? '🥾' : '🥾 MapRiot'}</button>
+            
           </div>
 
           <div style={S.zoomCtrl}>
