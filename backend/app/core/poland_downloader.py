@@ -536,22 +536,33 @@ def _merge_laz_epsg2180(input_paths: list, output_path: str,
         CHUNK_SIZE = 200_000
 
         def _detect_axis_orientation(path: str) -> bool | None:
-            """Přečte vzorek bodů ze SOUBORU `path` a mediánem (ne jedním bodem)
-            rozhodne, jestli chunk.x odpovídá eastingu, nebo northingu.
+            """Přečte vzorek bodů ze SOUBORU `path` a rozhodne, jestli chunk.x
+            odpovídá eastingu, nebo northingu — TAK, že vyzkouší obě orientace
+            přímo proti cílovému bboxu a vybere tu, která dá VÍC bodů uvnitř.
+            Porovnávání vzdálenosti od středu eastingu/northingu (starší přístup)
+            je nespolehlivé tam, kde jsou east/north hodnoty číselně blízko sebe
+            (typicky blízko hranice, kde bbox padne do podobného rozsahu v obou
+            osách) — pak je to skoro hod mincí. Výsledek na skutečných datech
+            (kolik bodů padne do bboxu) je mnohem spolehlivější indikátor,
+            protože špatná orientace téměř nikdy netrefí tolik bodů jako správná.
             Dělá se to PRO KAŽDÝ vstupní soubor zvlášť — různé GUGiK dlaždice
-            mezi sebou mívají nekonzistentní pořadí os, takže jedna globální
-            detekce pro celý merge by část souborů tipla špatně."""
+            mezi sebou mívají nekonzistentní pořadí os."""
             try:
                 with laspy.open(path) as fh0:
                     for chunk0 in fh0.chunk_iterator(CHUNK_SIZE):
                         cx0 = np.array(chunk0.x)
+                        cy0 = np.array(chunk0.y)
                         if len(cx0) == 0:
                             continue
-                        n_sample = min(2000, len(cx0))
-                        med_x = float(np.median(cx0[:n_sample]))
-                        e_mid = (ce0 + ce1) / 2
-                        n_mid = (cn0 + cn1) / 2
-                        return abs(med_x - e_mid) < abs(med_x - n_mid)
+                        n_sample = min(20_000, len(cx0))
+                        sx, sy = cx0[:n_sample], cy0[:n_sample]
+                        hits_normal = int(np.sum(
+                            (sx >= ce0) & (sx <= ce1) & (sy >= cn0) & (sy <= cn1)))
+                        hits_swapped = int(np.sum(
+                            (sy >= ce0) & (sy <= ce1) & (sx >= cn0) & (sx <= cn1)))
+                        if hits_normal == 0 and hits_swapped == 0:
+                            return None
+                        return hits_normal >= hits_swapped
             except Exception as e:
                 print(f"[pl_downloader] Detekce os ({os.path.basename(path)}) selhala: {e}")
             return None
@@ -661,18 +672,24 @@ def _merge_laz_dsm_epsg2180(input_paths: list, output_path: str,
         CHUNK_SIZE = 200_000
 
         def _detect_axis_orientation(path: str) -> bool | None:
-            """Stejná per-souborová medián detekce jako v DTM merge."""
+            """Stejná outcome-based per-souborová detekce jako v DTM merge —
+            vyzkouší obě orientace proti bboxu a vybere tu, co dá víc bodů."""
             try:
                 with laspy.open(path) as fh0:
                     for chunk0 in fh0.chunk_iterator(CHUNK_SIZE):
                         cx0 = np.array(chunk0.x)
+                        cy0 = np.array(chunk0.y)
                         if len(cx0) == 0:
                             continue
-                        n_sample = min(2000, len(cx0))
-                        med_x = float(np.median(cx0[:n_sample]))
-                        e_mid = (ce0 + ce1) / 2
-                        n_mid = (cn0 + cn1) / 2
-                        return abs(med_x - e_mid) < abs(med_x - n_mid)
+                        n_sample = min(20_000, len(cx0))
+                        sx, sy = cx0[:n_sample], cy0[:n_sample]
+                        hits_normal = int(np.sum(
+                            (sx >= ce0) & (sx <= ce1) & (sy >= cn0) & (sy <= cn1)))
+                        hits_swapped = int(np.sum(
+                            (sy >= ce0) & (sy <= ce1) & (sx >= cn0) & (sx <= cn1)))
+                        if hits_normal == 0 and hits_swapped == 0:
+                            return None
+                        return hits_normal >= hits_swapped
             except Exception as e:
                 print(f"[pl_downloader] DSM detekce os ({os.path.basename(path)}) selhala: {e}")
             return None
@@ -684,6 +701,8 @@ def _merge_laz_dsm_epsg2180(input_paths: list, output_path: str,
                 cx_is_easting = _detect_axis_orientation(path)
                 if cx_is_easting is None:
                     cx_is_easting = True
+                print(f"[pl_downloader] DSM {os.path.basename(path)}: detekce os → "
+                      f"chunk.x={'easting' if cx_is_easting else 'northing'}")
                 with laspy.open(path) as fh:
                     for chunk in fh.chunk_iterator(CHUNK_SIZE):
                         cx = np.array(chunk.x)

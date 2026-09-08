@@ -71,15 +71,15 @@ def load_dmr_grid(dmr_path: str, target_crs_code: str,
         total_points = fh.header.point_count
         fraction = min(1.0, MAX_POINTS / total_points) if total_points > 0 else 1.0
 
-        # Automatická detekce záměny os (cx/cy) — udělá se jen JEDNOU za celý
-        # soubor na základě mediánu z prvního neprázdného chunku, ne podle
-        # jediného bodu opakovaně pro každý chunk/dlaždici (to vedlo k tomu,
-        # že se některé dlaždice nesprávně ořízly na prázdno).
+        # Automatická detekce záměny os (cx/cy) — udělá se JEDNOU za celý
+        # soubor, ale outcome-based: vyzkouší se obě orientace přímo proti
+        # bboxu dlaždice a vybere ta, co dá víc bodů uvnitř. Porovnávání
+        # vzdálenosti bodu od středu eastingu/northingu (starší přístup) je
+        # nespolehlivé tam, kde jsou tyhle středy číselně blízko sebe —
+        # typicky blízko státní hranice — kde je to skoro hod mincí.
         cx_is_easting = None
         if bbox_clip is not None:
             bx0, bx1, by0, by1 = bbox_clip
-            e_mid = (bx0 + bx1) / 2
-            n_mid = (by0 + by1) / 2
 
         for chunk in fh.chunk_iterator(1_000_000):
             clas = np.array(chunk.classification)
@@ -99,9 +99,19 @@ def load_dmr_grid(dmr_path: str, target_crs_code: str,
             # Ořez na bbox dlaždice
             if bbox_clip is not None:
                 if cx_is_easting is None:
-                    n_sample = min(2000, len(cx))
-                    med_x = np.median(cx[:n_sample])
-                    cx_is_easting = abs(med_x - e_mid) < abs(med_x - n_mid)
+                    n_sample = min(20_000, len(cx))
+                    sx, sy = cx[:n_sample], cy[:n_sample]
+                    hits_normal = int(np.sum(
+                        (sx >= bx0) & (sx <= bx1) & (sy >= by0) & (sy <= by1)))
+                    hits_swapped = int(np.sum(
+                        (sy >= bx0) & (sy <= bx1) & (sx >= by0) & (sx <= by1)))
+                    if hits_normal == 0 and hits_swapped == 0:
+                        cx_is_easting = True  # ani jedna varianta netrefila vzorek, defaultuj
+                    else:
+                        cx_is_easting = hits_normal >= hits_swapped
+                    _cb(f"Detekce os dlaždice: chunk.x="
+                        f"{'easting' if cx_is_easting else 'northing'} "
+                        f"(shod: normal={hits_normal}, swapped={hits_swapped})")
                 if cx_is_easting:
                     m = (cx >= bx0) & (cx <= bx1) & (cy >= by0) & (cy <= by1)
                 else:
