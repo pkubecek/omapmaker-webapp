@@ -274,7 +274,7 @@ export default function MapView({ bbox, onBboxChange, onCuzkComplete, onHelp, is
   const [country, setCountry] = useState('cz');
 
   // Podkladová vrstva mapy
-  const [baseLayer, setBaseLayer] = useState('osm');
+  const [baseLayer, setBaseLayer] = useState('mapriot');
   const baseLayersRef = useRef({});
 
   useEffect(() => {
