@@ -534,60 +534,88 @@ def _merge_laz_epsg2180(input_paths: list, output_path: str,
 
         total_written = 0
         CHUNK_SIZE = 200_000
-        _cx_is_easting = None  # detekujeme z prvního chunku
+        _cx_is_easting = None  # detekujeme z mediánu vzorku bodů, ne z jediného bodu
 
-        with laspy.open(output_path, mode="w", header=out_header) as out_fh:
-            for path in input_paths:
-                if progress_cb:
-                    progress_cb(f"  Mergování: {os.path.basename(path)}")
-                with laspy.open(path) as fh:
-                    for chunk in fh.chunk_iterator(CHUNK_SIZE):
-                        cx = np.array(chunk.x)
-                        cy = np.array(chunk.y)
-                        cz = np.array(chunk.z)
-                        cc = np.array(chunk.classification)
-                        # Automatická detekce os z prvního chunku
-                        if _cx_is_easting is None and len(cx) > 0:
-                            e_mid = (ce0 + ce1) / 2
-                            n_mid = (cn0 + cn1) / 2
-                            _cx_is_easting = abs(cx[0] - e_mid) < abs(cx[0] - n_mid)
-                            print(f"[pl_downloader] Detekce os: cx[0]={cx[0]:.0f}, cy[0]={cy[0]:.0f} → cx={'easting' if _cx_is_easting else 'northing'}")
-                        if _cx_is_easting:
-                            m = (cx >= ce0) & (cx <= ce1) & (cy >= cn0) & (cy <= cn1)
-                        else:
-                            m = (cx >= cn0) & (cx <= cn1) & (cy >= ce0) & (cy <= ce1)
-                        if not np.any(m):
+        def _detect_axis_orientation() -> bool | None:
+            """Přečte vzorek bodů z prvního souboru a mediánem (ne jedním bodem)
+            rozhodne, jestli chunk.x odpovídá eastingu, nebo northingu.
+            Jeden bod je snadno šum/okrajová hodnota — zvlášť u menších bboxů,
+            kde jsou středy eastingu a northingu číselně blízko sebe."""
+            try:
+                with laspy.open(input_paths[0]) as fh0:
+                    for chunk0 in fh0.chunk_iterator(CHUNK_SIZE):
+                        cx0 = np.array(chunk0.x)
+                        if len(cx0) == 0:
                             continue
-                        cx, cy, cz, cc = cx[m], cy[m], cz[m], cc[m]
-                        out_chunk = laspy.ScaleAwarePointRecord.zeros(len(cx), header=out_header)
-                        out_chunk.x = cx
-                        out_chunk.y = cy
-                        out_chunk.z = cz
-                        out_chunk.classification = cc
-                        out_fh.write_points(out_chunk)
-                        total_written += len(cx)
-                        del cx, cy, cz, cc, out_chunk
-                gc.collect()
+                        n_sample = min(2000, len(cx0))
+                        med_x = float(np.median(cx0[:n_sample]))
+                        e_mid = (ce0 + ce1) / 2
+                        n_mid = (cn0 + cn1) / 2
+                        return abs(med_x - e_mid) < abs(med_x - n_mid)
+            except Exception as e:
+                print(f"[pl_downloader] Detekce os selhala: {e}")
+            return None
 
-        if total_written == 0:
-            print("[pl_downloader] Varování: po ořezu nezůstaly žádné body!")
-            # Zkus merge bez ořezu jako fallback
-            if progress_cb:
-                progress_cb("  Clip selhal, zkouším merge bez ořezu...")
+        def _write_merge(cx_is_easting: bool) -> int:
+            """Smerguje všechny vstupní soubory s ořezem podle dané orientace os.
+            Vrátí počet zapsaných bodů."""
+            written = 0
             with laspy.open(output_path, mode="w", header=out_header) as out_fh:
                 for path in input_paths:
+                    if progress_cb:
+                        progress_cb(f"  Mergování: {os.path.basename(path)}")
                     with laspy.open(path) as fh:
                         for chunk in fh.chunk_iterator(CHUNK_SIZE):
-                            out_chunk = laspy.ScaleAwarePointRecord.zeros(
-                                len(chunk.x), header=out_header)
-                            out_chunk.x = np.array(chunk.x)
-                            out_chunk.y = np.array(chunk.y)
-                            out_chunk.z = np.array(chunk.z)
-                            out_chunk.classification = np.array(chunk.classification)
+                            cx = np.array(chunk.x)
+                            cy = np.array(chunk.y)
+                            cz = np.array(chunk.z)
+                            cc = np.array(chunk.classification)
+                            if cx_is_easting:
+                                m = (cx >= ce0) & (cx <= ce1) & (cy >= cn0) & (cy <= cn1)
+                            else:
+                                m = (cx >= cn0) & (cx <= cn1) & (cy >= ce0) & (cy <= ce1)
+                            if not np.any(m):
+                                continue
+                            cx, cy, cz, cc = cx[m], cy[m], cz[m], cc[m]
+                            out_chunk = laspy.ScaleAwarePointRecord.zeros(len(cx), header=out_header)
+                            out_chunk.x = cx
+                            out_chunk.y = cy
+                            out_chunk.z = cz
+                            out_chunk.classification = cc
                             out_fh.write_points(out_chunk)
-                            total_written += len(chunk.x)
+                            written += len(cx)
+                            del cx, cy, cz, cc, out_chunk
+                    gc.collect()
+            return written
+
+        _cx_is_easting = _detect_axis_orientation()
+        if _cx_is_easting is None:
+            _cx_is_easting = True  # nejčastější případ, když detekce selže úplně
+        print(f"[pl_downloader] Detekce os (medián vzorku): cx={'easting' if _cx_is_easting else 'northing'}")
+
+        total_written = _write_merge(_cx_is_easting)
+
+        if total_written == 0:
+            # Ořez s odhadnutou orientací nenašel nic — než se vzdát, zkus
+            # OPAČNOU orientaci os (heuristika mohla tipnout špatně).
+            print("[pl_downloader] Ořez s detekovanou orientací os nenašel žádné body, zkouším opačnou orientaci...")
             if progress_cb:
-                progress_cb(f"  Merge bez ořezu: {total_written:,} bodů")
+                progress_cb("  Ořez nenašel body, zkouším opačné pořadí os...")
+            total_written = _write_merge(not _cx_is_easting)
+            if total_written > 0:
+                print(f"[pl_downloader] Opačná orientace os fungovala: {total_written:,} bodů")
+
+        if total_written == 0:
+            # Ani jedna orientace os nenašla body v požadovaném bboxu — stažené
+            # dlaždice se skutečně nepřekrývají s požadovanou oblastí (např.
+            # WFS vrátil dlaždice pro jiné místo). NEsmí se tiše sloučit vše
+            # bez ořezu — to by do mapy propašovalo DTM data z úplně jiného
+            # prostoru, aniž by pipeline cokoliv nahlásila jako chybu.
+            print("[pl_downloader] Chyba: žádná ze stažených LAZ dlaždic nemá body uvnitř požadovaného bboxu "
+                  "(vyzkoušeny obě orientace os E/N) — stažená data zjevně neodpovídají požadované oblasti.")
+            if progress_cb:
+                progress_cb("  CHYBA: stažené dlaždice neodpovídají požadované oblasti (0 bodů po ořezu)")
+            return False
 
         print(f"[pl_downloader] Merge: {total_written:,} bodů → {os.path.basename(output_path)}")
         return total_written > 0

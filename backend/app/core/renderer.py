@@ -395,7 +395,7 @@ def render_map(
         except Exception as e:
             print(f"[renderer] Chyba vegetace: {e}")
 
-    # Skály a vrstevnice
+    # Skály
     if layer_visibility.get("rocks", True):
         if gdf_rocks is not None and not gdf_rocks.empty and (selected_codes is None or "201" in selected_codes):
             _cb("Kreslím skály...")
@@ -406,6 +406,10 @@ def render_map(
             except Exception as e:
                 print(f"[renderer] Chyba skal: {e}")
 
+    # Vrstevnice — vlastní přepínač "contours", nezávislý na "rocks"
+    # (dřív byly omylem zanořené pod skalami, takže vypnutí skal
+    # v Layer Selectoru zhaslo i všechny vrstevnice)
+    if layer_visibility.get("contours", True):
         _cb("Kreslím vrstevnice...")
         for sym_key, layer_key, zo in [
             ("sym101", "base", 50),
