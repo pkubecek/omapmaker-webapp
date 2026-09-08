@@ -791,7 +791,7 @@ export default function MapView({ bbox, onBboxChange, onCuzkComplete, onHelp, is
             <button
               style={{ ...S.baseLayerBtn, ...(baseLayer === 'mapriot' ? S.baseLayerBtnActive : {}) }}
               onClick={() => setBaseLayer('mapriot')}
-            >{isMobile ? '🗺️' : 'Mapa'}</button>
+            >{isMobile ? '🗺️' : '🗺️ Mapa'}</button>
             {/* Basic OSM basemap
             <button
               style={{ ...S.baseLayerBtn, ...(baseLayer === 'osm' ? S.baseLayerBtnActive : {}) }}
