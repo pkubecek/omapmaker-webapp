@@ -308,7 +308,7 @@ export default function MapView({ bbox, onBboxChange, onCuzkComplete, onHelp, is
         maxZoom: 18,
       }
     );
-    baseLayersRef.current = { osm: osmLayer, ortofoto: ortofotoLayer, mapriot: mapriotLayer };
+    baseLayersRef.current = {  ortofoto: ortofotoLayer, osm: osmLayer, mapriot: mapriotLayer };
     osmLayer.addTo(map);
 
     const layersRef = { current: [] };
