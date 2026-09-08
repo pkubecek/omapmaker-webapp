@@ -107,6 +107,13 @@ def load_dmr_grid(dmr_path: str, target_crs_code: str,
                 else:
                     m = (cx >= by0) & (cx <= by1) & (cy >= bx0) & (cy <= bx1)
                 cx, cy, cz = cx[m], cy[m], cz[m]
+                if not cx_is_easting:
+                    # Zdroj měl osy prohozené (chunk.x=northing, chunk.y=easting) —
+                    # filtr už to zohlednil, ale bez tohohle swapu by se northing
+                    # uložilo jako "x" a easting jako "y" a celá navazující mřížka
+                    # (grid_x/grid_y, clip_polygon, vrstevnice...) by pak byla vůči
+                    # zbytku pipeline (core_box aj., vždy v pořadí E,N) prohozená.
+                    cx, cy = cy, cx
             if len(cx) == 0:
                 continue
             xs.append(cx)

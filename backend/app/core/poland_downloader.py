@@ -534,15 +534,15 @@ def _merge_laz_epsg2180(input_paths: list, output_path: str,
 
         total_written = 0
         CHUNK_SIZE = 200_000
-        _cx_is_easting = None  # detekujeme z mediánu vzorku bodů, ne z jediného bodu
 
-        def _detect_axis_orientation() -> bool | None:
-            """Přečte vzorek bodů z prvního souboru a mediánem (ne jedním bodem)
+        def _detect_axis_orientation(path: str) -> bool | None:
+            """Přečte vzorek bodů ze SOUBORU `path` a mediánem (ne jedním bodem)
             rozhodne, jestli chunk.x odpovídá eastingu, nebo northingu.
-            Jeden bod je snadno šum/okrajová hodnota — zvlášť u menších bboxů,
-            kde jsou středy eastingu a northingu číselně blízko sebe."""
+            Dělá se to PRO KAŽDÝ vstupní soubor zvlášť — různé GUGiK dlaždice
+            mezi sebou mívají nekonzistentní pořadí os, takže jedna globální
+            detekce pro celý merge by část souborů tipla špatně."""
             try:
-                with laspy.open(input_paths[0]) as fh0:
+                with laspy.open(path) as fh0:
                     for chunk0 in fh0.chunk_iterator(CHUNK_SIZE):
                         cx0 = np.array(chunk0.x)
                         if len(cx0) == 0:
@@ -553,66 +553,54 @@ def _merge_laz_epsg2180(input_paths: list, output_path: str,
                         n_mid = (cn0 + cn1) / 2
                         return abs(med_x - e_mid) < abs(med_x - n_mid)
             except Exception as e:
-                print(f"[pl_downloader] Detekce os selhala: {e}")
+                print(f"[pl_downloader] Detekce os ({os.path.basename(path)}) selhala: {e}")
             return None
 
-        def _write_merge(cx_is_easting: bool) -> int:
-            """Smerguje všechny vstupní soubory s ořezem podle dané orientace os.
-            Vrátí počet zapsaných bodů."""
-            written = 0
-            with laspy.open(output_path, mode="w", header=out_header) as out_fh:
-                for path in input_paths:
-                    if progress_cb:
-                        progress_cb(f"  Mergování: {os.path.basename(path)}")
-                    with laspy.open(path) as fh:
-                        for chunk in fh.chunk_iterator(CHUNK_SIZE):
-                            cx = np.array(chunk.x)
-                            cy = np.array(chunk.y)
-                            cz = np.array(chunk.z)
-                            cc = np.array(chunk.classification)
-                            if cx_is_easting:
-                                m = (cx >= ce0) & (cx <= ce1) & (cy >= cn0) & (cy <= cn1)
-                            else:
-                                m = (cx >= cn0) & (cx <= cn1) & (cy >= ce0) & (cy <= ce1)
-                            if not np.any(m):
-                                continue
-                            cx, cy, cz, cc = cx[m], cy[m], cz[m], cc[m]
-                            out_chunk = laspy.ScaleAwarePointRecord.zeros(len(cx), header=out_header)
-                            out_chunk.x = cx
-                            out_chunk.y = cy
-                            out_chunk.z = cz
-                            out_chunk.classification = cc
-                            out_fh.write_points(out_chunk)
-                            written += len(cx)
-                            del cx, cy, cz, cc, out_chunk
-                    gc.collect()
-            return written
-
-        _cx_is_easting = _detect_axis_orientation()
-        if _cx_is_easting is None:
-            _cx_is_easting = True  # nejčastější případ, když detekce selže úplně
-        print(f"[pl_downloader] Detekce os (medián vzorku): cx={'easting' if _cx_is_easting else 'northing'}")
-
-        total_written = _write_merge(_cx_is_easting)
+        with laspy.open(output_path, mode="w", header=out_header) as out_fh:
+            for path in input_paths:
+                if progress_cb:
+                    progress_cb(f"  Mergování: {os.path.basename(path)}")
+                cx_is_easting = _detect_axis_orientation(path)
+                if cx_is_easting is None:
+                    cx_is_easting = True  # nejčastější případ, když detekce selže úplně
+                print(f"[pl_downloader] {os.path.basename(path)}: detekce os → "
+                      f"chunk.x={'easting' if cx_is_easting else 'northing'}")
+                with laspy.open(path) as fh:
+                    for chunk in fh.chunk_iterator(CHUNK_SIZE):
+                        cx = np.array(chunk.x)
+                        cy = np.array(chunk.y)
+                        cz = np.array(chunk.z)
+                        cc = np.array(chunk.classification)
+                        if not cx_is_easting:
+                            # Normalizace na kanonické pořadí (x=easting, y=northing)
+                            # PŘED zápisem — jinak by výstupní merged LAZ zdědil
+                            # prohozené osy z téhle konkrétní dlaždice a navazující
+                            # pipeline (core_box aj., vždy v pořadí E,N) by se s ním
+                            # vůbec nepřekrývala.
+                            cx, cy = cy, cx
+                        m = (cx >= ce0) & (cx <= ce1) & (cy >= cn0) & (cy <= cn1)
+                        if not np.any(m):
+                            continue
+                        cx, cy, cz, cc = cx[m], cy[m], cz[m], cc[m]
+                        out_chunk = laspy.ScaleAwarePointRecord.zeros(len(cx), header=out_header)
+                        out_chunk.x = cx
+                        out_chunk.y = cy
+                        out_chunk.z = cz
+                        out_chunk.classification = cc
+                        out_fh.write_points(out_chunk)
+                        total_written += len(cx)
+                        del cx, cy, cz, cc, out_chunk
+                gc.collect()
 
         if total_written == 0:
-            # Ořez s odhadnutou orientací nenašel nic — než se vzdát, zkus
-            # OPAČNOU orientaci os (heuristika mohla tipnout špatně).
-            print("[pl_downloader] Ořez s detekovanou orientací os nenašel žádné body, zkouším opačnou orientaci...")
-            if progress_cb:
-                progress_cb("  Ořez nenašel body, zkouším opačné pořadí os...")
-            total_written = _write_merge(not _cx_is_easting)
-            if total_written > 0:
-                print(f"[pl_downloader] Opačná orientace os fungovala: {total_written:,} bodů")
-
-        if total_written == 0:
-            # Ani jedna orientace os nenašla body v požadovaném bboxu — stažené
-            # dlaždice se skutečně nepřekrývají s požadovanou oblastí (např.
-            # WFS vrátil dlaždice pro jiné místo). NEsmí se tiše sloučit vše
-            # bez ořezu — to by do mapy propašovalo DTM data z úplně jiného
-            # prostoru, aniž by pipeline cokoliv nahlásila jako chybu.
+            # Žádná dlaždice nemá body v požadovaném bboxu, i po per-souborové
+            # detekci a normalizaci os. Stažené dlaždice se skutečně nepřekrývají
+            # s požadovanou oblastí (např. WFS vrátil dlaždice pro jiné místo).
+            # NEsmí se tiše sloučit vše bez ořezu — to by do mapy propašovalo
+            # DTM data z úplně jiného prostoru, aniž by pipeline cokoliv
+            # nahlásila jako chybu.
             print("[pl_downloader] Chyba: žádná ze stažených LAZ dlaždic nemá body uvnitř požadovaného bboxu "
-                  "(vyzkoušeny obě orientace os E/N) — stažená data zjevně neodpovídají požadované oblasti.")
+                  "— stažená data zjevně neodpovídají požadované oblasti.")
             if progress_cb:
                 progress_cb("  CHYBA: stažené dlaždice neodpovídají požadované oblasti (0 bodů po ořezu)")
             return False
@@ -671,26 +659,42 @@ def _merge_laz_dsm_epsg2180(input_paths: list, output_path: str,
 
         total_written = 0
         CHUNK_SIZE = 200_000
-        _cx_is_easting = None
+
+        def _detect_axis_orientation(path: str) -> bool | None:
+            """Stejná per-souborová medián detekce jako v DTM merge."""
+            try:
+                with laspy.open(path) as fh0:
+                    for chunk0 in fh0.chunk_iterator(CHUNK_SIZE):
+                        cx0 = np.array(chunk0.x)
+                        if len(cx0) == 0:
+                            continue
+                        n_sample = min(2000, len(cx0))
+                        med_x = float(np.median(cx0[:n_sample]))
+                        e_mid = (ce0 + ce1) / 2
+                        n_mid = (cn0 + cn1) / 2
+                        return abs(med_x - e_mid) < abs(med_x - n_mid)
+            except Exception as e:
+                print(f"[pl_downloader] DSM detekce os ({os.path.basename(path)}) selhala: {e}")
+            return None
 
         with laspy.open(output_path, mode="w", header=out_header) as out_fh:
             for path in input_paths:
                 if progress_cb:
                     progress_cb(f"  DSM merge: {os.path.basename(path)}")
+                cx_is_easting = _detect_axis_orientation(path)
+                if cx_is_easting is None:
+                    cx_is_easting = True
                 with laspy.open(path) as fh:
                     for chunk in fh.chunk_iterator(CHUNK_SIZE):
                         cx = np.array(chunk.x)
                         cy = np.array(chunk.y)
                         cz = np.array(chunk.z)
                         cc = np.array(chunk.classification)
-                        if _cx_is_easting is None and len(cx) > 0:
-                            e_mid = (ce0 + ce1) / 2
-                            n_mid = (cn0 + cn1) / 2
-                            _cx_is_easting = abs(cx[0] - e_mid) < abs(cx[0] - n_mid)
-                        if _cx_is_easting:
-                            m = (cx >= ce0) & (cx <= ce1) & (cy >= cn0) & (cy <= cn1)
-                        else:
-                            m = (cx >= cn0) & (cx <= cn1) & (cy >= ce0) & (cy <= ce1)
+                        if not cx_is_easting:
+                            # Normalizace na kanonické pořadí (x=easting, y=northing)
+                            # PŘED zápisem — stejný důvod jako v DTM merge výše.
+                            cx, cy = cy, cx
+                        m = (cx >= ce0) & (cx <= ce1) & (cy >= cn0) & (cy <= cn1)
                         # DSM: vše kromě noise (7) a unclassified který je pod zemí
                         # Ponecháme: 1 (unclass), 3 (low veg), 4 (med veg), 5 (high veg),
                         #             6 (building), 9 (water), 2 (ground) jako podádní body
