@@ -287,16 +287,16 @@ export default function MapView({ bbox, onBboxChange, onCuzkComplete, onHelp, is
     const map = L.map(mapRef.current, { center: [49.8, 15.5], zoom: 8, zoomControl: false });
 
     const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap', maxZoom: 19,
+      attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community', maxZoom: 19,
     });
-    const ortofotoLayer = L.tileLayer.wms('https://ags.cuzk.gov.cz/arcgis1/services/ORTOFOTO/MapServer/WMSServer', {
+    const ortofotoLayer = L.tileLayer.wms('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
       layers: '0',
       format: 'image/jpeg',
       version: '1.3.0',
       crs: L.CRS.EPSG3857,
       transparent: false,
       attribution: '© ČÚZK',
-      maxZoom: 20,
+      maxZoom: 19,
     });
     const mapriotApiKey = process.env.REACT_APP_MAPRIOT_API_KEY;
     const mapriotLayer = L.tileLayer(
@@ -305,7 +305,7 @@ export default function MapView({ bbox, onBboxChange, onCuzkComplete, onHelp, is
         attribution:
           '<a href="https://mapriot.com/copyright" target="_blank">© MapRiot.com</a> ' +
           '<a href="https://www.openstreetmap.org/copyright" target="_blank">© OpenStreetMap contributors</a>',
-        maxZoom: 18,
+        maxZoom: 19,
       }
     );
     baseLayersRef.current = {  ortofoto: ortofotoLayer, osm: osmLayer, mapriot: mapriotLayer };
@@ -791,7 +791,7 @@ export default function MapView({ bbox, onBboxChange, onCuzkComplete, onHelp, is
             <button
               style={{ ...S.baseLayerBtn, ...(baseLayer === 'mapriot' ? S.baseLayerBtnActive : {}) }}
               onClick={() => setBaseLayer('mapriot')}
-            >{isMobile ? '🥾' : '🥾 MapRiot'}</button>
+            >{isMobile ? '🗺️' : 'Mapa'}</button>
             {/* Basic OSM basemap
             <button
               style={{ ...S.baseLayerBtn, ...(baseLayer === 'osm' ? S.baseLayerBtnActive : {}) }}
@@ -801,7 +801,7 @@ export default function MapView({ bbox, onBboxChange, onCuzkComplete, onHelp, is
             <button
               style={{ ...S.baseLayerBtn, ...(baseLayer === 'ortofoto' ? S.baseLayerBtnActive : {}) }}
               onClick={() => setBaseLayer('ortofoto')}
-            >{isMobile ? '🛰' : '🛰 Ortofoto'}</button>
+            >{isMobile ? '🛰️' : '🛰️ Ortofoto'}</button>
             
           </div>
 
