@@ -264,8 +264,8 @@ function useEtaSeconds(startedAt, progress, isRunning) {
 function etaColor(remainingSec) {
   if (remainingSec == null) return null;
   if (remainingSec > 300) return 'var(--forest)';
-  if (remainingSec > 60) return '#c9a63a';
-  return '#c96a3a';
+  if (remainingSec > 60) return 'var(--forest)';
+  return 'var(--forest)';
 }
 
 // Kolečko se křížkem vedle progress baru — zruší běžící/frontou čekající job
