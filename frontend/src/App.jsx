@@ -94,6 +94,7 @@ export default function App() {
           status: data.status,
           progress: data.progress ?? prev.progress,
           step: data.step ?? prev.step,
+          started_at: data.started_at ?? prev.started_at,
           jobId,
         }));
         if (data.step) addLog(data.step, data.status === 'error' ? 'warn' : 'info');
