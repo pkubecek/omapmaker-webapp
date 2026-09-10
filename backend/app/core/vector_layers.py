@@ -662,7 +662,7 @@ def add_vector_layers(
         # tak nikdy nedostaly do žádné masky pro linie (byly jen v masce pro
         # 501, ale ta se aplikuje na gdf_polys, takže běžná linie footway
         # tam nikdy nespadla) -> pěší cesty se vůbec nevykreslovaly.
-        mask_footway = (c("highway").isin(["road", "bridleway", "footway"]) |
+        mask_footway = (c("highway").isin(["road", "bridleway", "footway", "track"]) |
                         ((c("highway") == "cycleway") & (~c("surface").isin(["concrete", "asphalt"])) &
                         (c("tracktype") != "grade1")) &
                         (c("bridge") != "yes") & (c("access") != "private"))
