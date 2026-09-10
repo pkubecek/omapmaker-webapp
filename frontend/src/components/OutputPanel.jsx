@@ -34,7 +34,8 @@ const S = {
   },
   progressTitle: { fontSize: 12, fontWeight: 500 },
   progressPct: { fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--text-secondary)' },
-  progressEta: { fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--text-muted)' },
+  progressPctGroup: { display: 'flex', alignItems: 'baseline', gap: 6 },
+  progressEta: { fontFamily: 'var(--mono)', fontSize: 10, transition: 'color 0.5s ease' },
   barRow: {
     display: 'flex',
     alignItems: 'center',
@@ -243,7 +244,7 @@ function formatEta(seconds) {
   return sec === 0 ? `~${min} min` : `~${min} min ${sec} s`;
 }
 
-function useEtaText(startedAt, progress, isRunning) {
+function useEtaSeconds(startedAt, progress, isRunning) {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     if (!isRunning) return undefined;
@@ -255,8 +256,16 @@ function useEtaText(startedAt, progress, isRunning) {
   const elapsedSec = now / 1000 - startedAt;
   if (elapsedSec <= 0) return null;
   const remainingSec = elapsedSec * (100 - progress) / progress;
-  const text = formatEta(remainingSec);
-  return text ? `zbývá ${text}` : null;
+  return remainingSec > 0 ? remainingSec : null;
+}
+
+// Barva podle toho, jak blízko je odhadovaný konec zpracování —
+// tou se obarví přímo existující progress bar (žádný nový element).
+function etaColor(remainingSec) {
+  if (remainingSec == null) return null;
+  if (remainingSec > 300) return 'var(--forest)';
+  if (remainingSec > 60) return '#c9a63a';
+  return '#c96a3a';
 }
 
 // Kolečko se křížkem vedle progress baru — zruší běžící/frontou čekající job
@@ -288,7 +297,7 @@ export default function OutputPanel({ job, logLines, canRun, running, onRun, onC
   const isDone = status === 'done';
   const isError = status === 'error';
   const isCancelled = status === 'cancelled';
-  const etaText = useEtaText(startedAt, progress, status === 'running');
+  const etaSeconds = useEtaSeconds(startedAt, progress, status === 'running');
 
   // Auto-scroll log
   useEffect(() => {
@@ -359,14 +368,23 @@ export default function OutputPanel({ job, logLines, canRun, running, onRun, onC
         <div style={S.sectionLabel}>Průběh zpracování</div>
         <div style={S.progressHeader}>
           <span style={S.progressTitle}>{STATUS_LABELS[status] || status}</span>
-          <span style={S.progressPct}>{status === 'idle' ? '—' : `${Math.round(progress)}%`}</span>
+          <span style={S.progressPctGroup}>
+            {etaSeconds != null && (
+              <span style={{ ...S.progressEta, color: etaColor(etaSeconds) }}>
+                zbývá {formatEta(etaSeconds)}
+              </span>
+            )}
+            <span style={S.progressPct}>{status === 'idle' ? '—' : `${Math.round(progress)}%`}</span>
+          </span>
         </div>
         <div style={S.barRow}>
           <div style={S.barWrap}>
             <div
               style={{
                 ...S.barFill,
-                ...(isError || isCancelled ? S.barFillError : {}),
+                ...(isError || isCancelled
+                  ? S.barFillError
+                  : etaColor(etaSeconds) ? { background: etaColor(etaSeconds) } : {}),
                 width: `${progress}%`,
               }}
             />
@@ -378,7 +396,6 @@ export default function OutputPanel({ job, logLines, canRun, running, onRun, onC
             ? 'Nahrajte DMR a DMP, pak klikněte Generovat mapu'
             : step || '—'}
         </div>
-        {etaText && <div style={S.progressEta}>{etaText}</div>}
       </div>
 
       {/* Log */}
