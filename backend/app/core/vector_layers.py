@@ -641,7 +641,7 @@ def add_vector_layers(
 
         # 504 - Vozová cesta
         cgdf = isom("504")
-        mask_track = (c("highway").isin(["cycleway", "unclassified"]) &
+        mask_track = (c("highway").isin(["cycleway", "unclassified", "track"]) &
                       (~c("surface").isin(["concrete", "asphalt"])) & (c("tracktype") != "grade1") &
                       ~c("tunnel").isin(["yes", "avalanche_protector", "building_passage"]) &
                       (c("bridge") != "yes") & (c("access") != "private"))
