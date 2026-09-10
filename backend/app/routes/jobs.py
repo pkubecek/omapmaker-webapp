@@ -19,7 +19,6 @@ from ..core.job_store import JOBS_DIR, job_path as _job_path, read_job as _read_
 router = APIRouter()
 MAX_CONCURRENT_JOBS = int(os.environ.get("MAX_CONCURRENT_JOBS", "3"))
 _job_semaphore = asyncio.Semaphore(MAX_CONCURRENT_JOBS)
-JOB_TIMEOUT_SECONDS = int(os.environ.get("JOB_TIMEOUT_SECONDS", "1800"))  # 30 min
 
 # Sledování běžících subprocessů a zrušených jobů, aby šlo job zabít
 # tlačítkem "Zrušit" z frontendu (viz endpoint /jobs/{job_id}/cancel).
@@ -55,20 +54,9 @@ async def _run_job_subprocess(job_id: str, job_dir: str):
                     cwd=os.getcwd(),
                 )
                 _running_procs[job_id] = proc
-                try:
-                    await asyncio.wait_for(proc.wait(), timeout=JOB_TIMEOUT_SECONDS)
-                except asyncio.TimeoutError:
-                    proc.kill()
-                    await proc.wait()  # počkej, ať se opravdu ukončí (zamezí zombie)
-                    _write_job(job_id, {
-                        "status": "error",
-                        "progress": 0,
-                        "step": f"Zpracování překročilo časový limit ({JOB_TIMEOUT_SECONDS // 60} min) a bylo ukončeno.",
-                        "error": "timeout",
-                        "png_path": None,
-                        "gpkg_path": None,
-                    })
-                    return
+                # Bez časového limitu — job běží, dokud sám neskončí nebo
+                # dokud ho uživatel nezruší přes /jobs/{id}/cancel.
+                await proc.wait()
 
                 if job_id in _cancelled_jobs:
                     # Zrušeno uživatelem během běhu — _cancel_job() proces už zabil,

@@ -14,6 +14,7 @@ Zapisuje průběžný i finální stav do job.json přes job_store.
 import sys
 import json
 import os
+import time
 import traceback
 
 
@@ -29,12 +30,17 @@ def main():
     with open(os.path.join(job_dir, "file_paths.json")) as f:
         file_paths = json.load(f)
 
+    # Čas startu zpracování — frontend z něj a z aktuálního progressu
+    # dopočítává odhadovaný zbývající čas (ETA).
+    started_at = time.time()
+
     def progress_cb(pct: int, msg: str):
         write_job(job_id, {
             "status": "running",
             "progress": pct,
             "step": msg,
             "error": None,
+            "started_at": started_at,
             "png_path": None,
             "gpkg_path": None,
         })
@@ -52,6 +58,7 @@ def main():
             "progress": 100,
             "step": "Hotovo!",
             "error": None,
+            "started_at": started_at,
             "png_path": result.get("png_path"),
             "gpkg_path": result.get("gpkg_path"),
             "vectors_path": result.get("vectors_path"),
@@ -64,6 +71,7 @@ def main():
             "progress": 0,
             "step": f"Chyba: {e}",
             "error": str(e),
+            "started_at": started_at,
             "png_path": None,
             "gpkg_path": None,
         })

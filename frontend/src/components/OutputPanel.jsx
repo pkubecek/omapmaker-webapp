@@ -34,6 +34,7 @@ const S = {
   },
   progressTitle: { fontSize: 12, fontWeight: 500 },
   progressPct: { fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--text-secondary)' },
+  progressEta: { fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--text-muted)' },
   barRow: {
     display: 'flex',
     alignItems: 'center',
@@ -231,6 +232,33 @@ const STATUS_LABELS = {
   cancelled: 'Zrušeno',
 };
 
+// Odhad zbývajícího času z uplynulého času a aktuálního progressu.
+// Lineární extrapolace: při 20 % hotovo za 2 min odhadneme dalších 8 min.
+function formatEta(seconds) {
+  if (seconds == null || !isFinite(seconds) || seconds < 0) return null;
+  const s = Math.round(seconds);
+  if (s < 60) return `~${s} s`;
+  const min = Math.floor(s / 60);
+  const sec = s % 60;
+  return sec === 0 ? `~${min} min` : `~${min} min ${sec} s`;
+}
+
+function useEtaText(startedAt, progress, isRunning) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!isRunning) return undefined;
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [isRunning]);
+
+  if (!isRunning || !startedAt || !progress || progress <= 0) return null;
+  const elapsedSec = now / 1000 - startedAt;
+  if (elapsedSec <= 0) return null;
+  const remainingSec = elapsedSec * (100 - progress) / progress;
+  const text = formatEta(remainingSec);
+  return text ? `zbývá ${text}` : null;
+}
+
 // Kolečko se křížkem vedle progress baru — zruší běžící/frontou čekající job
 function CancelBtn({ onClick }) {
   const [hovered, setHovered] = useState(false);
@@ -256,10 +284,11 @@ export default function OutputPanel({ job, logLines, canRun, running, onRun, onC
   const [selectedCodes, setSelectedCodes] = useState(null); // null = vše
   const [exporting, setExporting] = useState(false);
   const [customPngUrl, setCustomPngUrl] = useState(null);
-  const { status = 'idle', progress = 0, step = '', jobId = null } = job || {};
+  const { status = 'idle', progress = 0, step = '', jobId = null, started_at: startedAt = null } = job || {};
   const isDone = status === 'done';
   const isError = status === 'error';
   const isCancelled = status === 'cancelled';
+  const etaText = useEtaText(startedAt, progress, status === 'running');
 
   // Auto-scroll log
   useEffect(() => {
@@ -349,6 +378,7 @@ export default function OutputPanel({ job, logLines, canRun, running, onRun, onC
             ? 'Nahrajte DMR a DMP, pak klikněte Generovat mapu'
             : step || '—'}
         </div>
+        {etaText && <div style={S.progressEta}>{etaText}</div>}
       </div>
 
       {/* Log */}
