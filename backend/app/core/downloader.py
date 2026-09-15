@@ -17,6 +17,8 @@ import numpy as np
 import laspy
 from pyproj import CRS, Transformer
 
+from .cancellation import DownloadCancelled
+
 
 CUZK_ATOM_DMR5G = "https://atom.cuzk.gov.cz/DMR5G-SJTSK/DMR5G-SJTSK.xml"
 CUZK_ATOM_DMP1G = "https://atom.cuzk.gov.cz/DMP1G-SJTSK/DMP1G-SJTSK.xml"
@@ -78,8 +80,10 @@ def _get_download_url_from_subfeed(sub_feed_url: str) -> str | None:
 
 
 def _download_tile(tile_id: str, sub_url: str, dest_dir: str, file_list: list,
-                   progress_cb=None) -> None:
+                   progress_cb=None, cancel_check=None) -> None:
     """Stáhne jednu dlaždici (ZIP → LAZ/LAS) do dest_dir."""
+    if cancel_check and cancel_check():
+        raise DownloadCancelled()
     zip_url = _get_download_url_from_subfeed(sub_url)
     if not zip_url:
         print(f"[downloader] Nelze najít ZIP pro {tile_id}")
@@ -104,7 +108,8 @@ def _download_tile(tile_id: str, sub_url: str, dest_dir: str, file_list: list,
 
 
 def merge_laz_files(input_paths: list, output_path: str,
-                    clip_bbox_wgs84: tuple | None = None) -> bool:
+                    clip_bbox_wgs84: tuple | None = None,
+                    cancel_check=None) -> bool:
     """
     Sloučí více LAZ/LAS souborů do jednoho streamováním po chunkách.
     Nepotřebuje načíst všechny body do RAM — konstantní spotřeba paměti.
@@ -175,6 +180,8 @@ def merge_laz_files(input_paths: list, output_path: str,
 
         with laspy.open(output_path, mode="w", header=out_header) as out_fh:
             for path in input_paths:
+                if cancel_check and cancel_check():
+                    raise DownloadCancelled()
                 print(f"[downloader] Mergování: {os.path.basename(path)}")
                 with laspy.open(path) as fh:
                     for chunk in fh.chunk_iterator(CHUNK_SIZE):
@@ -210,6 +217,8 @@ def merge_laz_files(input_paths: list, output_path: str,
         print(f"[downloader] Merge hotov: {total_written:,} bodů → {os.path.basename(output_path)}")
         return True
 
+    except DownloadCancelled:
+        raise
     except Exception as e:
         print(f"[downloader] Chyba při merge: {e}")
         import traceback; traceback.print_exc()
@@ -221,6 +230,7 @@ def download_cuzk(
     dsm_type: str,
     out_dir: str,
     progress_cb=None,
+    cancel_check=None,
 ) -> dict:
     """
     Hlavní funkce: stáhne DMR 5G + DMP (1G nebo OK) pro daný bbox.
@@ -229,6 +239,8 @@ def download_cuzk(
     dsm_type: 'DMPOK' nebo 'DMP1G'
     out_dir: výstupní složka na serveru
     progress_cb: volitelná funkce(msg: str) pro reportování průběhu
+    cancel_check: volitelná funkce() -> bool; pokud vrátí True, stahování se
+                  přeruší vyvoláním DownloadCancelled (volající se postará o úklid)
 
     Vrací: { dmr_path, dmp_path }
     """
@@ -274,18 +286,22 @@ def download_cuzk(
 
     _cb(f"Stahuji {len(dmr_t)} DMR 5G dlaždic...")
     for i, (tid, su) in enumerate(dmr_t, 1):
+        if cancel_check and cancel_check():
+            raise DownloadCancelled()
         _cb(f"DMR {i}/{len(dmr_t)}: {tid}")
-        _download_tile(tid, su, dmr_raw_dir, dmr_files)
+        _download_tile(tid, su, dmr_raw_dir, dmr_files, cancel_check=cancel_check)
 
     _cb(f"Stahuji {len(dmp_t)} {dsm_type} dlaždic...")
     for i, (tid, su) in enumerate(dmp_t, 1):
+        if cancel_check and cancel_check():
+            raise DownloadCancelled()
         _cb(f"{dsm_type} {i}/{len(dmp_t)}: {tid}")
-        _download_tile(tid, su, dmp_raw_dir, dmp_files)
+        _download_tile(tid, su, dmp_raw_dir, dmp_files, cancel_check=cancel_check)
 
     _cb("Mergování DMR dlaždic...")
     dmr_merged = os.path.join(out_dir, "DMR5G_merged.laz")
     bbox_tuple = (mn_lat, mn_lon, mx_lat, mx_lon)
-    ok_dmr = merge_laz_files(dmr_files, dmr_merged, clip_bbox_wgs84=bbox_tuple)
+    ok_dmr = merge_laz_files(dmr_files, dmr_merged, clip_bbox_wgs84=bbox_tuple, cancel_check=cancel_check)
     if not ok_dmr:
         raise RuntimeError("Merge DMR selhal. Zkuste menší oblast.")
 
@@ -293,7 +309,7 @@ def download_cuzk(
     if dmp_files:
         _cb(f"Mergování {dsm_type} dlaždic...")
         dmp_merged = os.path.join(out_dir, dmp_merged_name)
-        merge_laz_files(dmp_files, dmp_merged, clip_bbox_wgs84=bbox_tuple)
+        merge_laz_files(dmp_files, dmp_merged, clip_bbox_wgs84=bbox_tuple, cancel_check=cancel_check)
 
     _cb("Hotovo!")
     return {

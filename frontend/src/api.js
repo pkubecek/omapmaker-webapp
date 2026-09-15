@@ -76,6 +76,11 @@ export function getDmpUrl(downloadId) {
   return `${BASE}/api/download/cuzk/${downloadId}/dmp`;
 }
 
+export async function cancelCuzkDownload(downloadId) {
+  const res = await api.post(`/api/download/cuzk/${downloadId}/cancel`);
+  return res.data;
+}
+
 /** @deprecated */
 export async function downloadCuzk(bbox, dsmType) {
   const res = await api.post('/api/download/cuzk', { bbox, dsm_type: dsmType });
@@ -96,6 +101,11 @@ export async function startPolandDownload(bbox, useLidar = true) {
 
 export async function getPolandStatus(downloadId) {
   const res = await api.get(`/api/download/poland/${downloadId}`);
+  return res.data;
+}
+
+export async function cancelPolandDownload(downloadId) {
+  const res = await api.post(`/api/download/poland/${downloadId}/cancel`);
   return res.data;
 }
 
@@ -124,5 +134,10 @@ export async function startItalyDownload(bbox) {
 
 export async function getItalyStatus(downloadId) {
   const res = await api.get(`/api/download/italy/${downloadId}`);
+  return res.data;
+}
+
+export async function cancelItalyDownload(downloadId) {
+  const res = await api.post(`/api/download/italy/${downloadId}/cancel`);
   return res.data;
 }

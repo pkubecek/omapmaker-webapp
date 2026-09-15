@@ -4,6 +4,7 @@ routes/download.py — stahování dat z ČÚZK, GUGiK (Polsko), BEV (Rakousko) 
 import os
 import uuid
 import json
+import shutil
 import threading
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse
@@ -13,6 +14,7 @@ from ..core.downloader import download_cuzk as _download_cuzk
 from ..core.poland_downloader import download_poland as _download_poland
 from ..core.austria_downloader import download_austria as _download_austria
 from ..core.italy_downloader import download_italy as _download_italy
+from ..core.cancellation import DownloadCancelled
 
 router = APIRouter()
 
@@ -50,6 +52,18 @@ _pl_read,   _pl_write   = _make_status_helpers(JOBS_BASE + "/poland")
 _at_read,   _at_write   = _make_status_helpers(JOBS_BASE + "/austria")
 _it_read,   _it_write   = _make_status_helpers(JOBS_BASE + "/italy")
 
+# dl_id -> threading.Event; nastavením se běžícímu downloaderu signalizuje zrušení
+_cancel_events: dict[str, threading.Event] = {}
+
+
+def _request_cancel(dl_id: str) -> bool:
+    """Nastaví cancel event pro běžící stahování. Vrátí False, pokud dl_id neběží."""
+    ev = _cancel_events.get(dl_id)
+    if ev is None:
+        return False
+    ev.set()
+    return True
+
 
 # ---------------------------------------------------------------------------
 # Pydantic models
@@ -82,6 +96,10 @@ class ItalyRequest(BaseModel):
 
 def _run_download(dl_id, download_fn, kwargs, read_fn, write_fn, extra_status_fields=None):
     """Spustí download funkci v threadu, zapisuje stav."""
+    cancel_event = threading.Event()
+    _cancel_events[dl_id] = cancel_event
+    out_dir = kwargs.get("out_dir")
+
     def cb(msg):
         s = read_fn(dl_id) or {}
         s["step"] = msg
@@ -90,7 +108,7 @@ def _run_download(dl_id, download_fn, kwargs, read_fn, write_fn, extra_status_fi
 
     def _run():
         try:
-            result = download_fn(progress_cb=cb, **kwargs)
+            result = download_fn(progress_cb=cb, cancel_check=cancel_event.is_set, **kwargs)
             status = {
                 "status": "done",
                 "progress": 100,
@@ -103,6 +121,18 @@ def _run_download(dl_id, download_fn, kwargs, read_fn, write_fn, extra_status_fi
             if extra_status_fields:
                 status.update(extra_status_fields)
             write_fn(dl_id, status)
+        except DownloadCancelled:
+            if out_dir:
+                shutil.rmtree(out_dir, ignore_errors=True)
+            write_fn(dl_id, {
+                "status": "cancelled",
+                "progress": 0,
+                "step": "Zrušeno uživatelem.",
+                "dmr_path": None,
+                "dmp_path": None,
+                "crs": None,
+                "error": None,
+            })
         except Exception as e:
             import traceback; traceback.print_exc()
             write_fn(dl_id, {
@@ -114,6 +144,8 @@ def _run_download(dl_id, download_fn, kwargs, read_fn, write_fn, extra_status_fi
                 "crs": None,
                 "error": str(e),
             })
+        finally:
+            _cancel_events.pop(dl_id, None)
 
     threading.Thread(target=_run, daemon=True).start()
 
@@ -162,6 +194,12 @@ async def get_cuzk_dmr(dl_id: str):
 async def get_cuzk_dmp(dl_id: str):
     return _file_response(_cuzk_read, dl_id, "dmp_path", "DMP")
 
+@router.post("/download/cuzk/{dl_id}/cancel")
+async def cancel_cuzk_download(dl_id: str):
+    if not _request_cancel(dl_id):
+        raise HTTPException(status_code=404, detail="Stahování nenalezeno nebo už neběží.")
+    return {"status": "cancelling"}
+
 
 # ---------------------------------------------------------------------------
 # GUGiK (Polsko)
@@ -194,6 +232,12 @@ async def get_poland_dmr(dl_id: str):
 @router.get("/download/poland/{dl_id}/dmp")
 async def get_poland_dmp(dl_id: str):
     return _file_response(_pl_read, dl_id, "dmp_path", "DMP")
+
+@router.post("/download/poland/{dl_id}/cancel")
+async def cancel_poland_download(dl_id: str):
+    if not _request_cancel(dl_id):
+        raise HTTPException(status_code=404, detail="Stahování nenalezeno nebo už neběží.")
+    return {"status": "cancelling"}
 
 
 # ---------------------------------------------------------------------------
@@ -254,5 +298,11 @@ async def get_italy_status(dl_id: str):
 @router.get("/download/italy/{dl_id}/dmr")
 async def get_italy_dmr(dl_id: str):
     return _file_response(_it_read, dl_id, "dmr_path", "DTM")
+
+@router.post("/download/italy/{dl_id}/cancel")
+async def cancel_italy_download(dl_id: str):
+    if not _request_cancel(dl_id):
+        raise HTTPException(status_code=404, detail="Stahování nenalezeno nebo už neběží.")
+    return {"status": "cancelling"}
 
 # Pozn.: žádný /dmp endpoint — SITR DSM nepublikuje (viz italy_downloader.py)

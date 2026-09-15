@@ -34,6 +34,8 @@ import xml.etree.ElementTree as ET
 import numpy as np
 from pyproj import CRS, Transformer
 
+from .cancellation import DownloadCancelled
+
 _SSL_CTX = ssl.create_default_context()
 _SSL_CTX.check_hostname = False
 _SSL_CTX.verify_mode = ssl.CERT_NONE
@@ -747,6 +749,7 @@ def download_poland(
     out_dir: str,
     use_lidar_point_cloud: bool = True,
     progress_cb=None,
+    cancel_check=None,
 ) -> dict:
     """
     Hlavní funkce: stáhne DTM a DSM pro daný bbox z polského GUGiK.
@@ -781,6 +784,9 @@ def download_poland(
     os.makedirs(dtm_raw_dir, exist_ok=True)
     dtm_files = []
 
+    if cancel_check and cancel_check():
+        raise DownloadCancelled()
+
     if use_lidar_point_cloud:
         cb("Hledám LiDAR dlaždice (DTM)...")
         lidar_tiles = _query_tiles(
@@ -813,6 +819,9 @@ def download_poland(
                 futures = {executor.submit(_download_lidar_tile, (i, tile)): tile
                            for i, tile in enumerate(lidar_tiles, 1)}
                 for future in as_completed(futures):
+                    if cancel_check and cancel_check():
+                        executor.shutdown(wait=False, cancel_futures=True)
+                        raise DownloadCancelled()
                     result = future.result()
                     if result:
                         with dtm_files_lock:
@@ -822,6 +831,9 @@ def download_poland(
         else:
             cb("LiDAR dlaždice nenalezeny, zkouším NMT rastr...")
             use_lidar_point_cloud = False
+
+    if cancel_check and cancel_check():
+        raise DownloadCancelled()
 
     if not use_lidar_point_cloud or not dtm_files:
         cb("Hledám NMT (rastr DTM) dlaždice [EVRF2007]...")
@@ -861,6 +873,9 @@ def download_poland(
             futures = {executor.submit(_download_nmt_tile, (i, tile)): tile
                        for i, tile in enumerate(nmt_tiles, 1)}
             for future in as_completed(futures):
+                if cancel_check and cancel_check():
+                    executor.shutdown(wait=False, cancel_futures=True)
+                    raise DownloadCancelled()
                 result = future.result()
                 if result:
                     with nmt_lock:
@@ -879,6 +894,9 @@ def download_poland(
             raise RuntimeError("Konverze NMT TIF → LAZ selhala.")
         dtm_files = [dtm_laz]
 
+    if cancel_check and cancel_check():
+        raise DownloadCancelled()
+
     # Merge LAZ dlaždic do jednoho souboru (vždy s bbox ořezem)
     dtm_merged = os.path.join(out_dir, "PL_LiDAR_DTM_merged.laz")
     if dtm_files:
@@ -893,6 +911,9 @@ def download_poland(
     # DSM — z LiDAR non-ground bodů (NMPT WFS vyžaduje autorizaci)
     # -------------------------------------------------------------------------
     dmp_merged = ""
+
+    if cancel_check and cancel_check():
+        raise DownloadCancelled()
 
     if dtm_files and use_lidar_point_cloud:
         cb("Vytvářím DSM z LiDAR non-ground bodů...")

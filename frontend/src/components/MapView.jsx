@@ -1,8 +1,8 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { startCuzkDownload, getCuzkStatus, startPolandDownload, getPolandStatus,
-  startItalyDownload, getItalyStatus } from '../api';
+import { startCuzkDownload, getCuzkStatus, cancelCuzkDownload, startPolandDownload, getPolandStatus, cancelPolandDownload,
+  startItalyDownload, getItalyStatus, cancelItalyDownload } from '../api';
 import EUROPE_BORDERS from './europeBorders';
 
 // Tooltip styl pro country polygony
@@ -269,6 +269,9 @@ export default function MapView({ bbox, onBboxChange, onCuzkComplete, onHelp, is
   const [cuzkState, setCuzkState] = useState('idle'); // idle | downloading | done | error
   const [cuzkProgress, setCuzkProgress] = useState(0);
   const [cuzkMsg, setCuzkMsg] = useState('');
+  const cuzkDlIdRef = useRef(null);
+  const cuzkPollRef = useRef(null);
+  const cuzkCountryRef = useRef('cz');
 
   // Detekovaná/ručně zvolená země
   const [country, setCountry] = useState('cz');
@@ -519,11 +522,13 @@ export default function MapView({ bbox, onBboxChange, onCuzkComplete, onHelp, is
     setCuzkState('downloading');
     setCuzkProgress(5);
     setCuzkMsg('Spouštím stahování...');
+    cuzkCountryRef.current = 'cz';
 
     let dlId = null;
     try {
       const { download_id } = await startCuzkDownload(bbox, dsmType);
       dlId = download_id;
+      cuzkDlIdRef.current = dlId;
     } catch (err) {
       setCuzkMsg(`Chyba: ${err.response?.data?.detail || err.message}`);
       setCuzkState('error');
@@ -547,6 +552,10 @@ export default function MapView({ bbox, onBboxChange, onCuzkComplete, onHelp, is
           clearInterval(poll);
           setCuzkMsg(`Chyba: ${s.error || s.step}`);
           setCuzkState('error');
+        } else if (s.status === 'cancelled') {
+          clearInterval(poll);
+          setCuzkMsg('Zrušeno.');
+          setCuzkState('idle');
         }
       } catch (pollErr) {
         clearInterval(poll);
@@ -554,6 +563,7 @@ export default function MapView({ bbox, onBboxChange, onCuzkComplete, onHelp, is
         setCuzkState('error');
       }
     }, 3000);
+    cuzkPollRef.current = poll;
   }, [bbox, dsmType, cuzkState, onCuzkComplete]);
 
   // Polsko stahování s pollingem
@@ -562,11 +572,13 @@ export default function MapView({ bbox, onBboxChange, onCuzkComplete, onHelp, is
     setCuzkState('downloading');
     setCuzkProgress(5);
     setCuzkMsg('Spouštím stahování z GUGiK...');
+    cuzkCountryRef.current = 'pl';
 
     let dlId = null;
     try {
       const { download_id } = await startPolandDownload(bbox, true);
       dlId = download_id;
+      cuzkDlIdRef.current = dlId;
     } catch (err) {
       setCuzkMsg(`Chyba: ${err.response?.data?.detail || err.message}`);
       setCuzkState('error');
@@ -593,6 +605,10 @@ export default function MapView({ bbox, onBboxChange, onCuzkComplete, onHelp, is
           clearInterval(poll);
           setCuzkMsg(`Chyba: ${s.error || s.step}`);
           setCuzkState('error');
+        } else if (s.status === 'cancelled') {
+          clearInterval(poll);
+          setCuzkMsg('Zrušeno.');
+          setCuzkState('idle');
         }
       } catch (pollErr) {
         clearInterval(poll);
@@ -600,6 +616,7 @@ export default function MapView({ bbox, onBboxChange, onCuzkComplete, onHelp, is
         setCuzkState('error');
       }
     }, 3000);
+    cuzkPollRef.current = poll;
   }, [bbox, cuzkState, onCuzkComplete]);
 
   // Itálie (Sicílie) stahování s pollingem
@@ -608,11 +625,13 @@ export default function MapView({ bbox, onBboxChange, onCuzkComplete, onHelp, is
     setCuzkState('downloading');
     setCuzkProgress(5);
     setCuzkMsg('Spouštím stahování ze SITR...');
+    cuzkCountryRef.current = 'it';
 
     let dlId = null;
     try {
       const { download_id } = await startItalyDownload(bbox);
       dlId = download_id;
+      cuzkDlIdRef.current = dlId;
     } catch (err) {
       setCuzkMsg(`Chyba: ${err.response?.data?.detail || err.message}`);
       setCuzkState('error');
@@ -638,6 +657,10 @@ export default function MapView({ bbox, onBboxChange, onCuzkComplete, onHelp, is
           clearInterval(poll);
           setCuzkMsg(`Chyba: ${s.error || s.step}`);
           setCuzkState('error');
+        } else if (s.status === 'cancelled') {
+          clearInterval(poll);
+          setCuzkMsg('Zrušeno.');
+          setCuzkState('idle');
         }
       } catch (pollErr) {
         clearInterval(poll);
@@ -645,7 +668,32 @@ export default function MapView({ bbox, onBboxChange, onCuzkComplete, onHelp, is
         setCuzkState('error');
       }
     }, 3000);
+    cuzkPollRef.current = poll;
   }, [bbox, cuzkState, onCuzkComplete]);
+
+  // Zrušení probíhajícího stahování DMR/DMP (server přeruší stahování a smaže rozdělané soubory)
+  const handleCancelDownload = useCallback(async () => {
+    const dlId = cuzkDlIdRef.current;
+    if (!dlId) return;
+    setCuzkMsg('Ruším stahování...');
+    try {
+      if (cuzkCountryRef.current === 'cz') await cancelCuzkDownload(dlId);
+      else if (cuzkCountryRef.current === 'pl') await cancelPolandDownload(dlId);
+      else if (cuzkCountryRef.current === 'it') await cancelItalyDownload(dlId);
+    } catch (err) {
+      // Job už mohl mezitím doběhnout / zaniknout — polling to stejně odchytí
+      console.warn('Zrušení stahování selhalo:', err.message);
+    }
+    // Polling dál běží a jakmile server zapíše status "cancelled", nastaví stav sám;
+    // pro okamžitou odezvu v UI zastavíme i lokální interval.
+    if (cuzkPollRef.current) {
+      clearInterval(cuzkPollRef.current);
+      cuzkPollRef.current = null;
+    }
+    setCuzkState('idle');
+    setCuzkProgress(0);
+    setCuzkMsg('Zrušeno.');
+  }, []);
 
   const bboxLabel = bbox
     ? `${fmtCoord(bbox.min_lat)}–${fmtCoord(bbox.max_lat)} N · ${fmtCoord(bbox.min_lon)}–${fmtCoord(bbox.max_lon)} E`
@@ -745,6 +793,10 @@ export default function MapView({ bbox, onBboxChange, onCuzkComplete, onHelp, is
                 <div style={{ ...S.cuzkBarFill, width: `${cuzkProgress}%` }} />
               </div>
               <span style={{ ...S.cuzkMsg, whiteSpace: isMobile ? 'normal' : 'nowrap' }}>{cuzkMsg}</span>
+              <button style={{ ...S.cuzkBtn, background: 'var(--text-secondary)' }}
+                onClick={handleCancelDownload}>
+                ✕ Zrušit
+              </button>
             </div>
           )}
 

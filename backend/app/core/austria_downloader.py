@@ -237,6 +237,7 @@ def download_austria(
     bbox: dict,
     out_dir: str,
     progress_cb=None,
+    cancel_check=None,
 ) -> dict:
     """
     Hlavní funkce: stáhne DGM (DTM) + DOM (DSM) pro daný bbox z BEV.
@@ -244,6 +245,8 @@ def download_austria(
     bbox: { min_lat, min_lon, max_lat, max_lon }  (WGS84)
     out_dir: výstupní složka na serveru
     progress_cb: volitelná funkce(msg: str)
+    cancel_check: přijímán kvůli jednotnému rozhraní se sdíleným _run_download
+                  (Rakousko je momentálně nedostupné ve frontendu — bez zapojení)
 
     Vrací: { dmr_path, dmp_path, crs }
     """

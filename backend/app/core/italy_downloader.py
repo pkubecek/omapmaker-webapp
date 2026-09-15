@@ -25,6 +25,8 @@ import ssl
 import numpy as np
 from pyproj import Transformer
 
+from .cancellation import DownloadCancelled
+
 _EXPORT_IMAGE_URL = "https://map.sitr.regione.sicilia.it/gis/rest/services/modelli_digitali/mdt_2013/ImageServer/exportImage"
 _SRC_CRS = "EPSG:25833"
 _PIXEL_SIZE_M = 2.0  # nativní rozlišení zdroje
@@ -169,7 +171,7 @@ def _tif_to_laz(tif_path: str, output_laz: str, progress_cb=None) -> bool:
         return False
 
 
-def download_italy(bbox: dict, out_dir: str, progress_cb=None) -> dict:
+def download_italy(bbox: dict, out_dir: str, progress_cb=None, cancel_check=None) -> dict:
     """
     Hlavní funkce: stáhne DTM pro Sicílii z regionálního SITR WCS.
 
@@ -203,11 +205,17 @@ def download_italy(bbox: dict, out_dir: str, progress_cb=None) -> dict:
     BUFFER = 50
     bbox_25833 = (minx - BUFFER, miny - BUFFER, maxx + BUFFER, maxy + BUFFER)
 
+    if cancel_check and cancel_check():
+        raise DownloadCancelled()
+
     tif_path = os.path.join(out_dir, "IT_SITR_DTM_2m.tif")
     cb("Stahuji DTM (mdt_2013, 2m) z SITR Sicilia...")
     ok = _download_dtm_tiff(bbox_25833, tif_path, progress_cb=cb)
     if not ok:
         raise RuntimeError("Stažení DTM ze SITR WCS selhalo.")
+
+    if cancel_check and cancel_check():
+        raise DownloadCancelled()
 
     dtm_laz = os.path.join(out_dir, "IT_SITR_DTM_merged.laz")
     ok = _tif_to_laz(tif_path, dtm_laz, progress_cb=cb)
