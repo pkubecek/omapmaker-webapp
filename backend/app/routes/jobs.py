@@ -15,17 +15,13 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 from ..core.job_store import JOBS_DIR, job_path as _job_path, read_job as _read_job, write_job as _write_job
+from ..core.cleanup import purge_job_inputs
 
 router = APIRouter()
 MAX_CONCURRENT_JOBS = int(os.environ.get("MAX_CONCURRENT_JOBS", "3"))
 _job_semaphore = asyncio.Semaphore(MAX_CONCURRENT_JOBS)
-
-# Sledování běžících subprocessů a zrušených jobů, aby šlo job zabít
-# tlačítkem "Zrušit" z frontendu (viz endpoint /jobs/{job_id}/cancel).
-_running_procs: dict[str, asyncio.subprocess.Process] = {}
-_cancelled_jobs: set[str] = set()
-
-
+JOB_TIMEOUT_SECONDS = int(os.environ.get("JOB_TIMEOUT_SECONDS", "1800"))  # 30 min
+RENDER_TIMEOUT_SECONDS = int(os.environ.get("RENDER_TIMEOUT_SECONDS", "600"))  # 10 min
 async def _run_job_subprocess(job_id: str, job_dir: str):
         position_job = _read_job(job_id) or {}
         if _job_semaphore.locked():
@@ -34,47 +30,30 @@ async def _run_job_subprocess(job_id: str, job_dir: str):
             _write_job(job_id, position_job)
  
         async with _job_semaphore:
-            # Job mohl být zrušen ještě ve frontě (než jsme vůbec spustili subprocess)
-            if job_id in _cancelled_jobs:
-                _cancelled_jobs.discard(job_id)
-                _write_job(job_id, {
-                    "status": "cancelled",
-                    "progress": 0,
-                    "step": "Zrušeno uživatelem (ve frontě).",
-                    "error": "cancelled",
-                    "png_path": None,
-                    "gpkg_path": None,
-                })
-                return
-
             proc = None
             try:
                 proc = await asyncio.create_subprocess_exec(
                     sys.executable, "-m", "app.core.run_job_process", job_id, job_dir,
                     cwd=os.getcwd(),
                 )
-                _running_procs[job_id] = proc
-                # Bez časového limitu — job běží, dokud sám neskončí nebo
-                # dokud ho uživatel nezruší přes /jobs/{id}/cancel.
-                await proc.wait()
-
-                if job_id in _cancelled_jobs:
-                    # Zrušeno uživatelem během běhu — _cancel_job() proces už zabil,
-                    # jen doplníme finální stav (přepíše, co si stihl zapsat subprocess).
-                    _cancelled_jobs.discard(job_id)
+                try:
+                    await asyncio.wait_for(proc.wait(), timeout=JOB_TIMEOUT_SECONDS)
+                except asyncio.TimeoutError:
+                    proc.kill()
+                    await proc.wait()  # počkej, ať se opravdu ukončí (zamezí zombie)
                     _write_job(job_id, {
-                        "status": "cancelled",
+                        "status": "error",
                         "progress": 0,
-                        "step": "Zrušeno uživatelem.",
-                        "error": "cancelled",
+                        "step": f"Zpracování překročilo časový limit ({JOB_TIMEOUT_SECONDS // 60} min) a bylo ukončeno.",
+                        "error": "timeout",
                         "png_path": None,
                         "gpkg_path": None,
                     })
                     return
-
+ 
                 if proc.returncode != 0:
                     job = _read_job(job_id) or {}
-                    if job.get("status") not in ("done", "error", "cancelled"):
+                    if job.get("status") not in ("done", "error"):
                         _write_job(job_id, {
                             "status": "error",
                             "progress": 0,
@@ -96,7 +75,9 @@ async def _run_job_subprocess(job_id: str, job_dir: str):
                     "gpkg_path": None,
                 })
             finally:
-                _running_procs.pop(job_id, None)
+                # Nahrané LAS/LAZ už nejsou potřeba (re-render jede z cache
+                # pickle) — smazat hned, ať nezabírají disk až do TTL úklidu.
+                purge_job_inputs(job_dir)
 
 
 def _save_file(upload: UploadFile, dest_dir: str) -> str:
@@ -192,38 +173,6 @@ async def get_job(job_id: str):
     return {"job_id": job_id, **job}
 
 
-@router.post("/jobs/{job_id}/cancel")
-async def cancel_job(job_id: str):
-    """Zruší běžící nebo frontou čekající job. Pokud už je job hotový/chybný,
-    je to no-op (vrátí aktuální stav beze změny)."""
-    job = _read_job(job_id)
-    if job is None:
-        raise HTTPException(status_code=404, detail="Job nenalezen.")
-
-    if job.get("status") in ("done", "error", "cancelled"):
-        return {"job_id": job_id, **job}
-
-    proc = _running_procs.get(job_id)
-    if proc is not None and proc.returncode is None:
-        # Job už běží jako subprocess — rovnou zabít. Finální zápis stavu
-        # "cancelled" udělá _run_job_subprocess(), jakmile proc.wait() vrátí.
-        _cancelled_jobs.add(job_id)
-        proc.kill()
-    else:
-        # Job ještě čeká ve frontě na semafor (subprocess vůbec nezačal) —
-        # jen si poznamenáme, že se má přeskočit, jakmile na něj dojde řada.
-        _cancelled_jobs.add(job_id)
-        _write_job(job_id, {
-            **job,
-            "status": "cancelled",
-            "step": "Zrušeno uživatelem (ve frontě).",
-            "error": "cancelled",
-        })
-
-    updated = _read_job(job_id) or job
-    return {"job_id": job_id, **updated}
-
-
 @router.get("/jobs/{job_id}/png")
 async def get_png(job_id: str):
     job = _read_job(job_id)
@@ -288,7 +237,12 @@ class RenderRequest(BaseModel):
 @router.post("/jobs/{job_id}/render")
 async def render_custom(job_id: str, body: RenderRequest):
     """Znovu vyrenderuje PNG z cache (bez opětovného zpracování LiDAR/OSM)
-    s výběrem vrstev, který si uživatel proklikal v LayerSelectoru."""
+    s výběrem vrstev, který si uživatel proklikal v LayerSelectoru.
+
+    Render běží v samostatném procesu (app.core.run_render_process) přes
+    stejný semaphore jako joby — neblokuje event loop a paměť matplotlibu
+    se po dokončení vrátí OS. Request čeká na výsledek, API kontrakt
+    pro frontend zůstává stejný."""
     job = _read_job(job_id)
     if job is None:
         raise HTTPException(status_code=404, detail="Job nenalezen.")
@@ -296,18 +250,64 @@ async def render_custom(job_id: str, body: RenderRequest):
         raise HTTPException(status_code=425, detail="Job ještě není hotový.")
 
     job_dir = os.path.join(JOBS_DIR, job_id)
-    from ..core.pipeline import render_from_cache
 
+    # Každý request má vlastní request/result soubor — souběžné rendery
+    # stejného jobu si je nepřepíšou.
+    req_id = uuid.uuid4().hex[:8]
+    request_path = os.path.join(job_dir, f"render_{req_id}.json")
+    result_path = os.path.join(job_dir, f"render_{req_id}_result.json")
+    with open(request_path, "w") as f:
+        json.dump({"selected_codes": body.selected_codes, "result_path": result_path}, f)
+
+    proc = None
     try:
-        result = render_from_cache(job_id, job_dir, selected_codes=body.selected_codes)
-    except FileNotFoundError:
-        raise HTTPException(
-            status_code=404,
-            detail="Cache pro znovu-vyrenderování nenalezena (job byl vytvořen před touto funkcí, spusťte generování znovu).",
-        )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Render selhal: {e}")
+        async with _job_semaphore:
+            proc = await asyncio.create_subprocess_exec(
+                sys.executable, "-m", "app.core.run_render_process",
+                job_id, job_dir, request_path,
+                cwd=os.getcwd(),
+            )
+            try:
+                await asyncio.wait_for(proc.wait(), timeout=RENDER_TIMEOUT_SECONDS)
+            except asyncio.TimeoutError:
+                proc.kill()
+                await proc.wait()
+                raise HTTPException(
+                    status_code=504,
+                    detail=f"Render překročil časový limit ({RENDER_TIMEOUT_SECONDS // 60} min).",
+                )
 
+        try:
+            with open(result_path) as f:
+                result = json.load(f)
+        except (FileNotFoundError, json.JSONDecodeError):
+            raise HTTPException(
+                status_code=500,
+                detail=f"Render proces skončil bez výsledku (kód {proc.returncode}).",
+            )
+    except asyncio.CancelledError:
+        # Request zrušen (odpojený klient / shutdown) — neodcházet od běžícího procesu
+        if proc is not None and proc.returncode is None:
+            proc.kill()
+            await proc.wait()
+        raise
+    finally:
+        for p in (request_path, result_path):
+            try:
+                os.remove(p)
+            except OSError:
+                pass
+
+    if not result.get("ok"):
+        if result.get("cache_missing"):
+            raise HTTPException(
+                status_code=404,
+                detail="Cache pro znovu-vyrenderování nenalezena (job byl vytvořen před touto funkcí, spusťte generování znovu).",
+            )
+        raise HTTPException(status_code=500, detail=f"Render selhal: {result.get('error')}")
+
+    # Znovu načíst — během renderu se job.json mohl změnit
+    job = _read_job(job_id) or job
     job["custom_png_path"] = result["png_path"]
     _write_job(job_id, job)
 

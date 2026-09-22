@@ -9,12 +9,14 @@ Spuštění:
     uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 """
 import os
+import asyncio
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 
 from .routes.jobs import router as jobs_router
 from .routes.download import router as download_router
+from .core.cleanup import cleanup_loop
 
 app = FastAPI(
     title="OMapMaker API",
@@ -58,6 +60,13 @@ app.include_router(download_router, prefix="/api")
 # Gzip odpovědi nad 1 kB — vectors.geojson (live náhled) bez toho jde
 # přes síť nekomprimovaný a klidně to jsou jednotky MB.
 app.add_middleware(GZipMiddleware, minimum_size=1000)
+
+
+@app.on_event("startup")
+async def _start_cleanup():
+    # Úklid starých jobů/downloadů (TTL viz core/cleanup.py).
+    # Reference v app.state, ať task nesežere GC.
+    app.state.cleanup_task = asyncio.create_task(cleanup_loop())
 
 
 @app.get("/")
