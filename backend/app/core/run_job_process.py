@@ -60,6 +60,7 @@ def main():
             "error": None,
             "started_at": started_at,
             "png_path": result.get("png_path"),
+            "preview_path": result.get("preview_path"),
             "gpkg_path": result.get("gpkg_path"),
             "vectors_path": result.get("vectors_path"),
             "colors_path": result.get("colors_path"),

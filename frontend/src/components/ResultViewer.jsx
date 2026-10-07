@@ -141,7 +141,7 @@ export default function ResultViewer({
             <button
               style={{ ...S.segBtn, ...(mode === 'png' ? S.segBtnActive : {}) }}
               onClick={() => setMode('png')}
-              title="Finální PNG s plnou ISOM kartografií"
+              title="PNG s plnou ISOM psecifikací"
             >PNG</button>
           </div>
           <button style={S.close} onClick={onClose} title="Zavřít (Esc)">×</button>
@@ -164,7 +164,7 @@ export default function ResultViewer({
                 <div style={S.hint}>
                   {mode === 'png'
                     ? 'PNG ukazuje vyrenderovaný stav. Změny vrstev se do něj promítnou po „Vyrenderovat PNG“.'
-                    : 'Vektorový náhled je zjednodušený — plnou ISOM kartografii má PNG.'}
+                    : 'Vektorový náhled je zjednodušený — plný znakový klíč je v PNG.'}
                 </div>
               </div>
             )}

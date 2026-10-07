@@ -1,59 +1,97 @@
-import React, { useState } from 'react';
+import React from 'react';
+import { useTheme } from '../theme';
 
-const S = {
-  wrap: { display: 'flex', height: '100%', overflow: 'hidden', position: 'relative' },
-  drawer: (open) => ({
-    position: 'absolute',
-    left: 0, top: 0, bottom: 0,
-    width: 'clamp(260px, 30vw, 360px)',
-    zIndex: 200,
-    transform: open ? 'translateX(0)' : 'translateX(-100%)',
-    transition: 'transform 0.25s ease',
-    boxShadow: open ? '4px 0 20px rgba(0,0,0,0.15)' : 'none',
-    display: 'flex', flexDirection: 'column',
+const styles = {
+  bar: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: '0 16px',
+    height: 48,
     background: 'var(--panel-bg)',
-  }),
-  overlay: (open) => ({
-    position: 'absolute', inset: 0,
-    background: 'rgba(15,42,54,0.3)',
-    zIndex: 199,
-    display: open ? 'block' : 'none',
-  }),
-  main: { flex: 1, display: 'flex', overflow: 'hidden' },
-  hamburger: {
-    position: 'absolute', top: 10, left: 10, zIndex: 201,
-    width: 36, height: 36,
-    background: 'var(--panel-bg)',
+    color: 'var(--text-primary)',
+    fontFamily: 'var(--heading)',
+    fontSize: 13,
+    flexShrink: 0,
+    borderBottom: '3px solid transparent',
+    borderImage: 'var(--brand-gradient) 1',
+  },
+  brand: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 10,
+    fontWeight: 700,
+    fontSize: 15,
+    letterSpacing: '0.01em',
+  },
+  logo: {
+    width: 28,
+    height: 28,
+    borderRadius: 7,
+    flexShrink: 0,
+  },
+  version: { opacity: 0.35, fontWeight: 400 },
+  actions: { display: 'flex', gap: 8 },
+  btn: {
+    background: 'none',
     border: '0.5px solid var(--panel-border)',
+    color: 'var(--text-primary)',
+    padding: '5px 12px',
     borderRadius: 'var(--radius-sm)',
-    cursor: 'pointer', fontSize: 16,
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
-    boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+    fontSize: 11,
+    fontFamily: 'var(--heading)',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    gap: 5,
+    transition: 'border-color 0.15s',
+  },
+  btnPrimary: {
+    background: 'var(--brand-gradient)',
+    borderColor: 'transparent',
+    color: '#fff',
+  },
+  themeBtn: {
+    background: 'none',
+    border: '0.5px solid var(--panel-border)',
+    color: 'var(--text-secondary)',
+    width: 30,
+    height: 30,
+    borderRadius: 'var(--radius-md)',
+    cursor: 'pointer',
+    fontSize: 15,
+    lineHeight: 1,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  right: { display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 },
+  btnDisabled: {
+    opacity: 0.4,
+    cursor: 'not-allowed',
   },
 };
 
-export default function TabletLayout({ settingsPane, mapPane, outputPane }) {
-  const [drawerOpen, setDrawerOpen] = useState(false);
-
+export default function Topbar() {
+  const { theme, toggle } = useTheme();
+  const dark = theme === 'dark';
   return (
-    <div style={S.wrap}>
-      <button style={S.hamburger} onClick={() => setDrawerOpen(o => !o)}>
-        {drawerOpen ? '×' : '☰'}
-      </button>
-
-      <div style={S.overlay(drawerOpen)} onClick={() => setDrawerOpen(false)} />
-
-      <div style={S.drawer(drawerOpen)}>
-        {settingsPane}
+    <div style={styles.bar}>
+      <div style={styles.brand}>
+        <img src={`${process.env.PUBLIC_URL}/logo64.png`} alt="" style={styles.logo} />
+        OMapMaker
+        <span style={styles.version}></span>
       </div>
-
-      <div style={S.main}>
-        <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-          {mapPane}
-        </div>
-        <div style={{ width: 'clamp(220px, 25vw, 300px)', flexShrink: 0, overflow: 'auto', borderLeft: '0.5px solid var(--panel-border)' }}>
-          {outputPane}
-        </div>
+      <div style={styles.right}>
+        <button
+          style={styles.themeBtn}
+          onClick={toggle}
+          title={dark ? 'Přepnout na světlý režim' : 'Přepnout na tmavý režim'}
+          aria-label={dark ? 'Přepnout na světlý režim' : 'Přepnout na tmavý režim'}
+        >
+          {dark ? '☀' : '☾'}
+        </button>
       </div>
     </div>
   );

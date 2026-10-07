@@ -18,24 +18,77 @@ from ..core.job_store import JOBS_DIR, job_path as _job_path, read_job as _read_
 from ..core.cleanup import purge_job_inputs
 
 router = APIRouter()
-MAX_CONCURRENT_JOBS = int(os.environ.get("MAX_CONCURRENT_JOBS", "3"))
+# Jeden job má ve špičce ~1,5–2 GB RAM → při 8 GB stačí 2 souběžné joby
+# s rezervou (3 už riskovaly OOM). Lze přepsat proměnnou prostředí.
+MAX_CONCURRENT_JOBS = int(os.environ.get("MAX_CONCURRENT_JOBS", "2"))
 _job_semaphore = asyncio.Semaphore(MAX_CONCURRENT_JOBS)
+
+# Fronta (FIFO) jobů čekajících na volný slot — pro zobrazení pořadí uživateli.
+# Stav je jen v paměti hlavního procesu (uvicorn běží s jedním workerem).
+_waiting: list[str] = []
+# Běžící subprocessy a zrušené joby — pro tlačítko „Zrušit“ (/jobs/{id}/cancel)
+_running_procs: dict[str, asyncio.subprocess.Process] = {}
+_cancelled_jobs: set[str] = set()
+
+
+def _queue_position(job_id: str) -> int | None:
+    try:
+        return _waiting.index(job_id) + 1
+    except ValueError:
+        return None
+
+
+def _write_queued(job_id: str):
+    pos = _queue_position(job_id)
+    if pos is None:
+        return
+    job = _read_job(job_id) or {}
+    job.update({
+        "status": "queued",
+        "step": f"Ve frontě — {pos}. v pořadí, čeká na volný výpočetní slot",
+    })
+    _write_job(job_id, job)
+
+
+def _cancelled_state(step: str) -> dict:
+    return {
+        "status": "cancelled",
+        "progress": 0,
+        "step": step,
+        "error": "cancelled",
+        "png_path": None,
+        "gpkg_path": None,
+    }
 JOB_TIMEOUT_SECONDS = int(os.environ.get("JOB_TIMEOUT_SECONDS", "1800"))  # 30 min
 RENDER_TIMEOUT_SECONDS = int(os.environ.get("RENDER_TIMEOUT_SECONDS", "600"))  # 10 min
 async def _run_job_subprocess(job_id: str, job_dir: str):
-        position_job = _read_job(job_id) or {}
-        if _job_semaphore.locked():
-            position_job["status"] = "queued"
-            position_job["step"] = f"Ve frontě (max {MAX_CONCURRENT_JOBS} souběžných jobů)..."
-            _write_job(job_id, position_job)
- 
-        async with _job_semaphore:
+        _waiting.append(job_id)
+        try:
+            if _job_semaphore.locked():
+                _write_queued(job_id)
+            await _job_semaphore.acquire()
+        finally:
+            if job_id in _waiting:
+                _waiting.remove(job_id)
+        # Ostatním čekajícím se posunulo pořadí
+        for other in list(_waiting):
+            _write_queued(other)
+
+        try:
+            # Job mohl být zrušen ještě ve frontě (než se vůbec spustil subprocess)
+            if job_id in _cancelled_jobs:
+                _cancelled_jobs.discard(job_id)
+                _write_job(job_id, _cancelled_state("Zrušeno uživatelem (ve frontě)."))
+                purge_job_inputs(job_dir)
+                return
+
             proc = None
             try:
                 proc = await asyncio.create_subprocess_exec(
                     sys.executable, "-m", "app.core.run_job_process", job_id, job_dir,
                     cwd=os.getcwd(),
                 )
+                _running_procs[job_id] = proc
                 try:
                     await asyncio.wait_for(proc.wait(), timeout=JOB_TIMEOUT_SECONDS)
                 except asyncio.TimeoutError:
@@ -51,9 +104,16 @@ async def _run_job_subprocess(job_id: str, job_dir: str):
                     })
                     return
  
+                if job_id in _cancelled_jobs:
+                    # Zrušeno během běhu — cancel endpoint proces zabil,
+                    # doplníme finální stav (přepíše, co si stihl zapsat subprocess).
+                    _cancelled_jobs.discard(job_id)
+                    _write_job(job_id, _cancelled_state("Zrušeno uživatelem."))
+                    return
+
                 if proc.returncode != 0:
                     job = _read_job(job_id) or {}
-                    if job.get("status") not in ("done", "error"):
+                    if job.get("status") not in ("done", "error", "cancelled"):
                         _write_job(job_id, {
                             "status": "error",
                             "progress": 0,
@@ -75,9 +135,12 @@ async def _run_job_subprocess(job_id: str, job_dir: str):
                     "gpkg_path": None,
                 })
             finally:
+                _running_procs.pop(job_id, None)
                 # Nahrané LAS/LAZ už nejsou potřeba (re-render jede z cache
                 # pickle) — smazat hned, ať nezabírají disk až do TTL úklidu.
                 purge_job_inputs(job_dir)
+        finally:
+            _job_semaphore.release()
 
 
 def _save_file(upload: UploadFile, dest_dir: str) -> str:
@@ -170,7 +233,51 @@ async def get_job(job_id: str):
     job = _read_job(job_id)
     if job is None:
         raise HTTPException(status_code=404, detail="Job nenalezen.")
+    pos = _queue_position(job_id)
+    if pos is not None and job.get("status") == "queued":
+        job["queue_position"] = pos
+        job["queue_length"] = len(_waiting)
     return {"job_id": job_id, **job}
+
+
+@router.post("/jobs/{job_id}/cancel")
+async def cancel_job(job_id: str):
+    """Zruší běžící nebo ve frontě čekající job. U hotového/chybného jobu no-op."""
+    job = _read_job(job_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail="Job nenalezen.")
+    if job.get("status") in ("done", "error", "cancelled"):
+        return {"job_id": job_id, **job}
+
+    _cancelled_jobs.add(job_id)
+    proc = _running_procs.get(job_id)
+    if proc is not None and proc.returncode is None:
+        # Běží — zabít; finální stav zapíše _run_job_subprocess po proc.wait()
+        proc.kill()
+    else:
+        # Čeká ve frontě — hned označit; slot se při přidělení jen přeskočí
+        if job_id in _waiting:
+            _waiting.remove(job_id)
+            for other in list(_waiting):
+                _write_queued(other)
+        _write_job(job_id, {**job, **_cancelled_state("Zrušeno uživatelem (ve frontě).")})
+
+    updated = _read_job(job_id) or job
+    return {"job_id": job_id, **updated}
+
+
+@router.get("/jobs/{job_id}/preview")
+async def get_preview(job_id: str):
+    """Zmenšený náhled PNG pro web (miniatura v pravém panelu)."""
+    job = _read_job(job_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail="Job nenalezen.")
+    if job["status"] != "done":
+        raise HTTPException(status_code=425, detail="Job ještě není hotový.")
+    path = job.get("preview_path") or job.get("png_path")
+    if not path or not os.path.exists(path):
+        raise HTTPException(status_code=404, detail="Náhled nenalezen.")
+    return FileResponse(path, media_type="image/png")
 
 
 @router.get("/jobs/{job_id}/png")
