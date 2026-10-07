@@ -2,8 +2,39 @@
 <html lang="cs">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
-    <title>OMapMaker</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>OMapMaker – generátor orientačních map z LiDARu</title>
+    <meta name="description" content="OMapMaker automaticky vytvoří orientační mapu z LiDARových dat ČÚZK a GUGiK a z OpenStreetMap. Výstup jako PNG a GeoPackage pro OpenOrienteering Mapper, symboly ISOM 2017-2 a ISSprOM 2019-2." />
+    <meta name="robots" content="index, follow" />
+    <meta name="theme-color" content="#1a1f2e" />
+    <link rel="canonical" href="https://omapmaker.vercel.app/" />
+
+    <!-- Open Graph / sdílení na sociálních sítích -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="OMapMaker" />
+    <meta property="og:locale" content="cs_CZ" />
+    <meta property="og:url" content="https://omapmaker.vercel.app/" />
+    <meta property="og:title" content="OMapMaker – generátor orientačních map z LiDARu" />
+    <meta property="og:description" content="Vyberte oblast, stáhněte LiDAR data a získejte podklad orientační mapy pro OpenOrienteering Mapper." />
+    <meta name="twitter:card" content="summary" />
+
+    <!-- Strukturovaná data pro vyhledávače -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "OMapMaker",
+        "url": "https://omapmaker.vercel.app/",
+        "description": "Webová aplikace, která z LiDARových dat a OpenStreetMap automaticky vygeneruje orientační mapu (PNG a GeoPackage pro OpenOrienteering Mapper).",
+        "applicationCategory": "UtilitiesApplication",
+        "operatingSystem": "Web",
+        "inLanguage": "cs",
+        "isAccessibleForFree": true,
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "CZK" },
+        "sameAs": ["https://github.com/pkubecek/omapmaker-webapp"]
+      }
+    </script>
+
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500&display=swap" rel="stylesheet" />
@@ -11,6 +42,15 @@
     <link rel="icon" href="%PUBLIC_URL%/icon.ico" />
   </head>
   <body style="margin:0;background:#1a1f2e">
+    <noscript>
+      <div style="color:#e6e6e6;font-family:sans-serif;padding:24px;max-width:720px">
+        <h1>OMapMaker – generátor orientačních map</h1>
+        <p>OMapMaker z LiDARových dat (ČÚZK, GUGiK) a OpenStreetMap automaticky vygeneruje orientační mapu jako PNG obrázek
+          i GeoPackage pro import do OpenOrienteering Mapperu. Podporuje lesní mapy ISOM 2017-2 (1:10 000, 1:15 000)
+          a sprintové mapy ISSprOM 2019-2 (1:4 000).</p>
+        <p>Pro spuštění aplikace povolte JavaScript.</p>
+      </div>
+    </noscript>
     <div id="root"></div>
   </body>
 </html>
