@@ -509,12 +509,12 @@ export default function OutputPanel({ job, logLines, canRun, running, onRun, onC
 
         <DlBtn href={`${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/api/crt/OMapMaker-OpenOrienteeringMapper_10_000.crt`}
           download="OMapMaker-OpenOrienteeringMapper.crt">
-          ↓ Stáhnout CRT soubor pro ISOM 2017-2
+          ↓ Stáhnout CRT pro ISOM 2017-2
         </DlBtn>
 
         <DlBtn href={`${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/api/crt/OMapMaker-OpenOrienteeringMapper_4_000.crt`}
           download="OMapMaker-OpenOrienteeringMapper.crt">
-          ↓ Stáhnout CRT soubor ISSprOM 2019-2
+          ↓ Stáhnout CRT pro ISSprOM 2019-2
         </DlBtn>
       </div>
     </div>

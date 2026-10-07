@@ -29,7 +29,7 @@ const STEPS = [
   {
     icon: '🗺',
     title: 'Stáhněte výsledky',
-    desc: 'Po dokončení si stáhněte PNG mapu (500 DPI) nebo GPKG soubor, který je možné importovat do OpenOrienteering Mapperu pomocí CRT souboru, který stáhnete také v pravé liště',
+    desc: 'Po dokončení si stáhněte PNG mapu (600 DPI) nebo GPKG soubor, který je možné importovat do OpenOrienteering Mapperu pomocí CRT souboru, který stáhnete také v pravé liště',
   },
     ];
         
