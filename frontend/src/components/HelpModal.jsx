@@ -41,7 +41,7 @@ const S = {
     display: 'flex', alignItems: 'center', justifyContent: 'center',
   },
   modal: {
-    background: '#fff',
+    background: 'var(--panel-bg)',
     borderRadius: 12,
     width: 580,
     maxWidth: '95vw',
@@ -87,7 +87,7 @@ const S = {
     marginBottom: 3,
   },
   stepTitle: { fontSize: 12, fontWeight: 500, marginBottom: 5, color: 'var(--text-primary)' },
-  stepDesc: { fontSize: 11, color: '#6b7280', lineHeight: 1.55 },
+  stepDesc: { fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.55 },
   footer: {
     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
     padding: '12px 24px',
@@ -96,7 +96,7 @@ const S = {
   },
   checkLabel: {
     display: 'flex', alignItems: 'center', gap: 6,
-    fontSize: 11, color: '#6b7280', cursor: 'pointer',
+    fontSize: 11, color: 'var(--text-secondary)', cursor: 'pointer',
   },
   startBtn: {
     padding: '8px 20px', borderRadius: 6, border: 'none',
@@ -106,8 +106,8 @@ const S = {
   },
   tipBox: {
     marginTop: 14, padding: '10px 14px',
-    background: '#EAF6FB', border: '0.5px solid #BFE3F1',
-    borderRadius: 8, fontSize: 11, color: '#5a9ab5', lineHeight: 1.5,
+    background: 'var(--info-soft-bg)', border: '0.5px solid var(--info-soft-border)',
+    borderRadius: 8, fontSize: 11, color: 'var(--accent-strong)', lineHeight: 1.5,
   },
 };
 

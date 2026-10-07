@@ -45,9 +45,9 @@ const S = {
   mapContainer: { flex: 1, position: 'relative' },
   toolCtrl: {
     position: 'absolute', top: 10, left: 10, zIndex: 1000,
-    display: 'flex', background: 'rgba(255,255,255,0.92)',
+    display: 'flex', background: 'var(--overlay-bg)',
     border: '0.5px solid var(--panel-border)', borderRadius: 'var(--radius-sm)',
-    boxShadow: '0 2px 8px rgba(0,0,0,0.15)', overflow: 'hidden',
+    boxShadow: '0 2px 8px var(--shadow)', overflow: 'hidden',
   },
   toolCtrlBtn: {
     display: 'flex', alignItems: 'center', gap: 4, background: 'none',
@@ -62,14 +62,14 @@ const S = {
   helpBtn: {
     width: 40, height: 40, padding: 0, borderRadius: '50%',
     display: 'flex', alignItems: 'center', justifyContent: 'center',
-    background: 'rgba(255,255,255,0.92)', border: '0.5px solid var(--panel-border)',
-    boxShadow: '0 2px 8px rgba(0,0,0,0.15)', cursor: 'pointer',
+    background: 'var(--overlay-bg)', border: '0.5px solid var(--panel-border)',
+    boxShadow: '0 2px 8px var(--shadow)', cursor: 'pointer',
     fontWeight: 600, fontSize: 17, color: 'var(--text-primary)', fontFamily: 'var(--sans)',
   },
   baseLayerCtrl: {
-    display: 'flex', background: 'rgba(255,255,255,0.92)',
+    display: 'flex', background: 'var(--overlay-bg)',
     border: '0.5px solid var(--panel-border)', borderRadius: 'var(--radius-sm)',
-    boxShadow: '0 2px 8px rgba(0,0,0,0.15)', overflow: 'hidden',
+    boxShadow: '0 2px 8px var(--shadow)', overflow: 'hidden',
   },
   baseLayerBtn: {
     display: 'flex', alignItems: 'center', gap: 4, background: 'none',
@@ -78,9 +78,9 @@ const S = {
   },
   baseLayerBtnActive: { background: 'var(--accent-soft)', color: 'var(--accent-strong)' },
   zoomCtrl: {
-    display: 'flex', flexDirection: 'column', background: 'rgba(255,255,255,0.92)',
+    display: 'flex', flexDirection: 'column', background: 'var(--overlay-bg)',
     border: '0.5px solid var(--panel-border)', borderRadius: 'var(--radius-sm)',
-    boxShadow: '0 2px 8px rgba(0,0,0,0.15)', overflow: 'hidden',
+    boxShadow: '0 2px 8px var(--shadow)', overflow: 'hidden',
   },
   zoomBtn: {
     display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -96,8 +96,8 @@ const S = {
   linkBtn: {
     width: 43, height: 43, borderRadius: '50%',
     display: 'flex', alignItems: 'center', justifyContent: 'center',
-    background: 'rgba(255,255,255,0.92)', border: '0.5px solid var(--panel-border)',
-    boxShadow: '0 2px 8px rgba(0,0,0,0.15)', textDecoration: 'none',
+    background: 'var(--overlay-bg)', border: '0.5px solid var(--panel-border)',
+    boxShadow: '0 2px 8px var(--shadow)', textDecoration: 'none',
     color: 'var(--text-primary)', transition: 'background 0.15s',
   },
   hint: {
@@ -116,7 +116,7 @@ const S = {
   cuzkSelect: {
     fontFamily: 'var(--mono)', fontSize: 11, padding: '3px 6px',
     borderRadius: 'var(--radius-sm)', border: '0.5px solid var(--panel-border)',
-    background: '#fff', cursor: 'pointer',
+    background: 'var(--panel-bg)', cursor: 'pointer',
   },
   cuzkBtn: {
     display: 'flex', alignItems: 'center', gap: 4, padding: '5px 12px',
@@ -174,7 +174,7 @@ function CountryDropdown({ country, disabled, onChange }) {
           display: 'flex', alignItems: 'center', gap: 5,
           padding: '4px 8px 4px 8px',
           fontFamily: 'var(--mono)', fontSize: 11,
-          background: open ? 'var(--ink)' : '#fff',
+          background: open ? 'var(--ink)' : 'var(--panel-bg)',
           color: open ? '#fff' : 'var(--text-primary)',
           border: '0.5px solid var(--panel-border)',
           borderRadius: 'var(--radius-sm)',
@@ -196,7 +196,7 @@ function CountryDropdown({ country, disabled, onChange }) {
           position: 'absolute',
           top: 'calc(100% + 4px)',
           left: 0,
-          background: '#fff',
+          background: 'var(--panel-bg)',
           border: '0.5px solid var(--panel-border)',
           borderRadius: 'var(--radius-md)',
           boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
@@ -894,7 +894,7 @@ export default function MapView({ bbox, onBboxChange, onCuzkComplete, onHelp, is
             style={S.linkBtn}
             title="GitHub — zdrojový kód"
           >
-            <img src="https://github.com/favicon.ico" alt="GitHub" width="25" height="25" />
+            <img src="https://github.com/favicon.ico" alt="GitHub" width="25" height="25" className="icon-invert-dark" />
           </a>
           <a
             href="https://mapy.ceskyorientak.cz/"

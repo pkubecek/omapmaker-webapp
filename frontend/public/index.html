@@ -8,6 +8,17 @@
     <meta name="robots" content="index, follow" />
     <meta name="google-site-verification" content="sNmtapNgDByZVyUn964hmNoFZBY157QqidYX9vSk-ns" />
     <meta name="theme-color" content="#1DA8D8" />
+    <script>
+      // Nastav světlý/tmavý režim ještě před vykreslením (bez probliknutí)
+      (function () {
+        var t = null;
+        try { t = localStorage.getItem('omapmaker_theme'); } catch (e) {}
+        if (t !== 'light' && t !== 'dark') {
+          t = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        }
+        document.documentElement.setAttribute('data-theme', t);
+      })();
+    </script>
     <link rel="canonical" href="https://omapmaker.vercel.app/" />
 
     <!-- Open Graph / sdílení na sociálních sítích -->
@@ -44,7 +55,7 @@
     <link rel="icon" href="%PUBLIC_URL%/icon.ico" />
     <link rel="apple-touch-icon" href="%PUBLIC_URL%/apple-touch-icon.png" />
   </head>
-  <body style="margin:0;background:#ffffff">
+  <body style="margin:0">
     <noscript>
       <div style="color:#e6e6e6;font-family:sans-serif;padding:24px;max-width:720px">
         <h1>OMapMaker – generátor orientačních map</h1>

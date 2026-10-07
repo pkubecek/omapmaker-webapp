@@ -46,13 +46,13 @@ const S = {
     gap: 8,
     padding: '8px 10px',
     borderRadius: 'var(--radius-md)',
-    background: '#EFFAF4',
-    border: '0.5px solid #C4EAD5',
+    background: 'var(--success-soft-bg)',
+    border: '0.5px solid var(--success-soft-border)',
     marginBottom: 6,
   },
   fileLoadedDsm: {
-    background: '#EAF6FB',
-    border: '0.5px solid #BFE3F1',
+    background: 'var(--info-soft-bg)',
+    border: '0.5px solid var(--info-soft-border)',
   },
   fileName: {
     flex: 1,
@@ -130,7 +130,7 @@ const S = {
     width: 11,
     height: 11,
     borderRadius: '50%',
-    background: '#fff',
+    background: 'var(--panel-bg)',
     top: 3,
     transition: 'left 0.2s',
   },
@@ -531,7 +531,7 @@ export default function SettingsPanel({ settings, onSettings, files, onFiles, is
         <div style={S.label}>Vrstvy</div>
         {LAYERS.map((l) => (
           <div style={S.layerRow} key={l.key} onClick={() => toggleLayer(l.key)}>
-            <div style={{ ...S.layerDot, background: l.color }} />
+            <div style={{ ...S.layerDot, background: l.color, boxShadow: '0 0 0 1px var(--panel-border)' }} />
             <span style={S.layerName}>{l.label}</span>
             <Toggle on={settings.layers[l.key]} onChange={() => toggleLayer(l.key)} />
           </div>

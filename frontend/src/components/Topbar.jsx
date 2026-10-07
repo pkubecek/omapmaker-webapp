@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTheme } from '../theme';
 
 const styles = {
   bar: {
@@ -7,7 +8,7 @@ const styles = {
     justifyContent: 'space-between',
     padding: '0 16px',
     height: 48,
-    background: '#fff',
+    background: 'var(--panel-bg)',
     color: 'var(--text-primary)',
     fontFamily: 'var(--heading)',
     fontSize: 13,
@@ -51,13 +52,31 @@ const styles = {
     borderColor: 'transparent',
     color: '#fff',
   },
+  themeBtn: {
+    background: 'none',
+    border: '0.5px solid var(--panel-border)',
+    color: 'var(--text-secondary)',
+    width: 30,
+    height: 30,
+    borderRadius: 'var(--radius-md)',
+    cursor: 'pointer',
+    fontSize: 15,
+    lineHeight: 1,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  right: { display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 },
   btnDisabled: {
     opacity: 0.4,
     cursor: 'not-allowed',
   },
 };
 
-export default function Topbar({ status }) {
+export default function Topbar({ status, isMobile }) {
+  const { theme, toggle } = useTheme();
+  const dark = theme === 'dark';
   return (
     <div style={styles.bar}>
       <div style={styles.brand}>
@@ -65,7 +84,17 @@ export default function Topbar({ status }) {
         OMapMaker
         <span style={styles.version}></span>
       </div>
-      <span style={styles.status}>{status}</span>
+      <div style={styles.right}>
+        {!isMobile && <span style={styles.status}>{status}</span>}
+        <button
+          style={styles.themeBtn}
+          onClick={toggle}
+          title={dark ? 'Přepnout na světlý režim' : 'Přepnout na tmavý režim'}
+          aria-label={dark ? 'Přepnout na světlý režim' : 'Přepnout na tmavý režim'}
+        >
+          {dark ? '☀' : '☾'}
+        </button>
+      </div>
     </div>
   );
 }

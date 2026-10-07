@@ -36,6 +36,13 @@
   --text-primary: #12232B;
   --text-secondary: #5B6B73;
   --text-muted: #94A3AA;
+  --overlay-bg: rgba(255,255,255,0.92);   /* plovoucí ovládací prvky nad mapou */
+  --success-soft-bg: #EFFAF4;
+  --success-soft-border: #C4EAD5;
+  --info-soft-bg: #EAF6FB;
+  --info-soft-border: #BFE3F1;
+  --shadow: rgba(0,0,0,0.15);
+  color-scheme: light;
   --mono: 'IBM Plex Mono', monospace;
   --sans: 'Montserrat', system-ui, sans-serif;
   --heading: 'Montserrat', system-ui, sans-serif;
@@ -43,6 +50,67 @@
   --radius-md: 8px;
   --radius-lg: 12px;
 }
+
+/* ── Tmavý režim ───────────────────────────────────────────────
+   Mapové podklady a náhled výsledné mapy zůstávají beze změny
+   (barvy ISOM musí sedět), přebarvuje se jen rozhraní. */
+:root[data-theme="dark"] {
+  --accent-strong: #4CC3EA;
+  --accent-soft: #12394A;
+  --accent-soft-strong: #1A4B60;
+
+  --ink: #2C4754;
+  --ink-light: #375766;
+  --paper: #0F1B21;
+  --paper-dark: #24373F;
+  --forest: #4FD08B;
+  --forest-mid: #3FBF7A;
+  --forest-light: #1F4D3C;
+  --rock: #E08455;
+  --rock-light: #4A2A1C;
+  --water: #4CC3EA;
+  --water-light: #1A4B60;
+  --panel-bg: #15232A;
+  --panel-border: #2B3F48;
+  --surface: #1B2C34;
+  --surface-hover: #22363F;
+  --text-primary: #E4EEF1;
+  --text-secondary: #9DB0B8;
+  --text-muted: #6E838C;
+  --overlay-bg: rgba(21,35,42,0.92);
+  --success-soft-bg: #13302A;
+  --success-soft-border: #1F4D3C;
+  --info-soft-bg: #10303D;
+  --info-soft-border: #1C4A5C;
+  --shadow: rgba(0,0,0,0.45);
+  color-scheme: dark;
+}
+
+html, body { background: var(--panel-bg); }
+
+/* Leaflet ovládací prvky v tmavém režimu */
+:root[data-theme="dark"] .leaflet-bar a,
+:root[data-theme="dark"] .leaflet-control-zoom a {
+  background: var(--panel-bg);
+  color: var(--text-primary);
+  border-bottom-color: var(--panel-border);
+}
+:root[data-theme="dark"] .leaflet-bar a:hover { background: var(--surface-hover); }
+:root[data-theme="dark"] .leaflet-bar { border-color: var(--panel-border); }
+:root[data-theme="dark"] .leaflet-control-attribution {
+  background: rgba(21,35,42,0.8) !important;
+  color: var(--text-secondary);
+}
+:root[data-theme="dark"] .leaflet-control-attribution a { color: var(--accent-strong); }
+
+/* Nativní formulářové prvky */
+select, input, textarea { color: var(--text-primary); }
+:root[data-theme="dark"] select,
+:root[data-theme="dark"] input:not([type="checkbox"]):not([type="radio"]) {
+  background-color: var(--surface);
+  border-color: var(--panel-border);
+}
+
 
 html, body {
   height: 100%;
@@ -112,3 +180,5 @@ h1, h2, h3, h4, h5, h6 {
 .select-pulse {
   animation: select-pulse 1.4s ease-in-out infinite;
 }
+/* Černé ikony (GitHub) v tmavém režimu invertovat */
+:root[data-theme="dark"] .icon-invert-dark { filter: invert(1); }
