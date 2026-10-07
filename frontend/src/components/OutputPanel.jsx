@@ -237,6 +237,7 @@ const STATUS_LABELS = {
 function formatEta(seconds) {
   if (seconds == null || !isFinite(seconds) || seconds < 0) return null;
   const s = Math.round(seconds);
+  if (s <= 0) return 'chvilku';
   if (s < 60) return `~${s} s`;
   const min = Math.floor(s / 60);
   const sec = s % 60;
@@ -245,17 +246,37 @@ function formatEta(seconds) {
 
 function useEtaSeconds(startedAt, progress, isRunning) {
   const [now, setNow] = useState(() => Date.now());
+  // Kotva odhadu: zbývající čas spočtený v okamžiku poslední změny progressu.
+  // Mezi změnami se od ní jen odečítá uplynulý čas → ETA odpočítává dolů.
+  const anchor = useRef(null); // { progress, remaining, at }
+
   useEffect(() => {
     if (!isRunning) return undefined;
     const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
   }, [isRunning]);
 
-  if (!isRunning || !startedAt || !progress || progress <= 0) return null;
-  const elapsedSec = now / 1000 - startedAt;
-  if (elapsedSec <= 0) return null;
-  const remainingSec = elapsedSec * (100 - progress) / progress;
-  return remainingSec > 0 ? remainingSec : null;
+  if (!isRunning || !startedAt || !progress || progress <= 0) {
+    anchor.current = null;
+    return null;
+  }
+
+  const a = anchor.current;
+  if (!a || a.progress !== progress) {
+    const elapsedSec = Date.now() / 1000 - startedAt;
+    if (elapsedSec <= 0) return null;
+    let estimate = elapsedSec * (100 - progress) / progress;
+    // Vyhlazení: nový odhad zprůměruj s tím, co zrovna odpočítáváme (méně skáče)
+    if (a) {
+      const counting = a.remaining - (Date.now() - a.at) / 1000;
+      if (counting > 0) estimate = (estimate + counting) / 2;
+    }
+    anchor.current = { progress, remaining: estimate, at: Date.now() };
+  }
+
+  const t = Math.max(now, anchor.current.at);
+  const remainingSec = anchor.current.remaining - (t - anchor.current.at) / 1000;
+  return Math.max(remainingSec, 0);
 }
 
 // Barva podle toho, jak blízko je odhadovaný konec zpracování —
