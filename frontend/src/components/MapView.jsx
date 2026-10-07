@@ -272,6 +272,9 @@ export default function MapView({ bbox, onBboxChange, onCuzkComplete, onHelp, is
   const cuzkDlIdRef = useRef(null);
   const cuzkPollRef = useRef(null);
   const cuzkCountryRef = useRef('cz');
+  // Aktuální stav v refu — handlery kreslení (closure v useEffect) jinak vidí starou hodnotu
+  const cuzkStateRef = useRef('idle');
+  useEffect(() => { cuzkStateRef.current = cuzkState; }, [cuzkState]);
 
   // Detekovaná/ručně zvolená země
   const [country, setCountry] = useState('cz');
@@ -281,7 +284,7 @@ export default function MapView({ bbox, onBboxChange, onCuzkComplete, onHelp, is
   const baseLayersRef = useRef({});
 
   useEffect(() => {
-    if (!bbox) setCountry('cz');
+    if (!bbox && cuzkStateRef.current !== 'downloading') setCountry('cz');
   }, [bbox]);
 
   // Init map — přidej polygony hranic
@@ -410,14 +413,20 @@ export default function MapView({ bbox, onBboxChange, onCuzkComplete, onHelp, is
       return map.containerPointToLatLng(point);
     }
 
+    // Nový výběr oblasti nesmí shodit běžící stahování — to ruší jen tlačítko „✕ Zrušit“
+    function resetDownloadUiIfIdle() {
+      if (cuzkStateRef.current === 'downloading') return;
+      setCuzkState('idle');
+      setCuzkProgress(0);
+      setCuzkMsg('');
+    }
+
     function onMouseDown(e) {
       startLatLng = e.latlng;
       if (rectRef.current) { rectRef.current.remove(); rectRef.current = null; }
       if (tempRect) { tempRect.remove(); tempRect = null; }
       drawState.current.drawing = true;
-      setCuzkState('idle');
-      setCuzkProgress(0);
-      setCuzkMsg('');
+      resetDownloadUiIfIdle();
     }
     function onMouseMove(e) {
       if (!drawState.current.drawing || !startLatLng) return;
@@ -454,9 +463,7 @@ export default function MapView({ bbox, onBboxChange, onCuzkComplete, onHelp, is
       if (tempRect) { tempRect.remove(); tempRect = null; }
       startLatLng = latlng;
       drawState.current.drawing = true;
-      setCuzkState('idle');
-      setCuzkProgress(0);
-      setCuzkMsg('');
+      resetDownloadUiIfIdle();
     }
     function onTouchMove(e) {
       if (!drawState.current.drawing || !startLatLng || e.touches.length !== 1) return;
@@ -513,7 +520,7 @@ export default function MapView({ bbox, onBboxChange, onCuzkComplete, onHelp, is
   const clearBbox = () => {
     if (rectRef.current) { rectRef.current.remove(); rectRef.current = null; }
     onBboxChange(null);
-    setCuzkState('idle');
+    if (cuzkStateRef.current !== 'downloading') setCuzkState('idle');
   };
 
   // ČÚZK stahování s pollingem
@@ -724,8 +731,8 @@ export default function MapView({ bbox, onBboxChange, onCuzkComplete, onHelp, is
         </div>
       )}
 
-      {/* Download panel — zobrazí se po výběru oblasti */}
-      {bbox && (
+      {/* Download panel — zobrazí se po výběru oblasti, a během stahování vždy (kvůli tlačítku Zrušit) */}
+      {(bbox || cuzkState === 'downloading') && (
         <div style={{
           ...S.cuzkPanel,
           flexDirection: isMobile ? 'column' : 'row',
