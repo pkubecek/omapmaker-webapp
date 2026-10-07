@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { getPngUrl, getGpkgUrl, getVectorsUrl, getColorsUrl, renderCustomPng } from '../api';
+import { getPngUrl, getPreviewUrl, getGpkgUrl, getVectorsUrl, getColorsUrl, renderCustomPng } from '../api';
 import ResultViewer from './ResultViewer';
 
 const S = {
@@ -314,7 +314,8 @@ export default function OutputPanel({ job, logLines, canRun, running, onRun, onC
   const [selectedCodes, setSelectedCodes] = useState(null); // null = vše
   const [exporting, setExporting] = useState(false);
   const [customPngUrl, setCustomPngUrl] = useState(null);
-  const { status = 'idle', progress = 0, step = '', jobId = null, started_at: startedAt = null } = job || {};
+  const { status = 'idle', progress = 0, step = '', jobId = null, started_at: startedAt = null, queuePosition = null } = job || {};
+  const isQueued = status === 'queued';
   const isDone = status === 'done';
   const isError = status === 'error';
   const isCancelled = status === 'cancelled';
@@ -377,7 +378,7 @@ export default function OutputPanel({ job, logLines, canRun, running, onRun, onC
       {/* Generovat mapu */}
       <div data-tour="run" style={{ padding: '12px 16px', borderBottom: '0.5px solid var(--panel-border)' }}>
         <RunBtn disabled={!canRun || running} onClick={onRun}>
-          {running ? '⏳ Zpracovávám...' : '▶ Generovat mapu'}
+          {isQueued ? '⏳ Čekám ve frontě...' : running ? '⏳ Zpracovávám...' : '▶ Generovat mapu'}
         </RunBtn>
         {!canRun && !running && (
           <div style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: 'var(--mono)', marginTop: 5, textAlign: 'center' }}>
@@ -390,7 +391,9 @@ export default function OutputPanel({ job, logLines, canRun, running, onRun, onC
       <div style={S.section}>
         <div style={S.sectionLabel}>Průběh zpracování</div>
         <div style={S.progressHeader}>
-          <span style={S.progressTitle}>{STATUS_LABELS[status] || status}</span>
+          <span style={S.progressTitle}>
+            {isQueued && queuePosition ? `Ve frontě — ${queuePosition}. v pořadí` : (STATUS_LABELS[status] || status)}
+          </span>
           <span style={S.progressPctGroup}>
             {etaSeconds != null && (
               <span style={{ ...S.progressEta, color: etaColor(etaSeconds) }}>
@@ -452,7 +455,7 @@ export default function OutputPanel({ job, logLines, canRun, running, onRun, onC
             <>
               <img
                 style={S.previewImg}
-                src={currentPngUrl}
+                src={customPngUrl || getPreviewUrl(jobId)}
                 alt="Náhled vygenerované mapy"
                 onError={(e) => { e.target.style.display = 'none'; }}
               />

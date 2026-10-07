@@ -31,6 +31,8 @@ from rasterio.io import MemoryFile
 from .memory_utils import release_memory   # uprav cestu podle skutečné struktury (např. z app.core.memory_utils)
 from .processor import (
     load_dmr_grid, load_dmp_grid,
+    split_points_to_tiles, read_tile_points,
+    dtm_grids_from_points, dsm_grid_from_points,
     classify_vegetation, vectorize_rocks,
     find_depressions, find_knolls,
     make_clip_polygon,
@@ -40,9 +42,11 @@ from .symbols import SymbolLibrary
 from .exporter import OomCollector
 from .zabaged_wfs import download_zabaged_wfs
 
-# Max velikost dlaždice v metrech. 1500×1500m při 0.5m pixelu = 9M pixelů = ~700 MB
+# Max velikost dlaždice v metrech. 1500×1500 m (+ překryv) při 0.5m pixelu ≈ 13M pixelů,
+# špička paměti jedné dlaždice ~1,5–2 GB (měřeno; dominuje Delaunayova triangulace).
 TILE_SIZE_M = 1500
 OVERLAP_M = 150   # překryv kvůli artefaktům na hranicích
+DSM_MARGIN_M = 5  # DSM body i kousek za hranou dlaždice, ať lineární interpolace nemá díry u okraje
 
 
 def _cache_path(output_dir, job_id):
@@ -119,8 +123,8 @@ def _compute_tiles(minx, maxx, miny, maxy, tile_size, overlap):
 
 
 def _process_tile(
-    tile_bbox, dmr_path, dmp_path, params, sym_library,
-    gdf_osm, zabaged_gdfs, isom_gdfs,
+    tile_bbox, dtm_tile_file, dsm_tile_file, dmp_path, params, sym_library,
+    get_osm, zabaged_gdfs, isom_gdfs,
     tile_idx, total_tiles, cb,
 ):
     """
@@ -129,7 +133,7 @@ def _process_tile(
     core_x0,x1,y0,y1 = core bbox bez překryvu (vystřihuje se)
     """
     tx0, tx1, ty0, ty1, core_x0, core_x1, core_y0, core_y1 = tile_bbox
-    pct_base = int(10 + (tile_idx / total_tiles) * 70)
+    pct_base = int(12 + (tile_idx / total_tiles) * 68)
 
     CURRENT_CRS = params["crs"]
     SIGMA = params["sigma"]
@@ -143,47 +147,50 @@ def _process_tile(
     def tcb(msg):
         cb(pct_base, f"Dlaždice {tile_idx+1}/{total_tiles}: {msg}")
 
-    tcb("Načítám DTM...")
+    # DTM — body dlaždice už jsou předpřipravené z jednoho průchodu LAZ
+    # (split_points_to_tiles); cubic i linear sdílí jednu triangulaci.
+    tcb("Interpoluji DTM...")
     try:
-        dmr_grid_cubic, grid_x, grid_y, extent, dmr_points, dmr_z = load_dmr_grid(
-            dmr_path, CURRENT_CRS,
+        dmr_grid_cubic, dmr_grid_linear, grid_x, grid_y, extent, dmr_points, dmr_z = dtm_grids_from_points(
+            read_tile_points(dtm_tile_file),
             pixel_size=FIXED_PIXEL_SIZE,
             sigma_smooth=SIGMA,
-            bbox_clip=(tx0, tx1, ty0, ty1),
             progress_cb=tcb,
         )
     except Exception as e:
         print(f"[tile {tile_idx}] DTM chyba: {e}")
         return None
+    finally:
+        _remove_quiet(dtm_tile_file)
 
     minx, maxx, miny, maxy = extent
     shape = grid_x.shape
     transform = rasterio.transform.from_bounds(minx, miny, maxx, maxy,
                                                 width=shape[0], height=shape[1])
     clip_polygon = make_clip_polygon(dmr_points)
+    del dmr_z
 
-    # Linear DTM
-    from scipy.interpolate import griddata
-    shift_x = np.mean(dmr_points[:, 0])
-    shift_y = np.mean(dmr_points[:, 1])
-    pts_sh = dmr_points - np.array([shift_x, shift_y])
-    gx_sh = grid_x - shift_x
-    gy_sh = grid_y - shift_y
-    dmr_grid_linear = griddata(pts_sh, dmr_z, (gx_sh, gy_sh), method="linear")
-    if np.isnan(dmr_grid_linear).all():
-        dmr_grid_linear = griddata(pts_sh, dmr_z, (gx_sh, gy_sh), method="nearest")
-
-    # DSM
-    tcb("Načítám DSM...")
+    # DSM — LAZ: jen body dlaždice (dřív se interpolovaly body z celého souboru);
+    # GeoTIFF: původní cesta přes load_dmp_grid.
+    tcb("Interpoluji DSM...")
     try:
-        dmp_grid = load_dmp_grid(dmp_path, grid_x, grid_y, extent, CURRENT_CRS)
+        if dsm_tile_file:
+            dmp_grid = dsm_grid_from_points(read_tile_points(dsm_tile_file), grid_x, grid_y)
+        elif dmp_path:
+            dmp_grid = load_dmp_grid(dmp_path, grid_x, grid_y, extent, CURRENT_CRS)
+        else:
+            raise ValueError("DSM není k dispozici")
         vegetation_height = np.clip(dmp_grid - dmr_grid_linear, 0, None)
         del dmp_grid
     except Exception as e:
         print(f"[tile {tile_idx}] DSM chyba: {e}")
         vegetation_height = np.zeros_like(dmr_grid_linear)
+    finally:
+        _remove_quiet(dsm_tile_file)
 
-    # Lesní maska z OSM
+    # Lesní maska z OSM — OSM se stahuje ve vlákně; čeká se na něj až tady
+    # (u první dlaždice je obvykle dávno hotové, interpolace trvá déle).
+    gdf_osm = get_osm() if callable(get_osm) else get_osm
     forest_mask = np.zeros(shape, dtype=np.uint8)
     if gdf_osm is not None and not gdf_osm.empty:
         try:
@@ -230,7 +237,7 @@ def _process_tile(
 
     # Vegetace, skály, vrstevnice, mikrotvary
     tcb("Klasifikuji vegetaci...")
-    gdf_vegetation = classify_vegetation(vegetation_height, BINS, transform, dmr_path)
+    gdf_vegetation = classify_vegetation(vegetation_height, BINS, transform, None)
     if gdf_vegetation is not None and not gdf_vegetation.empty:
         gdf_vegetation = gdf_vegetation.set_crs(CURRENT_CRS, allow_override=True)
     print(f"[debug-contours] gdf_vegetation před clip_to_core: "
@@ -322,6 +329,15 @@ def _process_tile(
     }
 
 
+def _remove_quiet(path):
+    if not path:
+        return
+    try:
+        os.remove(path)
+    except OSError:
+        pass
+
+
 def _merge_tile_results(tile_results):
     """Sloučí výsledky všech dlaždic do jednoho setu GeoDataFrames."""
     all_veg, all_rocks = [], []
@@ -373,9 +389,18 @@ def run_pipeline(job_id: str, params: dict, file_paths: dict,
                  output_dir: str, progress_cb) -> dict:
     start = time.time()
 
+    # Progress nesmí couvat — zprávy ze stahovacího vlákna (OSM/ZABAGED)
+    # přicházejí s nižším % než hlavní výpočet, který mezitím běží dál.
+    import threading
+    _pct_state = {"pct": 0}
+    _pct_lock = threading.Lock()
+
     def cb(pct, msg):
-        print(f"[pipeline {job_id}] {pct}% — {msg}")
-        progress_cb(pct, msg)
+        with _pct_lock:
+            _pct_state["pct"] = max(_pct_state["pct"], int(pct))
+            pct = _pct_state["pct"]
+            print(f"[pipeline {job_id}] {pct}% — {msg}")
+            progress_cb(pct, msg)
 
     cb(1, "Spouštím analýzu...")
 
@@ -510,61 +535,65 @@ def run_pipeline(job_id: str, params: dict, file_paths: dict,
     n_tiles = len(tiles)
     cb(5, f"Zpracuji {n_tiles} dlaždic ({TILE_SIZE_M}×{TILE_SIZE_M}m)...")
 
-    # OSM stáhnout jednou pro celou oblast
-    cb(6, "Stahuji OSM data...")
-    gdf_osm = None
-    try:
-        ox.settings.use_cache = True
-        ox.settings.cache_folder = os.path.join(tempfile.gettempdir(), "OMapMaker_OSM")
-        ox.settings.user_agent = "OMapMaker-Web-v7"
-        ox.settings.timeout = 300
-        to_wgs = Transformer.from_crs(CURRENT_CRS, "EPSG:4326", always_xy=True)
-        buf = 300
-        mn_lon, mn_lat = to_wgs.transform(global_minx - buf, global_miny - buf)
-        mx_lon, mx_lat = to_wgs.transform(global_maxx + buf, global_maxy + buf)
-        tags = {
-            "highway": True, "building": True, "waterway": True, "natural": True,
-            "landuse": True, "leisure": True, "railway": True, "power": True,
-            "man_made": True, "barrier": True, "historic": True, "amenity": True,
-            "aerialway": True, "water": True, "wetland": True, "military": True,
-            "access": True, "bridge": True, "tunnel": True, "surface": True,
-            "tracktype": True, "trail_visibility": True, "geological": True,
-            "intermittent": True, "covered": True, "place": True, "emergency": True,
-        }
+    # OSM a ZABAGED (REST) se stahují ve vlákně SOUBĚŽNĚ s načítáním LAZ —
+    # síťové čekání se tak schová za výpočet místo toho, aby ho blokovalo.
+    def _fetch_osm():
+        gdf_osm = None
+        try:
+            ox.settings.use_cache = True
+            ox.settings.cache_folder = os.path.join(tempfile.gettempdir(), "OMapMaker_OSM")
+            ox.settings.user_agent = "OMapMaker-Web-v7"
+            # 120 s místo 300 s — zaseknuté zrcadlo nesmí blokovat job 5 minut
+            ox.settings.timeout = 120
+            to_wgs = Transformer.from_crs(CURRENT_CRS, "EPSG:4326", always_xy=True)
+            buf = 300
+            mn_lon, mn_lat = to_wgs.transform(global_minx - buf, global_miny - buf)
+            mx_lon, mx_lat = to_wgs.transform(global_maxx + buf, global_maxy + buf)
+            tags = {
+                "highway": True, "building": True, "waterway": True, "natural": True,
+                "landuse": True, "leisure": True, "railway": True, "power": True,
+                "man_made": True, "barrier": True, "historic": True, "amenity": True,
+                "aerialway": True, "water": True, "wetland": True, "military": True,
+                "access": True, "bridge": True, "tunnel": True, "surface": True,
+                "tracktype": True, "trail_visibility": True, "geological": True,
+                "intermittent": True, "covered": True, "place": True, "emergency": True,
+            }
 
-        # Hlavní instance overpass-api.de u cloudových IP adres (Railway, AWS, ...)
-        # občas tvrdě odmítá spojení ("Connection refused") kvůli ochraně proti
-        # zahlcení. Zkusíme postupně i veřejná zrcadla, než to celé vzdáme.
-        OVERPASS_MIRRORS = [
-            "https://overpass-api.de/api",
-            "https://overpass.kumi.systems/api",
-            "https://overpass.osm.ch/api",
-            "https://overpass.openstreetmap.ru/api",
-        ]
-        last_err = None
-        for mirror in OVERPASS_MIRRORS:
-            ox.settings.overpass_url = mirror
-            try:
-                cb(7, f"OSM: zkouším {mirror} ...")
-                gdf_osm = ox.features_from_bbox((mn_lon, mn_lat, mx_lon, mx_lat), tags=tags)
-                cb(8, f"OSM staženo přes {mirror}: {len(gdf_osm)} prvků")
-                last_err = None
-                break
-            except Exception as mirror_err:
-                last_err = mirror_err
-                cb(7, f"OSM: {mirror} selhalo ({mirror_err}), zkouším další zrcadlo...")
-                gdf_osm = None
-                continue
+            # Hlavní instance overpass-api.de u cloudových IP adres (Railway, AWS, ...)
+            # občas tvrdě odmítá spojení ("Connection refused") kvůli ochraně proti
+            # zahlcení. Zkusíme postupně i veřejná zrcadla, než to celé vzdáme.
+            OVERPASS_MIRRORS = [
+                "https://overpass-api.de/api",
+                "https://overpass.kumi.systems/api",
+                "https://overpass.osm.ch/api",
+                "https://overpass.openstreetmap.ru/api",
+            ]
+            last_err = None
+            for mirror in OVERPASS_MIRRORS:
+                ox.settings.overpass_url = mirror
+                try:
+                    cb(7, f"OSM: zkouším {mirror} ...")
+                    gdf_osm = ox.features_from_bbox((mn_lon, mn_lat, mx_lon, mx_lat), tags=tags)
+                    cb(8, f"OSM staženo přes {mirror}: {len(gdf_osm)} prvků")
+                    last_err = None
+                    break
+                except Exception as mirror_err:
+                    last_err = mirror_err
+                    cb(7, f"OSM: {mirror} selhalo ({mirror_err}), zkouším další zrcadlo...")
+                    gdf_osm = None
+                    continue
 
-        if gdf_osm is None:
-            raise last_err if last_err is not None else RuntimeError("OSM: všechna zrcadla selhala")
+            if gdf_osm is None:
+                raise last_err if last_err is not None else RuntimeError("OSM: všechna zrcadla selhala")
 
-        cb(8, f"OSM bbox WGS84: {mn_lat:.4f}N {mn_lon:.4f}E .. {mx_lat:.4f}N {mx_lon:.4f}E")
-        gdf_osm = gdf_osm.to_crs(CURRENT_CRS)
-        cb(8, f"OSM bounds po to_crs({CURRENT_CRS}): {gdf_osm.total_bounds}")
-        cb(8, f"LiDAR extent: minx={global_minx:.0f}, maxx={global_maxx:.0f}, miny={global_miny:.0f}, maxy={global_maxy:.0f}")
-    except Exception as e:
-        cb(8, f"Varování OSM: {e}")
+            cb(8, f"OSM bbox WGS84: {mn_lat:.4f}N {mn_lon:.4f}E .. {mx_lat:.4f}N {mx_lon:.4f}E")
+            gdf_osm = gdf_osm.to_crs(CURRENT_CRS)
+            cb(8, f"OSM bounds po to_crs({CURRENT_CRS}): {gdf_osm.total_bounds}")
+            cb(8, f"LiDAR extent: minx={global_minx:.0f}, maxx={global_maxx:.0f}, miny={global_miny:.0f}, maxy={global_maxy:.0f}")
+        except Exception as e:
+            cb(8, f"Varování OSM: {e}")
+
+        return gdf_osm
 
     # ZABAGED
     cb(9, "Načítám ZABAGED® soubory...")
@@ -573,21 +602,56 @@ def run_pipeline(job_id: str, params: dict, file_paths: dict,
 
     # Automatické stažení přes ArcGIS REST API — pouze pokud je zaškrtnuto v nastavení
     # a uživatel nenahrál vlastní soubory
-    use_zabaged = params.get("download_zabaged", False)
-    if use_zabaged and not file_paths.get("zabaged"):
-        cb(9, "Stahuji ZABAGED® data z ČÚZK REST API...")
+    def _fetch_zabaged_rest():
+        zabaged_gdfs = {}
+        use_zabaged = params.get("download_zabaged", False)
+        if use_zabaged and not file_paths.get("zabaged"):
+            cb(9, "Stahuji ZABAGED® data z ČÚZK REST API...")
+            try:
+                to_wgs_zab = Transformer.from_crs(CURRENT_CRS, "EPSG:4326", always_xy=True)
+                zab_minx, zab_miny = to_wgs_zab.transform(global_minx, global_miny)
+                zab_maxx, zab_maxy = to_wgs_zab.transform(global_maxx, global_maxy)
+                zabaged_gdfs = download_zabaged_wfs(
+                    bbox_wgs84=(zab_minx, zab_miny, zab_maxx, zab_maxy),
+                    target_crs=CURRENT_CRS,
+                    progress_cb=lambda msg: cb(9, msg),
+                )
+                cb(9, f"ZABAGED staženo: {len(zabaged_gdfs)} vrstev")
+            except Exception as e:
+                cb(9, f"Varování ZABAGED REST: {e}")
+
+        return zabaged_gdfs
+
+    from concurrent.futures import ThreadPoolExecutor
+    _net_pool = ThreadPoolExecutor(max_workers=2)
+    cb(6, "Stahuji OSM data (souběžně s načítáním LiDARu)...")
+    _osm_future = _net_pool.submit(_fetch_osm)
+    _zab_future = _net_pool.submit(_fetch_zabaged_rest)
+
+    # LAZ se čte JEDNOU a body se rozdělí po dlaždicích do dočasných souborů
+    # (dřív každá dlaždice dekomprimovala celý soubor znovu).
+    tiles_dir = os.path.join(output_dir, "_tiles_tmp")
+    tile_boxes = [t[:4] for t in tiles]
+    cb(10, "Načítám DTM (jeden průchod pro všechny dlaždice)...")
+    dtm_tile_files = split_points_to_tiles(
+        dmr_path, CURRENT_CRS, tile_boxes, tiles_dir, kind="dtm",
+        progress_cb=lambda m: cb(10, m))
+    dsm_tile_files = [None] * n_tiles
+    if dmp_path and os.path.splitext(dmp_path)[1].lower() in (".las", ".laz"):
+        cb(11, "Načítám DSM (jeden průchod pro všechny dlaždice)...")
         try:
-            to_wgs_zab = Transformer.from_crs(CURRENT_CRS, "EPSG:4326", always_xy=True)
-            zab_minx, zab_miny = to_wgs_zab.transform(global_minx, global_miny)
-            zab_maxx, zab_maxy = to_wgs_zab.transform(global_maxx, global_maxy)
-            zabaged_gdfs = download_zabaged_wfs(
-                bbox_wgs84=(zab_minx, zab_miny, zab_maxx, zab_maxy),
-                target_crs=CURRENT_CRS,
-                progress_cb=lambda msg: cb(9, msg),
-            )
-            cb(9, f"ZABAGED staženo: {len(zabaged_gdfs)} vrstev")
+            dsm_tile_files = split_points_to_tiles(
+                dmp_path, CURRENT_CRS, tile_boxes, tiles_dir, kind="dsm",
+                margin=DSM_MARGIN_M, progress_cb=lambda m: cb(11, m))
         except Exception as e:
-            cb(9, f"Varování ZABAGED REST: {e}")
+            cb(11, f"Varování DSM: {e} — pokračuji bez vegetace")
+            dsm_tile_files = [None] * n_tiles
+            dmp_path = ""
+
+    def _get_osm():
+        if not _osm_future.done():
+            cb(12, "Čekám na dokončení stahování OSM...")
+        return _osm_future.result()
 
     for path in file_paths.get("zabaged", []):
         fname = os.path.basename(path)
@@ -647,12 +711,21 @@ def run_pipeline(job_id: str, params: dict, file_paths: dict,
     tile_results = []
     for i, tile_bbox in enumerate(tiles):
         result = _process_tile(
-            tile_bbox, dmr_path, dmp_path, tile_params, sym_library,
-            gdf_osm, zabaged_gdfs, isom_gdfs,
+            tile_bbox, dtm_tile_files[i], dsm_tile_files[i], dmp_path, tile_params, sym_library,
+            _get_osm, zabaged_gdfs, isom_gdfs,
             i, n_tiles, cb,
         )
         tile_results.append(result)
         gc.collect()
+
+    import shutil
+    shutil.rmtree(tiles_dir, ignore_errors=True)
+
+    # OSM / ZABAGED REST z vlákna (ZABAGED soubory od uživatele mají přednost,
+    # stejně jako dřív, kdy se načítaly až po REST stažení)
+    gdf_osm = _get_osm()
+    zabaged_gdfs = {**(_zab_future.result() or {}), **zabaged_gdfs}
+    _net_pool.shutdown(wait=False)
 
     # Sloučení výsledků
     cb(80, "Slučuji výsledky dlaždic...")
@@ -801,6 +874,7 @@ def run_pipeline(job_id: str, params: dict, file_paths: dict,
 
     result = {
         "png_path": render_result["png_path"],
+        "preview_path": render_result.get("preview_path"),
         "gpkg_path": gpkg_path,
         "world_file_path": render_result.get("world_file_path"),
         "vectors_path": vectors_path,

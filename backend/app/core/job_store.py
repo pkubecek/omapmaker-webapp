@@ -26,7 +26,11 @@ def read_job(job_id: str) -> dict | None:
 
 
 def write_job(job_id: str, data: dict):
+    # Atomický zápis (tmp + rename) — API čte job.json během zápisu ze
+    # subprocesu; rozepsaný soubor by read_job() vyhodnotil jako neexistující job.
     path = job_path(job_id)
     os.makedirs(os.path.dirname(path), exist_ok=True)
-    with open(path, "w") as f:
+    tmp = f"{path}.{os.getpid()}.tmp"
+    with open(tmp, "w") as f:
         json.dump(data, f)
+    os.replace(tmp, path)

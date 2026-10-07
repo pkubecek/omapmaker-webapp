@@ -26,6 +26,10 @@ export async function cancelJob(jobId) {
   return res.data;
 }
 
+export function getPreviewUrl(jobId) {
+  return `${BASE}/api/jobs/${jobId}/preview`;
+}
+
 export function getPngUrl(jobId) {
   return `${BASE}/api/jobs/${jobId}/png`;
 }

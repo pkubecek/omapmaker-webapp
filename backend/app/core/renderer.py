@@ -29,6 +29,12 @@ from .exporter import _oom_isom_code
 
 SCALE_DEFAULT = 10000
 
+# Rozlišení PNG. 600 DPI je běžný strop pro tisk OB map; dřív 1000 DPI
+# (A4 = 96 Mpx, A3 = 193 Mpx) — ~3× víc pixelů bez viditelného přínosu.
+PNG_DPI = int(os.environ.get("PNG_DPI", "600"))
+# Náhled pro web (pravý panel) — delší strana v pixelech
+PREVIEW_MAX_PX = 1600
+
 
 def in2m(inch, scale=10_000):
     return inch * 0.0254 * scale
@@ -457,12 +463,26 @@ def render_map(
     )
 
     # Uložení PNG
-    _cb("Ukládám PNG (1000 DPI)...")
+    # Bez bbox_inches="tight": osy vyplňují celou figuru (subplots_adjust 0..1,
+    # axis off, artisti oříznutí na osy), takže výřez je stejný — ale "tight"
+    # nutil matplotlib vykreslit celou mapu DVAKRÁT (jednou jen kvůli změření).
+    _cb(f"Ukládám PNG ({PNG_DPI} DPI)...")
     plt.subplots_adjust(left=0, right=1, top=1, bottom=0)
     transparent = paper_format == "Data Extent"
-    plt.savefig(output_png_path, dpi=1000, bbox_inches="tight",
-                pad_inches=0, transparent=transparent)
+    plt.savefig(output_png_path, dpi=PNG_DPI, transparent=transparent)
     plt.close(fig)
+
+    # Malý náhled pro web — prohlížeč nemusí kvůli miniatuře stahovat celé PNG
+    preview_path = os.path.splitext(output_png_path)[0] + "_preview.png"
+    try:
+        from PIL import Image
+        Image.MAX_IMAGE_PIXELS = None  # vlastní výstup, ne cizí vstup
+        with Image.open(output_png_path) as img:
+            img.thumbnail((PREVIEW_MAX_PX, PREVIEW_MAX_PX), Image.LANCZOS)
+            img.save(preview_path, optimize=True)
+    except Exception as e:
+        print(f"[renderer] Náhled PNG chyba: {e}")
+        preview_path = None
 
     # World file
     world_file_path = os.path.splitext(output_png_path)[0] + ".pgw"
@@ -480,4 +500,5 @@ def render_map(
         world_file_path = None
 
     _cb("Mapa uložena.")
-    return {"png_path": output_png_path, "world_file_path": world_file_path}
+    return {"png_path": output_png_path, "world_file_path": world_file_path,
+            "preview_path": preview_path}

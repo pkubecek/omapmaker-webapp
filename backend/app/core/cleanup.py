@@ -136,6 +136,10 @@ async def cleanup_loop():
 def purge_job_inputs(job_dir: str):
     """Smaže nahrané DTM/DSM z adresáře jobu. Soubory mimo job_dir
     (serverové cesty z download adresářů) nechává být — ty uklidí TTL."""
+    # Dočasné body po dlaždicích z pipeline (při pádu/zrušení jobu tam zůstanou)
+    import shutil
+    shutil.rmtree(os.path.join(job_dir, "_tiles_tmp"), ignore_errors=True)
+
     fp = _read_json(os.path.join(job_dir, "file_paths.json")) or {}
     job_prefix = os.path.realpath(job_dir) + os.sep
     for key in ("dtm", "dsm"):

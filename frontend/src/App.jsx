@@ -86,6 +86,7 @@ export default function App() {
     if (startTour || !tourSeen()) setShowTour(true);
   };
   const pollRef = useRef(null);
+  const lastStepRef = useRef(null);
 
   const addLog = useCallback((msg, type = 'info') => {
     setLogLines((prev) => [...prev.slice(-199), { time: nowStr(), msg, type }]);
@@ -106,9 +107,14 @@ export default function App() {
           progress: data.progress ?? prev.progress,
           step: data.step ?? prev.step,
           started_at: data.started_at ?? prev.started_at,
+          queuePosition: data.status === 'queued' ? (data.queue_position ?? null) : null,
           jobId,
         }));
-        if (data.step) addLog(data.step, data.status === 'error' ? 'warn' : 'info');
+        // Log jen při změně kroku — ve frontě se stav opakuje každých 1,5 s
+        if (data.step && data.step !== lastStepRef.current) {
+          lastStepRef.current = data.step;
+          addLog(data.step, data.status === 'error' ? 'warn' : 'info');
+        }
         if (data.status === 'done' || data.status === 'error' || data.status === 'cancelled') {
           stopPolling();
           if (data.status === 'done') addLog('Analýza dokončena.', 'ok');
@@ -124,6 +130,7 @@ export default function App() {
   const handleRun = useCallback(async () => {
     if (!files.dtm) return;
     setLogLines([]);
+    lastStepRef.current = null;
     setJob({ status: 'queued', progress: 0, step: 'Odesílám data...', jobId: null });
     addLog('Spouštím analýzu...', 'info');
 
@@ -241,6 +248,7 @@ export default function App() {
   if (!hasDtm && !hasDsm) topStatus = 'Nahrajte DTM a DSM';
   else if (!hasDtm) topStatus = 'Chybí DTM';
   else if (!hasDsm) topStatus = 'Připraveno (bez DSM — bez vegetace)';
+  else if (job.status === 'queued') topStatus = job.queuePosition ? `Ve frontě — ${job.queuePosition}. v pořadí` : 'Ve frontě...';
   else if (running) topStatus = 'Zpracovávám...';
   else if (job.status === 'done') topStatus = 'Mapa vygenerována ✓';
   else if (job.status === 'error') topStatus = 'Chyba!';

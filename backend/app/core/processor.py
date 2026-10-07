@@ -168,6 +168,237 @@ def load_dmr_grid(dmr_path: str, target_crs_code: str,
 
 
 # ---------------------------------------------------------------------------
+# Jednorázové načtení LAZ pro všechny dlaždice (místo čtení celého souboru
+# znovu pro každou dlaždici). Body se během jediného průchodu rozdělí do
+# dočasných binárních souborů po dlaždicích (float64 x,y,z) — v RAM se
+# nedrží celé mračno, jen jeden chunk.
+# ---------------------------------------------------------------------------
+
+# Stejné ředění jako dřív v load_dmr_grid/load_dmp_grid: podíl se počítá
+# z počtu bodů CELÉHO souboru (max ~2,5 M bodů ze souboru). Výsledky tak
+# zůstávají srovnatelné s předchozí verzí; zvýšení hustoty je samostatné
+# rozhodnutí kvalita × čas.
+MAX_POINTS = 2_500_000
+
+
+def _source_crs_of(fh):
+    """CRS z hlavičky LAZ; GUGiK LAZ CRS nemá → detekce z rozsahu souřadnic."""
+    try:
+        source_crs = fh.header.parse_crs()
+        if source_crs is None:
+            raise ValueError("No CRS")
+    except Exception:
+        source_crs = CRS.from_epsg(5514)
+    # EPSG:5514 má záporné souřadnice; EPSG:2180 kladné ~140k-900k
+    if source_crs.equals(CRS.from_epsg(5514)) and float(fh.header.x_min) > 0:
+        source_crs = CRS.from_epsg(2180)
+    return source_crs
+
+
+def split_points_to_tiles(laz_path: str, target_crs_code: str, tile_boxes: list,
+                          out_dir: str, kind: str = "dtm", margin: float = 0.0,
+                          max_points: int = MAX_POINTS,
+                          progress_cb=None) -> list:
+    """
+    Přečte LAZ JEDNOU a body rozdělí do souborů po dlaždicích.
+
+    kind: "dtm" → jen terén (třídy 2, 8); "dsm" → vše kromě šumu (třída 7)
+    tile_boxes: [(x0, x1, y0, y1), ...] v cílovém CRS (bbox dlaždice vč. překryvu)
+    margin: rozšíření bboxu dlaždice (m) — u DSM, ať interpolace nemá díry u okraje
+    Vrací seznam cest (jedna na dlaždici) k souborům s float64 trojicemi x,y,z.
+
+    Ředění bodů: fraction = max_points / počet bodů v souboru (jako dřív).
+    """
+    def _cb(msg):
+        print(f"[processor] {msg}")
+        if progress_cb:
+            progress_cb(msg)
+
+    os.makedirs(out_dir, exist_ok=True)
+    boxes = [(x0 - margin, x1 + margin, y0 - margin, y1 + margin) for (x0, x1, y0, y1) in tile_boxes]
+    paths = [os.path.join(out_dir, f"{kind}_{i}.bin") for i in range(len(boxes))]
+    files = [open(p, "wb") for p in paths]
+    counts = [0] * len(boxes)
+
+    gx0 = min(b[0] for b in boxes); gx1 = max(b[1] for b in boxes)
+    gy0 = min(b[2] for b in boxes); gy1 = max(b[3] for b in boxes)
+
+    try:
+        with laspy.open(laz_path) as fh:
+            source_crs = _source_crs_of(fh)
+            transformer = None
+            try:
+                target_crs_obj = CRS.from_string(target_crs_code)
+                if source_crs != target_crs_obj:
+                    transformer = Transformer.from_crs(source_crs, target_crs_obj, always_xy=True)
+            except Exception as e:
+                print(f"[processor] Varování transformace {kind}: {e}")
+
+            hdr = fh.header
+            total_points = hdr.point_count
+            fraction = min(1.0, max_points / total_points) if total_points > 0 else 1.0
+            _cb(f"{kind.upper()}: {total_points:,} bodů v souboru, ředění {fraction:.2f}")
+            cx_is_easting = None   # detekce prohozených os (outcome-based, jednou za soubor)
+
+            for chunk in fh.chunk_iterator(1_000_000):
+                clas = np.array(chunk.classification)
+                keep = ((clas == 2) | (clas == 8)) if kind == "dtm" else (clas != 7)
+                n_keep = int(np.count_nonzero(keep))
+                if n_keep == 0:
+                    continue
+
+                cx = np.array(chunk.x[keep])
+                cy = np.array(chunk.y[keep])
+                cz = np.array(chunk.z[keep])
+                if fraction < 1.0:
+                    rnd = np.random.rand(len(cx)) < fraction
+                    cx, cy, cz = cx[rnd], cy[rnd], cz[rnd]
+                if len(cx) == 0:
+                    continue
+                if transformer:
+                    cx, cy = transformer.transform(cx, cy)
+
+                if cx_is_easting is None:
+                    n_sample = min(20_000, len(cx))
+                    sx, sy = cx[:n_sample], cy[:n_sample]
+                    hits_normal = int(np.sum((sx >= gx0) & (sx <= gx1) & (sy >= gy0) & (sy <= gy1)))
+                    hits_swapped = int(np.sum((sy >= gx0) & (sy <= gx1) & (sx >= gy0) & (sx <= gy1)))
+                    cx_is_easting = True if (hits_normal == 0 and hits_swapped == 0) else hits_normal >= hits_swapped
+                    _cb(f"Detekce os {kind.upper()}: chunk.x={'easting' if cx_is_easting else 'northing'} "
+                        f"(shod: normal={hits_normal}, swapped={hits_swapped})")
+                if not cx_is_easting:
+                    cx, cy = cy, cx
+
+                for i, (bx0, bx1, by0, by1) in enumerate(boxes):
+                    m = (cx >= bx0) & (cx <= bx1) & (cy >= by0) & (cy <= by1)
+                    k = int(np.count_nonzero(m))
+                    if k:
+                        files[i].write(np.column_stack((cx[m], cy[m], cz[m])).astype(np.float64).tobytes())
+                        counts[i] += k
+    finally:
+        for f in files:
+            f.close()
+
+    _cb(f"{kind.upper()} načteno jednou pro {len(boxes)} dlaždic: {sum(counts):,} bodů")
+    return paths
+
+
+def read_tile_points(path: str) -> np.ndarray:
+    """Načte body dlaždice (N×3 float64). Prázdný/neexistující soubor → (0,3)."""
+    if not path or not os.path.exists(path) or os.path.getsize(path) == 0:
+        return np.empty((0, 3))
+    return np.fromfile(path, dtype=np.float64).reshape(-1, 3)
+
+
+def _grid_axes(min_x, max_x, min_y, max_y, pixel_size):
+    """
+    Mřížka jako v np.mgrid[min_x:max_x:pixel_size, min_y:max_y:pixel_size],
+    ale grid_x/grid_y jsou jen broadcast POHLEDY (bez alokace 2× ~100 MB).
+    Pro čtení (.shape, .min(), indexace, aritmetika) se chovají jako plné pole.
+    """
+    xs = np.mgrid[min_x:max_x:pixel_size]
+    ys = np.mgrid[min_y:max_y:pixel_size]
+    shape = (len(xs), len(ys))
+    grid_x = np.broadcast_to(xs[:, None], shape)
+    grid_y = np.broadcast_to(ys[None, :], shape)
+    return grid_x, grid_y, xs, ys
+
+
+def _eval_blocks(interp, xs_shifted, ys_shifted, block_rows=256):
+    """Vyhodnotí interpolátor po pásech řádků — bez obřího pole souřadnic všech pixelů."""
+    out = np.empty((len(xs_shifted), len(ys_shifted)), dtype=np.float64)
+    for i0 in range(0, len(xs_shifted), block_rows):
+        i1 = min(i0 + block_rows, len(xs_shifted))
+        gx = np.broadcast_to(xs_shifted[i0:i1, None], (i1 - i0, len(ys_shifted)))
+        gy = np.broadcast_to(ys_shifted[None, :], (i1 - i0, len(ys_shifted)))
+        out[i0:i1] = interp(gx, gy)
+    return out
+
+
+def dtm_grids_from_points(pts_xyz: np.ndarray, pixel_size: float = 0.5,
+                          sigma_smooth: float = 4, progress_cb=None) -> tuple:
+    """
+    Stejný výsledek jako load_dmr_grid() + lineární DTM z _process_tile(),
+    ale s JEDNOU Delaunayovou triangulací sdílenou pro kubickou i lineární
+    interpolaci (dřív se stejná triangulace stavěla dvakrát).
+
+    Vrací: (dmr_grid_cubic_smoothed, dmr_grid_linear, grid_x, grid_y, extent, points, z)
+    """
+    from scipy.spatial import Delaunay
+    from scipy.interpolate import CloughTocher2DInterpolator, LinearNDInterpolator, NearestNDInterpolator
+
+    def _cb(msg):
+        print(f"[processor] {msg}")
+        if progress_cb:
+            progress_cb(msg)
+
+    if len(pts_xyz) == 0:
+        raise ValueError("DTM neobsahuje žádné body klasifikované jako terén (třídy 2, 8).")
+
+    x, y, z = pts_xyz[:, 0], pts_xyz[:, 1], pts_xyz[:, 2]
+    _cb(f"DTM dlaždice: {len(x):,} bodů")
+
+    buffer_dist = pixel_size
+    min_x, max_x = x.min() - buffer_dist, x.max() + buffer_dist
+    min_y, max_y = y.min() - buffer_dist, y.max() + buffer_dist
+    extent = (min_x, max_x, min_y, max_y)
+    grid_x, grid_y, xs, ys = _grid_axes(min_x, max_x, min_y, max_y, pixel_size)
+
+    points = np.vstack((x, y)).T
+    valid = np.isfinite(points).all(axis=1) & np.isfinite(z)
+    points = points[valid]
+    z = z[valid]
+
+    shift_x = np.mean(points[:, 0])
+    shift_y = np.mean(points[:, 1])
+    pts_shifted = points - np.array([shift_x, shift_y])
+    xs_sh, ys_sh = xs - shift_x, ys - shift_y
+
+    _cb("Triangulace DTM (jednou pro cubic i linear)...")
+    tri = Delaunay(pts_shifted)
+
+    _cb("Interpoluji DTM (cubic)...")
+    dmr_grid = _eval_blocks(CloughTocher2DInterpolator(tri, z), xs_sh, ys_sh)
+    mask_nan = np.isnan(dmr_grid)
+    if np.any(mask_nan):
+        # Nearest jen pro chybějící pixely (dřív se počítal pro celý grid)
+        ii, jj = np.nonzero(mask_nan)
+        dmr_grid[mask_nan] = NearestNDInterpolator(pts_shifted, z)(xs_sh[ii], ys_sh[jj])
+    dmr_grid = gaussian_filter(dmr_grid, sigma=sigma_smooth)
+
+    _cb("Interpoluji DTM (linear)...")
+    dmr_linear = _eval_blocks(LinearNDInterpolator(tri, z), xs_sh, ys_sh)
+    del tri
+    if np.isnan(dmr_linear).all():
+        dmr_linear = _eval_blocks(NearestNDInterpolator(pts_shifted, z), xs_sh, ys_sh)
+
+    return dmr_grid, dmr_linear, grid_x, grid_y, extent, points, z
+
+
+def dsm_grid_from_points(pts_xyz: np.ndarray, grid_x: np.ndarray, grid_y: np.ndarray) -> np.ndarray:
+    """Lineární interpolace DSM bodů DLAŽDICE na mřížku DTM (dřív body celého souboru)."""
+    from scipy.interpolate import LinearNDInterpolator, NearestNDInterpolator
+
+    if len(pts_xyz) == 0:
+        raise ValueError("DSM neobsahuje platná data.")
+    pts = pts_xyz[:, :2]
+    z = pts_xyz[:, 2]
+    valid = np.isfinite(pts).all(axis=1) & np.isfinite(z)
+    pts, z = pts[valid], z[valid]
+
+    xs = grid_x[:, 0]
+    ys = grid_y[0, :]
+    shift_x, shift_y = np.mean(pts[:, 0]), np.mean(pts[:, 1])
+    pts_shifted = pts - np.array([shift_x, shift_y])
+    xs_sh, ys_sh = xs - shift_x, ys - shift_y
+
+    dmp_grid = _eval_blocks(LinearNDInterpolator(pts_shifted, z), xs_sh, ys_sh)
+    if np.isnan(dmp_grid).all():
+        dmp_grid = _eval_blocks(NearestNDInterpolator(pts_shifted, z), xs_sh, ys_sh)
+    return dmp_grid
+
+
+# ---------------------------------------------------------------------------
 # DSM (DMP) loading
 # ---------------------------------------------------------------------------
 
