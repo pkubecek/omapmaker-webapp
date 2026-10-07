@@ -15,7 +15,7 @@ const S = {
   }),
   overlay: (open) => ({
     position: 'absolute', inset: 0,
-    background: 'rgba(26,31,46,0.3)',
+    background: 'rgba(15,42,54,0.3)',
     zIndex: 199,
     display: open ? 'block' : 'none',
   }),

@@ -7,34 +7,35 @@ const styles = {
     justifyContent: 'space-between',
     padding: '0 16px',
     height: 48,
-    background: 'var(--ink)',
-    color: '#fff',
-    fontFamily: 'var(--mono)',
+    background: '#fff',
+    color: 'var(--text-primary)',
+    fontFamily: 'var(--heading)',
     fontSize: 13,
     flexShrink: 0,
-    borderBottom: '1px solid rgba(255,255,255,0.06)',
+    borderBottom: '3px solid transparent',
+    borderImage: 'var(--brand-gradient) 1',
   },
   brand: {
     display: 'flex',
     alignItems: 'center',
-    gap: 8,
-    fontWeight: 500,
-    letterSpacing: '0.06em',
+    gap: 10,
+    fontWeight: 700,
+    fontSize: 15,
+    letterSpacing: '0.01em',
   },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: '50%',
-    background: 'var(--rock)',
+  logo: {
+    width: 28,
+    height: 28,
+    borderRadius: 7,
     flexShrink: 0,
   },
   version: { opacity: 0.35, fontWeight: 400 },
-  status: { fontSize: 11, opacity: 0.5, fontFamily: 'var(--mono)' },
+  status: { fontSize: 11, color: 'var(--text-secondary)', fontFamily: 'var(--mono)' },
   actions: { display: 'flex', gap: 8 },
   btn: {
     background: 'none',
-    border: '0.5px solid rgba(255,255,255,0.22)',
-    color: '#fff',
+    border: '0.5px solid var(--panel-border)',
+    color: 'var(--text-primary)',
     padding: '5px 12px',
     borderRadius: 'var(--radius-sm)',
     fontSize: 11,
@@ -46,8 +47,9 @@ const styles = {
     transition: 'border-color 0.15s',
   },
   btnPrimary: {
-    background: 'var(--rock)',
-    borderColor: 'var(--rock)',
+    background: 'var(--brand-gradient)',
+    borderColor: 'transparent',
+    color: '#fff',
   },
   btnDisabled: {
     opacity: 0.4,
@@ -59,7 +61,7 @@ export default function Topbar({ status }) {
   return (
     <div style={styles.bar}>
       <div style={styles.brand}>
-        <span style={styles.dot} />
+        <img src={`${process.env.PUBLIC_URL}/logo64.png`} alt="" style={styles.logo} />
         OMapMaker
         <span style={styles.version}></span>
       </div>

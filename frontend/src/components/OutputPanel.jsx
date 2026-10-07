@@ -44,7 +44,7 @@ const S = {
   },
   barWrap: {
     flex: 1,
-    background: '#f0ead6',
+    background: 'var(--paper-dark)',
     borderRadius: 3,
     height: 4,
     overflow: 'hidden',
@@ -52,7 +52,7 @@ const S = {
   barFill: {
     height: '100%',
     borderRadius: 3,
-    background: 'var(--forest)',
+    background: 'var(--brand-gradient)',
     transition: 'width 0.5s ease',
   },
   barFillError: { background: '#c96a3a' },
@@ -121,7 +121,7 @@ const S = {
     border: '0.5px solid var(--panel-border)', borderRadius: 'var(--radius-sm)',
     background: 'none', color: 'var(--text-secondary)', cursor: 'pointer',
   },
-  toggleBtnActive: { background: '#f0ead6', color: 'var(--text-primary)' },
+  toggleBtnActive: { background: 'var(--accent-soft)', color: 'var(--accent-strong)' },
   dlBtn: {
     display: 'flex',
     alignItems: 'center',
@@ -159,9 +159,9 @@ function RunBtn({ disabled, onClick, children }) {
       style={{
         width: '100%', padding: '9px 0',
         borderRadius: 'var(--radius-md)', border: 'none',
-        background: disabled ? 'var(--panel-border)' : hovered ? '#c05a2a' : 'var(--rock)',
+        background: disabled ? 'var(--panel-border)' : hovered ? 'var(--brand-gradient-hover)' : 'var(--brand-gradient)',
         color: disabled ? 'var(--text-muted)' : '#fff',
-        fontSize: 12, fontFamily: 'var(--sans)', fontWeight: 500,
+        fontSize: 12, fontFamily: 'var(--sans)', fontWeight: 600,
         cursor: disabled ? 'not-allowed' : 'pointer',
         transition: 'background 0.15s',
         letterSpacing: '0.02em',
@@ -185,11 +185,11 @@ function DlBtn({ href, download, disabled, primary, onClick, children }) {
     transition: 'background 0.15s, border-color 0.15s, opacity 0.15s',
     opacity: disabled ? 0.38 : 1,
     ...(primary ? {
-      background: hovered && !disabled ? '#2d3448' : 'var(--ink)',
+      background: hovered && !disabled ? 'var(--ink-light)' : 'var(--ink)',
       color: '#fff',
       borderColor: 'var(--ink)',
     } : {
-      background: hovered && !disabled ? 'var(--color-background-secondary, #f5f4f0)' : 'none',
+      background: hovered && !disabled ? 'var(--surface-hover)' : 'none',
       color: 'var(--text-primary)',
     }),
   };

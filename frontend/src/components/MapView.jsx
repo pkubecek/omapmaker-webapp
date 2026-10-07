@@ -9,7 +9,7 @@ import EUROPE_BORDERS from './europeBorders';
 if (typeof document !== 'undefined') {
   const s = document.createElement('style');
   s.textContent = [
-    '.map-country-tooltip{background:rgba(26,31,46,0.82);color:#fff;border:none;',
+    '.map-country-tooltip{background:rgba(15,42,54,0.82);color:#fff;border:none;',
     'box-shadow:none;font-family:monospace;font-size:11px;padding:3px 8px;',
     'border-radius:4px;white-space:nowrap;}',
     '.map-country-tooltip::before{display:none;}',
@@ -39,7 +39,7 @@ const S = {
     padding: '4px 10px', fontSize: 11, cursor: 'pointer',
     color: 'var(--text-secondary)', fontFamily: 'var(--sans)', transition: 'background 0.15s',
   },
-  toolBtnActive: { background: '#f0ead6', color: 'var(--text-primary)', borderColor: '#d0c8b8' },
+  toolBtnActive: { background: 'var(--accent-soft)', color: 'var(--accent-strong)', borderColor: 'var(--accent-soft-strong)' },
   divider: { width: '0.5px', height: 16, background: 'var(--panel-border)', margin: '0 2px', flexShrink: 0 },
   bboxInfo: { fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--text-secondary)' },
   mapContainer: { flex: 1, position: 'relative' },
@@ -54,7 +54,7 @@ const S = {
     border: 'none', padding: '6px 10px', fontSize: 11, cursor: 'pointer',
     color: 'var(--text-secondary)', fontFamily: 'var(--sans)', transition: 'background 0.15s',
   },
-  toolCtrlBtnActive: { background: '#f0ead6', color: 'var(--text-primary)' },
+  toolCtrlBtnActive: { background: 'var(--accent-soft)', color: 'var(--accent-strong)' },
   rightStack: {
     position: 'absolute', top: 10, right: 10, zIndex: 1000,
     display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8,
@@ -76,7 +76,7 @@ const S = {
     border: 'none', padding: '6px 10px', fontSize: 11, cursor: 'pointer',
     color: 'var(--text-secondary)', fontFamily: 'var(--sans)', transition: 'background 0.15s',
   },
-  baseLayerBtnActive: { background: '#f0ead6', color: 'var(--text-primary)' },
+  baseLayerBtnActive: { background: 'var(--accent-soft)', color: 'var(--accent-strong)' },
   zoomCtrl: {
     display: 'flex', flexDirection: 'column', background: 'rgba(255,255,255,0.92)',
     border: '0.5px solid var(--panel-border)', borderRadius: 'var(--radius-sm)',
@@ -102,15 +102,15 @@ const S = {
   },
   hint: {
     position: 'absolute', bottom: 12, left: '50%', transform: 'translateX(-50%)',
-    background: 'rgba(26,31,46,0.82)', color: '#fff', fontFamily: 'var(--mono)',
+    background: 'rgba(15,42,54,0.82)', color: '#fff', fontFamily: 'var(--mono)',
     fontSize: 11, padding: '5px 14px', borderRadius: 20, pointerEvents: 'none',
     whiteSpace: 'nowrap', zIndex: 1000,
   },
   // ČÚZK inline panel
   cuzkPanel: {
     display: 'flex', alignItems: 'center', gap: 8,
-    padding: '6px 12px', background: '#f6f9f3',
-    borderBottom: '0.5px solid #d0e0c0', flexShrink: 0, flexWrap: 'wrap',
+    padding: '6px 12px', background: 'var(--surface)',
+    borderBottom: '0.5px solid var(--panel-border)', flexShrink: 0, flexWrap: 'wrap',
   },
   cuzkLabel: { fontSize: 11, color: 'var(--text-secondary)', fontFamily: 'var(--mono)' },
   cuzkSelect: {
@@ -120,7 +120,7 @@ const S = {
   },
   cuzkBtn: {
     display: 'flex', alignItems: 'center', gap: 4, padding: '5px 12px',
-    borderRadius: 'var(--radius-sm)', border: 'none', background: 'var(--rock)',
+    borderRadius: 'var(--radius-sm)', border: 'none', background: 'var(--brand-gradient)',
     color: '#fff', fontSize: 11, fontFamily: 'var(--mono)', cursor: 'pointer',
     transition: 'opacity 0.15s',
   },
@@ -128,9 +128,9 @@ const S = {
     flex: 1, display: 'flex', alignItems: 'center', gap: 8,
   },
   cuzkBarWrap: {
-    flex: 1, height: 4, background: '#e0ddd5', borderRadius: 2, overflow: 'hidden', minWidth: 60,
+    flex: 1, height: 4, background: 'var(--panel-border)', borderRadius: 2, overflow: 'hidden', minWidth: 60,
   },
-  cuzkBarFill: { height: '100%', background: 'var(--forest)', borderRadius: 2, transition: 'width 0.4s' },
+  cuzkBarFill: { height: '100%', background: 'var(--brand-gradient)', borderRadius: 2, transition: 'width 0.4s' },
   cuzkMsg: { fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--text-secondary)', whiteSpace: 'nowrap' },
 };
 
@@ -218,14 +218,14 @@ function CountryDropdown({ country, disabled, onChange }) {
                 width: '100%', padding: '8px 12px',
                 border: 'none',
                 borderBottom: i < DATA_SOURCES.length - 1 ? '0.5px solid var(--panel-border)' : 'none',
-                background: src.key === country ? '#f0ead6' : 'transparent',
+                background: src.key === country ? 'var(--accent-soft)' : 'transparent',
                 cursor: src.available ? 'pointer' : 'not-allowed',
                 opacity: src.available ? 1 : 0.38,
                 textAlign: 'left',
                 transition: 'background 0.12s',
               }}
-              onMouseEnter={e => { if (src.available) e.currentTarget.style.background = src.key === country ? '#e8e0cc' : '#fafaf8'; }}
-              onMouseLeave={e => { e.currentTarget.style.background = src.key === country ? '#f0ead6' : 'transparent'; }}
+              onMouseEnter={e => { if (src.available) e.currentTarget.style.background = src.key === country ? 'var(--accent-soft-strong)' : 'var(--surface)'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = src.key === country ? 'var(--accent-soft)' : 'transparent'; }}
             >
               <span style={{ fontSize: 18, lineHeight: 1 }}>{src.flag}</span>
               <div>
@@ -367,7 +367,7 @@ export default function MapView({ bbox, onBboxChange, onCuzkComplete, onHelp, is
     if (bbox) {
       rectRef.current = L.rectangle(
         [[bbox.min_lat, bbox.min_lon], [bbox.max_lat, bbox.max_lon]],
-        { color: '#c96a3a', weight: 2, dashArray: '6 4', fillColor: '#c96a3a', fillOpacity: 0.07 }
+        { color: '#1DA8D8', weight: 2, dashArray: '6 4', fillColor: '#1DA8D8', fillOpacity: 0.07 }
       ).addTo(map);
     }
   }, [bbox]);
@@ -432,7 +432,7 @@ export default function MapView({ bbox, onBboxChange, onCuzkComplete, onHelp, is
       if (!drawState.current.drawing || !startLatLng) return;
       if (tempRect) tempRect.remove();
       tempRect = L.rectangle([startLatLng, e.latlng], {
-        color: '#c96a3a', weight: 1.5, dashArray: '5 3', fillOpacity: 0.05,
+        color: '#1DA8D8', weight: 1.5, dashArray: '5 3', fillOpacity: 0.05,
       }).addTo(map);
     }
     function onMouseUp(e) {
@@ -448,7 +448,7 @@ export default function MapView({ bbox, onBboxChange, onCuzkComplete, onHelp, is
       if (b.max_lat - b.min_lat < 0.001 || b.max_lon - b.min_lon < 0.001) { startLatLng = null; return; }
       rectRef.current = L.rectangle(
         [[b.min_lat, b.min_lon], [b.max_lat, b.max_lon]],
-        { color: '#c96a3a', weight: 2, dashArray: '6 4', fillOpacity: 0.07 }
+        { color: '#1DA8D8', weight: 2, dashArray: '6 4', fillOpacity: 0.07 }
       ).addTo(map);
       onBboxChange(b);
       startLatLng = null;
@@ -471,7 +471,7 @@ export default function MapView({ bbox, onBboxChange, onCuzkComplete, onHelp, is
       const latlng = touchToLatLng(e.touches[0]);
       if (tempRect) tempRect.remove();
       tempRect = L.rectangle([startLatLng, latlng], {
-        color: '#c96a3a', weight: 2, dashArray: '5 3', fillOpacity: 0.06,
+        color: '#1DA8D8', weight: 2, dashArray: '5 3', fillOpacity: 0.06,
       }).addTo(map);
     }
     function onTouchEnd(e) {
@@ -490,7 +490,7 @@ export default function MapView({ bbox, onBboxChange, onCuzkComplete, onHelp, is
       if (b.max_lat - b.min_lat < 0.001 || b.max_lon - b.min_lon < 0.001) { startLatLng = null; return; }
       rectRef.current = L.rectangle(
         [[b.min_lat, b.min_lon], [b.max_lat, b.max_lon]],
-        { color: '#c96a3a', weight: 2, dashArray: '6 4', fillOpacity: 0.07 }
+        { color: '#1DA8D8', weight: 2, dashArray: '6 4', fillOpacity: 0.07 }
       ).addTo(map);
       onBboxChange(b);
       startLatLng = null;

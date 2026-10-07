@@ -28,7 +28,7 @@ const S = {
     padding: '14px 12px',
     textAlign: 'center',
     cursor: 'pointer',
-    background: '#fafaf8',
+    background: 'var(--surface)',
     transition: 'border-color 0.15s',
     marginBottom: 6,
   },
@@ -46,13 +46,13 @@ const S = {
     gap: 8,
     padding: '8px 10px',
     borderRadius: 'var(--radius-md)',
-    background: '#f6f9f3',
-    border: '0.5px solid #d0e0c0',
+    background: '#EFFAF4',
+    border: '0.5px solid #C4EAD5',
     marginBottom: 6,
   },
   fileLoadedDsm: {
-    background: '#f3f8fb',
-    border: '0.5px solid #b8d4e4',
+    background: '#EAF6FB',
+    border: '0.5px solid #BFE3F1',
   },
   fileName: {
     flex: 1,
@@ -86,7 +86,7 @@ const S = {
     padding: '3px 6px',
     borderRadius: 'var(--radius-sm)',
     border: '0.5px solid var(--panel-border)',
-    background: '#fafaf8',
+    background: 'var(--surface)',
     color: 'var(--text-primary)',
     cursor: 'pointer',
   },
@@ -96,7 +96,7 @@ const S = {
     padding: '3px 6px',
     borderRadius: 'var(--radius-sm)',
     border: '0.5px solid var(--panel-border)',
-    background: '#fafaf8',
+    background: 'var(--surface)',
     width: 64,
     textAlign: 'right',
     color: 'var(--text-primary)',
@@ -140,7 +140,7 @@ const S = {
     minHeight: 52,
     padding: 6,
     marginBottom: 6,
-    background: '#fafaf8',
+    background: 'var(--surface)',
   },
   optionalItem: {
     display: 'flex',
@@ -258,7 +258,7 @@ function CollapsibleSection({ label, defaultOpen = false, children }) {
           width: '100%', padding: '12px 16px', background: 'none', border: 'none',
           cursor: 'pointer', textAlign: 'left',
         }}
-        onMouseEnter={(e) => e.currentTarget.style.background = '#f5f4f0'}
+        onMouseEnter={(e) => e.currentTarget.style.background = 'var(--surface-hover)'}
         onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
       >
         <span style={{
@@ -332,7 +332,7 @@ function FileDropZone({ id, label, icon, accept, file, onFile, onRemove, colorSt
       onClick={() => ref.current.click()}
       onDragOver={(e) => e.preventDefault()}
       onDrop={handleDrop}
-      onMouseEnter={(e) => e.currentTarget.style.borderColor = 'var(--rock)'}
+      onMouseEnter={(e) => e.currentTarget.style.borderColor = 'var(--accent)'}
       onMouseLeave={(e) => e.currentTarget.style.borderColor = 'var(--panel-border)'}
     >
       <div style={S.dropIcon}>{icon}</div>
@@ -588,7 +588,7 @@ export default function SettingsPanel({ settings, onSettings, files, onFiles, is
         </div>
         <button style={S.addBtn}
           onClick={() => zabRef.current.click()}
-          onMouseEnter={(e) => e.currentTarget.style.background = '#f5f4f0'}
+          onMouseEnter={(e) => e.currentTarget.style.background = 'var(--surface-hover)'}
           onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
         >
           + Přidat ZABAGED® soubory
@@ -627,7 +627,7 @@ export default function SettingsPanel({ settings, onSettings, files, onFiles, is
         </div>
         <button style={S.addBtn}
           onClick={() => isomRef.current.click()}
-          onMouseEnter={(e) => e.currentTarget.style.background = '#f5f4f0'}
+          onMouseEnter={(e) => e.currentTarget.style.background = 'var(--surface-hover)'}
           onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
         >
           + Přidat ISOM vrstvy

@@ -5,7 +5,7 @@ const S = {
   overlay: {
     position: 'fixed',
     inset: 0,
-    background: 'rgba(26,31,46,0.55)',
+    background: 'rgba(15,42,54,0.55)',
     zIndex: 9000,
     display: 'flex',
     alignItems: 'center',
@@ -73,22 +73,22 @@ const S = {
     padding: '5px 8px',
     border: '0.5px solid var(--panel-border)',
     borderRadius: 'var(--radius-sm)',
-    background: '#fafaf8',
+    background: 'var(--surface)',
   },
   barWrap: {
-    background: '#f0ead6',
+    background: 'var(--paper-dark)',
     borderRadius: 3,
     height: 5,
     overflow: 'hidden',
     marginBottom: 4,
   },
-  barFill: { height: '100%', borderRadius: 3, background: 'var(--forest)', transition: 'width 0.4s' },
+  barFill: { height: '100%', borderRadius: 3, background: 'var(--brand-gradient)', transition: 'width 0.4s' },
   dlBtn: {
     marginTop: 'auto',
     padding: '9px 0',
     borderRadius: 'var(--radius-md)',
     border: 'none',
-    background: 'var(--rock)',
+    background: 'var(--brand-gradient)',
     color: '#fff',
     fontSize: 12,
     fontFamily: 'var(--sans)',
@@ -102,7 +102,7 @@ const S = {
     bottom: 10,
     left: '50%',
     transform: 'translateX(-50%)',
-    background: 'rgba(26,31,46,0.8)',
+    background: 'rgba(15,42,54,0.8)',
     color: '#fff',
     fontFamily: 'var(--mono)',
     fontSize: 10,
@@ -151,7 +151,7 @@ export default function CuzkDownloader({ onComplete, onClose }) {
       if (!startLl) return;
       if (tmpRect) tmpRect.remove();
       tmpRect = L.rectangle([startLl, e.latlng], {
-        color: '#c96a3a', weight: 1.5, dashArray: '5 3', fillOpacity: 0.06,
+        color: '#1DA8D8', weight: 1.5, dashArray: '5 3', fillOpacity: 0.06,
       }).addTo(map);
     });
     map.on('mouseup', (e) => {
@@ -165,7 +165,7 @@ export default function CuzkDownloader({ onComplete, onClose }) {
       };
       if (b.max_lat - b.min_lat < 0.005 || b.max_lon - b.min_lon < 0.005) { startLl = null; return; }
       rectRef.current = L.rectangle([[b.min_lat, b.min_lon], [b.max_lat, b.max_lon]], {
-        color: '#c96a3a', weight: 2, dashArray: '6 4', fillOpacity: 0.07,
+        color: '#1DA8D8', weight: 2, dashArray: '6 4', fillOpacity: 0.07,
       }).addTo(map);
       setBbox(b);
       const kmLat = ((b.max_lat - b.min_lat) * 111).toFixed(1);

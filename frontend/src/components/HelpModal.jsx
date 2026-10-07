@@ -36,7 +36,7 @@ const STEPS = [
 const S = {
   overlay: {
     position: 'fixed', inset: 0,
-    background: 'rgba(26,31,46,0.6)',
+    background: 'rgba(15,42,54,0.6)',
     zIndex: 9999,
     display: 'flex', alignItems: 'center', justifyContent: 'center',
   },
@@ -54,14 +54,14 @@ const S = {
   header: {
     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
     padding: '18px 24px 14px',
-    borderBottom: '0.5px solid #e2ddd3',
-    background: '#1a1f2e',
+    borderBottom: 'none',
+    background: 'var(--brand-gradient)',
     color: '#fff',
   },
   headerLeft: { display: 'flex', alignItems: 'center', gap: 10 },
-  dot: { width: 8, height: 8, borderRadius: '50%', background: '#c96a3a', flexShrink: 0 },
-  title: { fontFamily: 'IBM Plex Mono, monospace', fontSize: 14, fontWeight: 500, letterSpacing: '0.04em' },
-  subtitle: { fontSize: 11, opacity: 0.5, fontFamily: 'IBM Plex Mono, monospace', marginTop: 2 },
+  dot: { width: 8, height: 8, borderRadius: '50%', background: '#fff', flexShrink: 0 },
+  title: { fontFamily: 'var(--heading)', fontSize: 15, fontWeight: 700, letterSpacing: '0.01em' },
+  subtitle: { fontSize: 11, opacity: 0.85, fontFamily: 'IBM Plex Mono, monospace', marginTop: 2 },
   closeBtn: {
     background: 'none', border: 'none', color: '#fff',
     fontSize: 20, cursor: 'pointer', opacity: 0.6, lineHeight: 1,
@@ -73,26 +73,26 @@ const S = {
   },
   step: {
     display: 'flex', gap: 12, padding: '14px',
-    borderRadius: 8, background: '#fafaf8',
-    border: '0.5px solid #e2ddd3',
+    borderRadius: 8, background: 'var(--surface)',
+    border: '0.5px solid var(--panel-border)',
   },
   stepIcon: {
     fontSize: 22, flexShrink: 0, width: 36, height: 36,
     display: 'flex', alignItems: 'center', justifyContent: 'center',
-    background: '#f0ead6', borderRadius: 8,
+    background: 'var(--accent-soft)', borderRadius: 8,
   },
   stepNum: {
     fontFamily: 'IBM Plex Mono, monospace', fontSize: 9,
-    color: '#c96a3a', fontWeight: 500, letterSpacing: '0.06em',
+    color: 'var(--accent-strong)', fontWeight: 600, letterSpacing: '0.06em',
     marginBottom: 3,
   },
-  stepTitle: { fontSize: 12, fontWeight: 500, marginBottom: 5, color: '#1a1f2e' },
+  stepTitle: { fontSize: 12, fontWeight: 500, marginBottom: 5, color: 'var(--text-primary)' },
   stepDesc: { fontSize: 11, color: '#6b7280', lineHeight: 1.55 },
   footer: {
     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
     padding: '12px 24px',
-    borderTop: '0.5px solid #e2ddd3',
-    background: '#fafaf8',
+    borderTop: '0.5px solid var(--panel-border)',
+    background: 'var(--surface)',
   },
   checkLabel: {
     display: 'flex', alignItems: 'center', gap: 6,
@@ -100,13 +100,13 @@ const S = {
   },
   startBtn: {
     padding: '8px 20px', borderRadius: 6, border: 'none',
-    background: '#1a1f2e', color: '#fff',
+    background: 'var(--brand-gradient)', color: '#fff',
     fontSize: 12, cursor: 'pointer', fontFamily: 'inherit',
     transition: 'background 0.15s',
   },
   tipBox: {
     marginTop: 14, padding: '10px 14px',
-    background: '#f3f8fb', border: '0.5px solid #c8e0ec',
+    background: '#EAF6FB', border: '0.5px solid #BFE3F1',
     borderRadius: 8, fontSize: 11, color: '#5a9ab5', lineHeight: 1.5,
   },
 };
@@ -167,8 +167,8 @@ export default function HelpModal({ onClose }) {
           <button
             style={S.startBtn}
             onClick={handleClose}
-            onMouseEnter={(e) => e.currentTarget.style.background = '#2d3448'}
-            onMouseLeave={(e) => e.currentTarget.style.background = '#1a1f2e'}
+            onMouseEnter={(e) => e.currentTarget.style.background = 'var(--brand-gradient-hover)'}
+            onMouseLeave={(e) => e.currentTarget.style.background = 'var(--brand-gradient)'}
           >
             Začít →
           </button>
