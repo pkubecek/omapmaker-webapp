@@ -375,7 +375,7 @@ export default function OutputPanel({ job, logLines, canRun, running, onRun, onC
   return (
     <div style={panelStyle}>
       {/* Generovat mapu */}
-      <div style={{ padding: '12px 16px', borderBottom: '0.5px solid var(--panel-border)' }}>
+      <div data-tour="run" style={{ padding: '12px 16px', borderBottom: '0.5px solid var(--panel-border)' }}>
         <RunBtn disabled={!canRun || running} onClick={onRun}>
           {running ? '⏳ Zpracovávám...' : '▶ Generovat mapu'}
         </RunBtn>
@@ -440,7 +440,7 @@ export default function OutputPanel({ job, logLines, canRun, running, onRun, onC
       </div>
 
       {/* Output */}
-      <div style={S.outputSection}>
+      <div data-tour="output" style={S.outputSection}>
         <div style={S.sectionLabel}>Výstup</div>
 
         <div

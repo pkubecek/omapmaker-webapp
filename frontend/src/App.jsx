@@ -1,10 +1,11 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import Topbar from './components/Topbar';
 import SettingsPanel from './components/SettingsPanel';
 import MapView from './components/MapView';
 import OutputPanel from './components/OutputPanel';
 import CuzkDownloader from './components/CuzkDownloader';
 import HelpModal from './components/HelpModal';
+import Tour, { TOUR_SEEN_KEY } from './components/Tour';
 import MobileLayout from './components/MobileLayout';
 import TabletLayout from './components/TabletLayout';
 import { useBreakpoint } from './hooks/useBreakpoint';
@@ -74,6 +75,16 @@ export default function App() {
   const [showHelp, setShowHelp] = useState(
     () => localStorage.getItem('omapmaker_help_seen') !== '1'
   );
+  // Průvodce rozhraním — jednou po první návštěvě (po zavření nápovědy)
+  const [showTour, setShowTour] = useState(false);
+  const tourSeen = () => { try { return localStorage.getItem(TOUR_SEEN_KEY) === '1'; } catch { return true; } };
+  useEffect(() => {
+    if (!showHelp && !tourSeen()) setShowTour(true); // nápověda se nezobrazila → rovnou průvodce
+  }, []);
+  const handleHelpClose = (startTour = false) => {
+    setShowHelp(false);
+    if (startTour || !tourSeen()) setShowTour(true);
+  };
   const pollRef = useRef(null);
 
   const addLog = useCallback((msg, type = 'info') => {
@@ -296,7 +307,8 @@ export default function App() {
         )}
       </div>
 
-      {showHelp && <HelpModal onClose={() => setShowHelp(false)} isMobile={isMobile} />}
+      {showHelp && <HelpModal onClose={handleHelpClose} isMobile={isMobile} />}
+      {showTour && !showHelp && <Tour onFinish={() => setShowTour(false)} isMobile={isMobile} />}
     </div>
   );
 }
