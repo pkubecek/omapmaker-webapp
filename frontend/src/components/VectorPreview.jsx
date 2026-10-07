@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 
 // Zjednodušené barvy podle skupiny — jen pro orientaci v náhledu,
 // přesnou ISOM kartografii dělá až serverový PNG export.
@@ -14,84 +14,108 @@ const GROUP_COLOR = {
   other: '#888888',
 };
 
-function ringToPoints(ring, project) {
-  return ring.map(([x, y]) => project(x, y).join(',')).join(' ');
+export const MAP_PAPER = '#faf8f2';
+const CONTENT_W = 1000; // šířka obsahu v jednotkách SVG (výška podle poměru stran)
+
+export function symbolColor(code, group, symbolColors) {
+  return (symbolColors && symbolColors[code]) || GROUP_COLOR[group] || '#555';
 }
 
-function geomToElements(geom, code, group, colorFn, project, key) {
-  const color = colorFn(code, group);
+const toPoints = (ring, project) => ring.map(([x, y]) => project(x, y).join(',')).join(' ');
+// Polygon s dírami jako jedna cesta (evenodd)
+const polyPath = (rings, project) =>
+  rings.map((r) => 'M' + r.map(([x, y]) => project(x, y).join(',')).join('L') + 'Z').join('');
+
+const NS = { vectorEffect: 'non-scaling-stroke' };
+
+function geomToElements(geom, color, project, key, out) {
   switch (geom.type) {
-    case 'Point':
-      { const [x, y] = project(...geom.coordinates); return <circle key={key} cx={x} cy={y} r={1.2} fill={color} />; }
+    case 'Point': {
+      const [x, y] = project(...geom.coordinates);
+      out.points.push(<circle key={key} cx={x} cy={y} r={1.4} fill={color} />);
+      break;
+    }
     case 'MultiPoint':
-      return geom.coordinates.map((c, i) => {
+      geom.coordinates.forEach((c, i) => {
         const [x, y] = project(...c);
-        return <circle key={`${key}-${i}`} cx={x} cy={y} r={1.2} fill={color} />;
+        out.points.push(<circle key={`${key}-${i}`} cx={x} cy={y} r={1.4} fill={color} />);
       });
+      break;
     case 'LineString':
-      return <polyline key={key} points={ringToPoints(geom.coordinates, project)} fill="none" stroke={color} strokeWidth={0.6} />;
+      out.lines.push(<polyline key={key} points={toPoints(geom.coordinates, project)} fill="none" stroke={color} strokeWidth={1.1} strokeLinejoin="round" style={NS} />);
+      break;
     case 'MultiLineString':
-      return geom.coordinates.map((line, i) => (
-        <polyline key={`${key}-${i}`} points={ringToPoints(line, project)} fill="none" stroke={color} strokeWidth={0.6} />
+      geom.coordinates.forEach((line, i) => out.lines.push(
+        <polyline key={`${key}-${i}`} points={toPoints(line, project)} fill="none" stroke={color} strokeWidth={1.1} strokeLinejoin="round" style={NS} />,
       ));
+      break;
     case 'Polygon':
-      return <polygon key={key} points={ringToPoints(geom.coordinates[0], project)} fill={color} fillOpacity={0.25} stroke={color} strokeWidth={0.4} />;
+      out.areas.push(<path key={key} d={polyPath(geom.coordinates, project)} fillRule="evenodd" fill={color} fillOpacity={0.45} stroke={color} strokeOpacity={0.7} strokeWidth={0.5} style={NS} />);
+      break;
     case 'MultiPolygon':
-      return geom.coordinates.map((poly, i) => (
-        <polygon key={`${key}-${i}`} points={ringToPoints(poly[0], project)} fill={color} fillOpacity={0.25} stroke={color} strokeWidth={0.4} />
+      geom.coordinates.forEach((poly, i) => out.areas.push(
+        <path key={`${key}-${i}`} d={polyPath(poly, project)} fillRule="evenodd" fill={color} fillOpacity={0.45} stroke={color} strokeOpacity={0.7} strokeWidth={0.5} style={NS} />,
       ));
+      break;
     default:
-      return null;
+      break;
   }
 }
 
 /**
- * vectorData: GeoJSON FeatureCollection (v mapových metrech, ne WGS84)
- * selectedCodes: Set<string> | null (null = zobrazit vše)
- * symbolColors: {ISOM kód: hex barva} ze serveru (skutečné ISOM barvy) — když
- *   chybí (starší job / fetch selhal), spadne se zpět na hrubou paletu podle skupiny.
+ * Převod GeoJSON (v mapových metrech) na SVG prvky.
+ * selectedCodes: Set<string> | null (null = vše)
+ * Vrací { elements, width, height } — elements se vkládají do <svg> / MapCanvas.
  */
-export default function VectorPreview({ vectorData, selectedCodes, symbolColors }) {
-  const colorFn = useMemo(() => {
-    return (code, group) => (symbolColors && symbolColors[code]) || GROUP_COLOR[group] || '#555';
-  }, [symbolColors]);
-
-  const { elements, viewBox } = useMemo(() => {
-    if (!vectorData?.features?.length) return { elements: null, viewBox: '0 0 100 100' };
-
+export function useVectorElements(vectorData, selectedCodes, symbolColors) {
+  // Projekce a hranice závisí jen na datech, ne na výběru vrstev
+  const geo = useMemo(() => {
+    if (!vectorData?.features?.length) return null;
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-    const collectBounds = (coords) => {
-      if (typeof coords[0] === 'number') {
-        const [x, y] = coords;
-        if (x < minX) minX = x; if (x > maxX) maxX = x;
-        if (y < minY) minY = y; if (y > maxY) maxY = y;
-      } else {
-        coords.forEach(collectBounds);
-      }
+    const collect = (c) => {
+      if (typeof c[0] === 'number') {
+        if (c[0] < minX) minX = c[0]; if (c[0] > maxX) maxX = c[0];
+        if (c[1] < minY) minY = c[1]; if (c[1] > maxY) maxY = c[1];
+      } else c.forEach(collect);
     };
-    vectorData.features.forEach((f) => collectBounds(f.geometry.coordinates));
-
-    const W = 800, H = 800 * (maxY - minY) / Math.max(maxX - minX, 1e-6);
+    vectorData.features.forEach((f) => f.geometry && collect(f.geometry.coordinates));
+    const spanX = Math.max(maxX - minX, 1e-6), spanY = Math.max(maxY - minY, 1e-6);
+    const W = CONTENT_W, H = CONTENT_W * spanY / spanX;
     const project = (x, y) => [
-      ((x - minX) / (maxX - minX)) * W,
-      H - ((y - minY) / (maxY - minY)) * H,   // flip Y — mapové Y roste na sever
+      +(((x - minX) / spanX) * W).toFixed(2),
+      +(H - ((y - minY) / spanY) * H).toFixed(2), // flip Y — mapové Y roste na sever
     ];
+    return { W, H, project };
+  }, [vectorData]);
 
-    const els = [];
+  return useMemo(() => {
+    if (!geo) return { elements: null, width: CONTENT_W, height: CONTENT_W };
+    const out = { areas: [], lines: [], points: [] };
     vectorData.features.forEach((f, i) => {
+      if (!f.geometry) return;
       const { code, group } = f.properties || {};
-      if (selectedCodes !== null && !selectedCodes.has(code)) return;
-      const el = geomToElements(f.geometry, code, group, colorFn, project, i);
-      if (el) els.push(el);
+      if (selectedCodes !== null && selectedCodes !== undefined && !selectedCodes.has(code)) return;
+      geomToElements(f.geometry, symbolColor(code, group, symbolColors), geo.project, i, out);
     });
+    // Pořadí kreslení: plochy → linie → body (ať linie nezakryje výplň)
+    return {
+      elements: [
+        <g key="areas">{out.areas}</g>,
+        <g key="lines">{out.lines}</g>,
+        <g key="points">{out.points}</g>,
+      ],
+      width: geo.W,
+      height: geo.H,
+    };
+  }, [geo, vectorData, selectedCodes, symbolColors]);
+}
 
-    return { elements: els, viewBox: `0 0 ${W} ${H}` };
-  }, [vectorData, selectedCodes, colorFn]);
-
+/** Jednoduchý statický náhled (bez posunu/zoomu). */
+export default function VectorPreview({ vectorData, selectedCodes, symbolColors }) {
+  const { elements, width, height } = useVectorElements(vectorData, selectedCodes, symbolColors);
   if (!elements) return null;
-
   return (
-    <svg viewBox={viewBox} style={{ width: '100%', height: '100%', background: '#faf8f2' }}>
+    <svg viewBox={`0 0 ${width} ${height}`} style={{ width: '100%', height: '100%', background: MAP_PAPER }}>
       {elements}
     </svg>
   );
