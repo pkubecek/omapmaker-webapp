@@ -383,7 +383,7 @@ export default function SettingsPanel({ settings, onSettings, files, onFiles, is
       ...(isMobile && { fontSize: 13 }),
     }}>
       {/* LiDAR */}
-      <div style={{ ...S.section, padding: isMobile ? '16px' : '14px 16px' }}>
+      <div data-tour="data" style={{ ...S.section, padding: isMobile ? '16px' : '14px 16px' }}>
         <div style={S.label}>LiDAR data</div>
         <FileDropZone
           label="Přetáhni nebo klikni pro DMR"
@@ -405,7 +405,7 @@ export default function SettingsPanel({ settings, onSettings, files, onFiles, is
       </div>
 
       {/* Mapa */}
-      <div style={S.section}>
+      <div data-tour="settings" style={S.section}>
         <div style={S.label}>Nastavení mapy</div>
         <div style={S.row}>
           <span style={S.settingLabel}>Souřadnicový systém</span>

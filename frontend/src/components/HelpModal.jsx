@@ -94,6 +94,11 @@ const S = {
     borderTop: '0.5px solid var(--panel-border)',
     background: 'var(--surface)',
   },
+  tourBtn: {
+    background: 'none', border: 'none', color: 'var(--accent-strong)', fontSize: 12,
+    cursor: 'pointer', textDecoration: 'underline', marginLeft: 'auto', marginRight: 12,
+    fontFamily: 'var(--sans)',
+  },
   checkLabel: {
     display: 'flex', alignItems: 'center', gap: 6,
     fontSize: 11, color: 'var(--text-secondary)', cursor: 'pointer',
@@ -114,11 +119,11 @@ const S = {
 export default function HelpModal({ onClose }) {
   const [dontShow, setDontShow] = useState(false);
 
-  const handleClose = () => {
+  const handleClose = (startTour = false) => {
     if (dontShow) {
       localStorage.setItem('omapmaker_help_seen', '1');
     }
-    onClose();
+    onClose(startTour === true);
   };
 
   return (
@@ -164,6 +169,7 @@ export default function HelpModal({ onClose }) {
             />
             Příště nezobrazovat
           </label>
+          <button style={S.tourBtn} onClick={() => handleClose(true)}>Prohlídka rozhraní</button>
           <button
             style={S.startBtn}
             onClick={handleClose}

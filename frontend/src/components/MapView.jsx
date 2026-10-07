@@ -838,6 +838,7 @@ export default function MapView({ bbox, onBboxChange, onCuzkComplete, onHelp, is
             onClick={() => setTool('pan')}
           >{isMobile ? '✋' : '✋ Posun'}</button>
           <button
+            data-tour="select"
             className={!selectClicked ? 'select-pulse' : ''}
             style={{ ...S.toolCtrlBtn, ...(tool === 'select' ? S.toolCtrlBtnActive : {}) }}
             onClick={() => { setTool('select'); setSelectClicked(true); }}
