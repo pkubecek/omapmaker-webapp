@@ -15,7 +15,7 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 from ..core.job_store import JOBS_DIR, job_path as _job_path, read_job as _read_job, write_job as _write_job
-from ..core.cleanup import purge_job_inputs
+from ..core.cleanup import purge_job_inputs, purge_job_outputs, release_job
 
 router = APIRouter()
 # Jeden job má ve špičce ~1,5–2 GB RAM → při 8 GB stačí 2 souběžné joby
@@ -50,6 +50,14 @@ def _write_queued(job_id: str):
     _write_job(job_id, job)
 
 
+def _touch_job(job_id: str):
+    """Aktivita na jobu (heartbeat, stažení souboru) — posune úklid."""
+    try:
+        os.utime(_job_path(job_id))
+    except OSError:
+        pass
+
+
 def _cancelled_state(step: str) -> dict:
     return {
         "status": "cancelled",
@@ -80,6 +88,7 @@ async def _run_job_subprocess(job_id: str, job_dir: str):
                 _cancelled_jobs.discard(job_id)
                 _write_job(job_id, _cancelled_state("Zrušeno uživatelem (ve frontě)."))
                 purge_job_inputs(job_dir)
+                purge_job_outputs(job_dir)
                 return
 
             proc = None
@@ -136,9 +145,13 @@ async def _run_job_subprocess(job_id: str, job_dir: str):
                 })
             finally:
                 _running_procs.pop(job_id, None)
-                # Nahrané LAS/LAZ už nejsou potřeba (re-render jede z cache
-                # pickle) — smazat hned, ať nezabírají disk až do TTL úklidu.
+                # Vstupy (upload i stažená data) už nejsou potřeba (re-render
+                # jede z cache pickle) — smazat hned.
                 purge_job_inputs(job_dir)
+                # Neúspěšný job (chyba/zrušení/timeout) nemá co nabídnout →
+                # pryč i s výstupy, zůstane jen job.json se stavem.
+                if (_read_job(job_id) or {}).get("status") != "done":
+                    purge_job_outputs(job_dir)
         finally:
             _job_semaphore.release()
 
@@ -166,12 +179,22 @@ async def create_job(
     job_dir = os.path.join(JOBS_DIR, job_id)
     os.makedirs(job_dir, exist_ok=True)
 
+    # Stažená data se po doběhnutí jobu mažou (core/cleanup.py) — další
+    # generování ze stejného downloadu musí data stáhnout znovu.
+    if dtm_server_path and not os.path.exists(dtm_server_path) and not (dtm and dtm.filename):
+        shutil.rmtree(job_dir, ignore_errors=True)
+        raise HTTPException(
+            status_code=410,
+            detail="Stažená data už byla po předchozím generování smazána — stáhni prosím oblast znovu.",
+        )
+
     # DTM — buď serverová cesta nebo upload
     if dtm_server_path and os.path.exists(dtm_server_path):
         dtm_path = dtm_server_path
     elif dtm and dtm.filename:
         dtm_path = _save_file(dtm, job_dir)
     else:
+        shutil.rmtree(job_dir, ignore_errors=True)
         raise HTTPException(status_code=422, detail="Chybí DTM soubor nebo cesta.")
 
     # DSM — buď serverová cesta nebo upload (volitelný)
@@ -266,12 +289,36 @@ async def cancel_job(job_id: str):
     return {"job_id": job_id, **updated}
 
 
+@router.post("/jobs/{job_id}/heartbeat")
+async def heartbeat_job(job_id: str):
+    """Frontend volá každou minutu, dokud má výsledek otevřený. Bez heartbeatu
+    se výstupy smažou po OMAPMAKER_JOB_IDLE_MINUTES (viz core/cleanup.py)."""
+    if _read_job(job_id) is None:
+        raise HTTPException(status_code=404, detail="Výsledek už byl ze serveru smazán.")
+    _touch_job(job_id)
+    return {"ok": True}
+
+
+@router.post("/jobs/{job_id}/release")
+async def release_job_endpoint(job_id: str):
+    """Uživatel výsledek opustil (nový job / zavřená stránka) → smazat hned.
+    Volá se i přes navigator.sendBeacon, proto POST bez těla."""
+    if not job_id.isalnum():
+        raise HTTPException(status_code=400, detail="Neplatné ID.")
+    job_dir = os.path.join(JOBS_DIR, job_id)
+    if not os.path.isdir(job_dir):
+        return {"released": False}
+    released = await asyncio.to_thread(release_job, job_dir)
+    return {"released": released}
+
+
 @router.get("/jobs/{job_id}/preview")
 async def get_preview(job_id: str):
     """Zmenšený náhled PNG pro web (miniatura v pravém panelu)."""
     job = _read_job(job_id)
     if job is None:
         raise HTTPException(status_code=404, detail="Job nenalezen.")
+    _touch_job(job_id)
     if job["status"] != "done":
         raise HTTPException(status_code=425, detail="Job ještě není hotový.")
     path = job.get("preview_path") or job.get("png_path")
@@ -285,6 +332,7 @@ async def get_png(job_id: str):
     job = _read_job(job_id)
     if job is None:
         raise HTTPException(status_code=404, detail="Job nenalezen.")
+    _touch_job(job_id)
     if job["status"] != "done":
         raise HTTPException(status_code=425, detail="Job ještě není hotový.")
     png_path = job.get("png_path")
@@ -298,6 +346,7 @@ async def get_gpkg(job_id: str):
     job = _read_job(job_id)
     if job is None:
         raise HTTPException(status_code=404, detail="Job nenalezen.")
+    _touch_job(job_id)
     if job["status"] != "done":
         raise HTTPException(status_code=425, detail="Job ještě není hotový.")
     gpkg_path = job.get("gpkg_path")
@@ -314,6 +363,7 @@ async def get_vectors(job_id: str):
     job = _read_job(job_id)
     if job is None:
         raise HTTPException(status_code=404, detail="Job nenalezen.")
+    _touch_job(job_id)
     if job["status"] != "done":
         raise HTTPException(status_code=425, detail="Job ještě není hotový.")
     vectors_path = job.get("vectors_path")
@@ -329,6 +379,7 @@ async def get_colors(job_id: str):
     job = _read_job(job_id)
     if job is None:
         raise HTTPException(status_code=404, detail="Job nenalezen.")
+    _touch_job(job_id)
     if job["status"] != "done":
         raise HTTPException(status_code=425, detail="Job ještě není hotový.")
     colors_path = job.get("colors_path")
@@ -426,6 +477,7 @@ async def get_custom_png(job_id: str):
     job = _read_job(job_id)
     if job is None:
         raise HTTPException(status_code=404, detail="Job nenalezen.")
+    _touch_job(job_id)
     custom_png_path = job.get("custom_png_path")
     if not custom_png_path or not os.path.exists(custom_png_path):
         raise HTTPException(status_code=404, detail="Vlastní PNG nenalezeno.")

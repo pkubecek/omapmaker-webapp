@@ -9,7 +9,7 @@ import Tour, { TOUR_SEEN_KEY } from './components/Tour';
 import MobileLayout from './components/MobileLayout';
 import TabletLayout from './components/TabletLayout';
 import { useBreakpoint } from './hooks/useBreakpoint';
-import { startJob, getJobStatus, cancelJob } from './api';
+import { startJob, getJobStatus, cancelJob, heartbeatJob, releaseJob } from './api';
 
 const DEFAULT_SETTINGS = {
   crs: 'EPSG:5514',
@@ -88,6 +88,32 @@ export default function App() {
   const pollRef = useRef(null);
   const lastStepRef = useRef(null);
 
+  // Výsledek na serveru žije jen dokud je otevřený: heartbeat každou minutu,
+  // při odchodu ze stránky ho rovnou uvolníme (backend smaže data hned).
+  const jobIdRef = useRef(null);
+  useEffect(() => { jobIdRef.current = job.jobId; }, [job.jobId]);
+  useEffect(() => {
+    if (job.status !== 'done' || !job.jobId) return undefined;
+    const id = job.jobId;
+    const t = setInterval(() => {
+      heartbeatJob(id).catch((err) => {
+        if (err.response?.status === 404) {
+          clearInterval(t);
+          setLogLines((prev) => [...prev.slice(-199), {
+            time: nowStr(), type: 'warn',
+            msg: 'Výsledek už byl ze serveru smazán — pro nové stažení spusť generování znovu.',
+          }]);
+        }
+      });
+    }, 60000);
+    return () => clearInterval(t);
+  }, [job.status, job.jobId]);
+  useEffect(() => {
+    const onLeave = () => releaseJob(jobIdRef.current);
+    window.addEventListener('pagehide', onLeave);
+    return () => window.removeEventListener('pagehide', onLeave);
+  }, []);
+
   const addLog = useCallback((msg, type = 'info') => {
     setLogLines((prev) => [...prev.slice(-199), { time: nowStr(), msg, type }]);
   }, []);
@@ -129,6 +155,8 @@ export default function App() {
 
   const handleRun = useCallback(async () => {
     if (!files.dtm) return;
+    // Předchozí výsledek už nikdo nepotřebuje → smazat na serveru hned
+    if (jobIdRef.current) releaseJob(jobIdRef.current);
     setLogLines([]);
     lastStepRef.current = null;
     setJob({ status: 'queued', progress: 0, step: 'Odesílám data...', jobId: null });

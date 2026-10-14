@@ -26,6 +26,24 @@ export async function cancelJob(jobId) {
   return res.data;
 }
 
+// Dokud je výsledek otevřený, frontend posílá heartbeat — jinak backend
+// výstupy jobu po pár minutách smaže (viz backend/app/core/cleanup.py).
+export async function heartbeatJob(jobId) {
+  const res = await api.post(`/api/jobs/${jobId}/heartbeat`);
+  return res.data;
+}
+
+// Okamžité smazání výsledku na serveru (nový job / odchod ze stránky).
+// sendBeacon projde i při zavírání záložky, kdy axios request nedoběhne.
+export function releaseJob(jobId) {
+  if (!jobId) return;
+  const url = `${BASE}/api/jobs/${jobId}/release`;
+  try {
+    if (navigator.sendBeacon && navigator.sendBeacon(url)) return;
+  } catch { /* fallback níže */ }
+  api.post(`/api/jobs/${jobId}/release`).catch(() => {});
+}
+
 export function getPreviewUrl(jobId) {
   return `${BASE}/api/jobs/${jobId}/preview`;
 }
