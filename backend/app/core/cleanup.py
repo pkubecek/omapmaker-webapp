@@ -7,20 +7,23 @@ Dvě věci:
      dočasné dlaždice a i stažená data z ČÚZK/GUGiK/BEV/SITR, ze kterých job
      četl (pokud je zrovna nepoužívá jiný běžící job). Re-render jede jen
      z cache pickle, vstupy už nejsou potřeba a jsou to největší soubory.
-  2) cleanup_loop() — periodicky maže výstupy jobů (PNG/GPKG/cache) starší
-     než JOB_TTL a stažená data, která žádný job nepoužil, starší než
-     DOWNLOAD_TTL.
+  2) purge_job_outputs(job_dir) — u jobu, který skončil chybou/zrušením/
+     timeoutem, smaže hned i výstupy (zůstane jen job.json se stavem).
+  3) cleanup_loop() — každou minutu maže výstupy hotových jobů, na které
+     se nikdo nedívá (frontend posílá heartbeat, dokud má výsledek otevřený;
+     při odchodu ze stránky / novém jobu volá /release a smaže se hned),
+     a stažená data, ze kterých nikdo negeneroval.
 
 Pozor: soubory v kontejneru se na Railway počítají do paměti (page cache),
 proto se musí mazat co nejdřív, ne až po dni.
 
 Stáří se počítá z mtime job.json / status.json (= poslední aktivita:
-progress, done, re-render), ne z data vytvoření.
+progress, done, re-render, heartbeat, stažení PNG/GPKG), ne z data vytvoření.
 
 Env:
-  OMAPMAKER_JOB_TTL_HOURS            (default 2, 0 = úklid vypnutý)
-  OMAPMAKER_DOWNLOAD_TTL_HOURS       (default 1 — nepoužitá stažená data)
-  OMAPMAKER_CLEANUP_INTERVAL_SECONDS (default 600)
+  OMAPMAKER_JOB_IDLE_MINUTES         (default 10, 0 = úklid vypnutý)
+  OMAPMAKER_DOWNLOAD_IDLE_MINUTES    (default 30 — nepoužitá stažená data)
+  OMAPMAKER_CLEANUP_INTERVAL_SECONDS (default 60)
 """
 import os
 import json
@@ -30,9 +33,12 @@ import asyncio
 
 from .job_store import JOBS_DIR
 
-JOB_TTL_SECONDS = float(os.environ.get("OMAPMAKER_JOB_TTL_HOURS", "2")) * 3600
-DOWNLOAD_TTL_SECONDS = float(os.environ.get("OMAPMAKER_DOWNLOAD_TTL_HOURS", "1")) * 3600
-CLEANUP_INTERVAL_SECONDS = int(os.environ.get("OMAPMAKER_CLEANUP_INTERVAL_SECONDS", "600"))
+JOB_TTL_SECONDS = float(os.environ.get("OMAPMAKER_JOB_IDLE_MINUTES", "10")) * 60
+DOWNLOAD_TTL_SECONDS = float(os.environ.get("OMAPMAKER_DOWNLOAD_IDLE_MINUTES", "30")) * 60
+CLEANUP_INTERVAL_SECONDS = int(os.environ.get("OMAPMAKER_CLEANUP_INTERVAL_SECONDS", "60"))
+# „Aktivní“ stav bez jakékoli aktivity déle než tohle = mrtvý proces
+# (restart kontejneru uprostřed jobu). Job má timeout 30 min.
+STALE_ACTIVE_SECONDS = 2 * 3600
 
 # Podadresáře JOBS_DIR, které používá routes/download.py (JOBS_BASE + "/<zdroj>").
 # Nejsou to joby, mají vlastní status.json a uklízejí se zvlášť.
@@ -60,10 +66,10 @@ def _age_seconds(marker_path: str, dir_path: str, now: float) -> float:
 
 
 def _is_active(status: str | None, age: float) -> bool:
-    # Aktivní joby/downloady nikdy nemažeme. Pojistka: "aktivní" stav starší
-    # než 2×TTL je pozůstatek procesu, který zanikl (restart kontejneru
-    # uprostřed jobu) — ten už nikdo nedokončí, takže se smaže normálně.
-    return status in ACTIVE_STATUSES and age < 2 * JOB_TTL_SECONDS
+    # Aktivní joby/downloady nikdy nemažeme. Pojistka: "aktivní" stav bez
+    # aktivity déle než STALE_ACTIVE_SECONDS je pozůstatek procesu, který
+    # zanikl (restart kontejneru uprostřed jobu) — smaže se normálně.
+    return status in ACTIVE_STATUSES and age < STALE_ACTIVE_SECONDS
 
 
 def cleanup_expired(now: float | None = None) -> list[str]:
@@ -230,3 +236,32 @@ def purge_job_inputs(job_dir: str):
                         os.remove(os.path.join(folder, name))
                     except OSError:
                         pass
+
+
+def purge_job_outputs(job_dir: str):
+    """Smaže z adresáře jobu všechno kromě job.json (stav pro polling)."""
+    try:
+        names = os.listdir(job_dir)
+    except OSError:
+        return
+    for name in names:
+        if name == "job.json":
+            continue
+        path = os.path.join(job_dir, name)
+        if os.path.isdir(path):
+            shutil.rmtree(path, ignore_errors=True)
+        else:
+            try:
+                os.remove(path)
+            except OSError:
+                pass
+
+
+def release_job(job_dir: str) -> bool:
+    """Smaže celý adresář jobu, pokud job neběží. Vrací True, když smazal."""
+    status = (_read_json(os.path.join(job_dir, "job.json")) or {}).get("status")
+    if status in ACTIVE_STATUSES:
+        return False
+    purge_job_inputs(job_dir)
+    shutil.rmtree(job_dir, ignore_errors=True)
+    return True
