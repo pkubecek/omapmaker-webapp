@@ -166,6 +166,15 @@ async def create_job(
     job_dir = os.path.join(JOBS_DIR, job_id)
     os.makedirs(job_dir, exist_ok=True)
 
+    # Stažená data se po doběhnutí jobu mažou (core/cleanup.py) — další
+    # generování ze stejného downloadu musí data stáhnout znovu.
+    if dtm_server_path and not os.path.exists(dtm_server_path) and not (dtm and dtm.filename):
+        shutil.rmtree(job_dir, ignore_errors=True)
+        raise HTTPException(
+            status_code=410,
+            detail="Stažená data už byla po předchozím generování smazána — stáhni prosím oblast znovu.",
+        )
+
     # DTM — buď serverová cesta nebo upload
     if dtm_server_path and os.path.exists(dtm_server_path):
         dtm_path = dtm_server_path

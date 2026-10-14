@@ -741,6 +741,7 @@ def _compute_depth_grid(fill_input: np.ndarray, grid_x: np.ndarray,
                          invert: bool = False) -> np.ndarray:
     """Spočítá depth/height grid přes pysheds nebo numpy fallback."""
     data = (-fill_input) if invert else fill_input
+    tmp_path = None
     try:
         from pysheds.grid import Grid as PyshedsGrid
         min_x, max_x = grid_x.min(), grid_x.max()
@@ -761,11 +762,16 @@ def _compute_depth_grid(fill_input: np.ndarray, grid_x: np.ndarray,
         pit_filled = grid.fill_pits(dem_rd)
         dem_filled = grid.fill_depressions(pit_filled)
         depth = (np.array(dem_filled) - np.array(dem_rd)).T
-        os.unlink(tmp_path)
         return depth
     except Exception:
         filled = _fill_depressions_numpy(data.T.astype(np.float64))
         return (filled - data.T).T
+    finally:
+        if tmp_path:
+            try:
+                os.unlink(tmp_path)
+            except OSError:
+                pass
 
 
 def find_depressions(grid_x, grid_y, dmr_grid, pixel_size=0.5,

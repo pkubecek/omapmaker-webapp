@@ -1,7 +1,3 @@
-import tracemalloc
-tracemalloc.start()
-     
-from debug_memory import router as debug_router
 """
 main.py — FastAPI aplikace OMapMaker backend.
 
@@ -29,7 +25,6 @@ _EXTRA_ORIGINS = [
     for o in os.environ.get("CORS_ORIGINS", "").split(",")
     if o.strip()
 ]
-app.include_router(debug_router)
 
 ALLOWED_ORIGINS = [
     "http://localhost:3000",

@@ -15,6 +15,7 @@ from ..core.poland_downloader import download_poland as _download_poland
 from ..core.austria_downloader import download_austria as _download_austria
 from ..core.italy_downloader import download_italy as _download_italy
 from ..core.cancellation import DownloadCancelled
+from ..core.memory_utils import release_memory
 
 router = APIRouter()
 
@@ -146,6 +147,9 @@ def _run_download(dl_id, download_fn, kwargs, read_fn, write_fn, extra_status_fi
             })
         finally:
             _cancel_events.pop(dl_id, None)
+            # Download běží jako vlákno v HLAVNÍM procesu (laspy/numpy/rasterio
+            # merge dlaždic) — bez tohohle si glibc nechá GB paměti napořád.
+            release_memory()
 
     threading.Thread(target=_run, daemon=True).start()
 

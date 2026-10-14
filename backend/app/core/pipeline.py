@@ -540,8 +540,9 @@ def run_pipeline(job_id: str, params: dict, file_paths: dict,
     def _fetch_osm():
         gdf_osm = None
         try:
-            ox.settings.use_cache = True
-            ox.settings.cache_folder = os.path.join(tempfile.gettempdir(), "OMapMaker_OSM")
+            # Bez cache — dřív se odpovědi Overpass ukládaly do /tmp/OMapMaker_OSM
+            # a nikdo je nemazal (rostlo to s každým jobem navždy).
+            ox.settings.use_cache = False
             ox.settings.user_agent = "OMapMaker-Web-v7"
             # 120 s místo 300 s — zaseknuté zrcadlo nesmí blokovat job 5 minut
             ox.settings.timeout = 120

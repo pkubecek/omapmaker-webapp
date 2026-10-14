@@ -2,18 +2,25 @@
 core/cleanup.py — úklid JOBS_DIR.
 
 Dvě věci:
-  1) purge_job_inputs(job_dir) — hned po doběhnutí jobu smaže nahrané DTM/DSM
-     (LAS/LAZ) z adresáře jobu. Re-render jede jen z cache pickle, vstupy už
-     nejsou potřeba a jsou to největší soubory v adresáři.
-  2) cleanup_loop() — periodicky maže adresáře jobů a stažených dat
-     (cuzk/poland/austria/italy), které jsou starší než TTL.
+  1) purge_job_inputs(job_dir) — hned po doběhnutí jobu (done/error/cancel/
+     timeout) smaže VŠECHNY vstupy: nahrané DTM/DSM, nahrané SHP (+ sidecary),
+     dočasné dlaždice a i stažená data z ČÚZK/GUGiK/BEV/SITR, ze kterých job
+     četl (pokud je zrovna nepoužívá jiný běžící job). Re-render jede jen
+     z cache pickle, vstupy už nejsou potřeba a jsou to největší soubory.
+  2) cleanup_loop() — periodicky maže výstupy jobů (PNG/GPKG/cache) starší
+     než JOB_TTL a stažená data, která žádný job nepoužil, starší než
+     DOWNLOAD_TTL.
+
+Pozor: soubory v kontejneru se na Railway počítají do paměti (page cache),
+proto se musí mazat co nejdřív, ne až po dni.
 
 Stáří se počítá z mtime job.json / status.json (= poslední aktivita:
 progress, done, re-render), ne z data vytvoření.
 
 Env:
-  OMAPMAKER_JOB_TTL_HOURS            (default 24, 0 = úklid vypnutý)
-  OMAPMAKER_CLEANUP_INTERVAL_SECONDS (default 3600)
+  OMAPMAKER_JOB_TTL_HOURS            (default 2, 0 = úklid vypnutý)
+  OMAPMAKER_DOWNLOAD_TTL_HOURS       (default 1 — nepoužitá stažená data)
+  OMAPMAKER_CLEANUP_INTERVAL_SECONDS (default 600)
 """
 import os
 import json
@@ -23,8 +30,9 @@ import asyncio
 
 from .job_store import JOBS_DIR
 
-JOB_TTL_SECONDS = float(os.environ.get("OMAPMAKER_JOB_TTL_HOURS", "24")) * 3600
-CLEANUP_INTERVAL_SECONDS = int(os.environ.get("OMAPMAKER_CLEANUP_INTERVAL_SECONDS", "3600"))
+JOB_TTL_SECONDS = float(os.environ.get("OMAPMAKER_JOB_TTL_HOURS", "2")) * 3600
+DOWNLOAD_TTL_SECONDS = float(os.environ.get("OMAPMAKER_DOWNLOAD_TTL_HOURS", "1")) * 3600
+CLEANUP_INTERVAL_SECONDS = int(os.environ.get("OMAPMAKER_CLEANUP_INTERVAL_SECONDS", "600"))
 
 # Podadresáře JOBS_DIR, které používá routes/download.py (JOBS_BASE + "/<zdroj>").
 # Nejsou to joby, mají vlastní status.json a uklízejí se zvlášť.
@@ -105,7 +113,7 @@ def cleanup_expired(now: float | None = None) -> list[str]:
             status = (_read_json(marker) or {}).get("status")
             age = _age_seconds(marker, path, now)
 
-            if _is_active(status, age) or age <= JOB_TTL_SECONDS:
+            if _is_active(status, age) or age <= DOWNLOAD_TTL_SECONDS:
                 continue
             prefix = os.path.realpath(path) + os.sep
             if any(p.startswith(prefix) for p in protected_files):
@@ -133,21 +141,62 @@ async def cleanup_loop():
         await asyncio.sleep(CLEANUP_INTERVAL_SECONDS)
 
 
+def _download_dir_of(path: str) -> str | None:
+    """Pro soubor uvnitř JOBS_DIR/<cuzk|poland|austria|italy>/<dl_id>/...
+    vrátí cestu k adresáři <dl_id>, jinak None."""
+    real = os.path.realpath(path)
+    for sub in DOWNLOAD_SUBDIRS:
+        base = os.path.realpath(os.path.join(JOBS_DIR, sub)) + os.sep
+        if real.startswith(base):
+            dl_id = real[len(base):].split(os.sep, 1)[0]
+            if dl_id:
+                return os.path.join(base, dl_id)
+    return None
+
+
+def _download_dirs_used_by_other_jobs(exclude_job_dir: str) -> set[str]:
+    """Download adresáře, ze kterých čte jiný aktivní (queued/running) job."""
+    used: set[str] = set()
+    if not os.path.isdir(JOBS_DIR):
+        return used
+    exclude = os.path.realpath(exclude_job_dir)
+    for name in os.listdir(JOBS_DIR):
+        path = os.path.join(JOBS_DIR, name)
+        if (name in DOWNLOAD_SUBDIRS or not os.path.isdir(path)
+                or os.path.realpath(path) == exclude):
+            continue
+        status = (_read_json(os.path.join(path, "job.json")) or {}).get("status")
+        if status not in ACTIVE_STATUSES:
+            continue
+        fp = _read_json(os.path.join(path, "file_paths.json")) or {}
+        for key in ("dtm", "dsm"):
+            d = _download_dir_of(fp[key]) if fp.get(key) else None
+            if d:
+                used.add(d)
+    return used
+
+
 def purge_job_inputs(job_dir: str):
-    """Smaže nahrané DTM/DSM z adresáře jobu. Soubory mimo job_dir
-    (serverové cesty z download adresářů) nechává být — ty uklidí TTL."""
+    """Po doběhnutí jobu smaže všechny jeho vstupy (viz docstring modulu).
+    V adresáři jobu zůstanou jen výstupy (PNG, GPKG, vectors, colors, cache
+    pro re-render) a malé JSONy — ty uklidí TTL."""
     # Dočasné body po dlaždicích z pipeline (při pádu/zrušení jobu tam zůstanou)
-    import shutil
     shutil.rmtree(os.path.join(job_dir, "_tiles_tmp"), ignore_errors=True)
 
     fp = _read_json(os.path.join(job_dir, "file_paths.json")) or {}
     job_prefix = os.path.realpath(job_dir) + os.sep
+
+    # --- DTM/DSM: upload v adresáři jobu, nebo serverová cesta z downloadu ---
+    download_dirs: set[str] = set()
     for key in ("dtm", "dsm"):
         path = fp.get(key)
         if not path:
             continue
         real = os.path.realpath(path)
         if not real.startswith(job_prefix):
+            d = _download_dir_of(real)
+            if d:
+                download_dirs.add(d)
             continue
         try:
             os.remove(real)
@@ -155,3 +204,29 @@ def purge_job_inputs(job_dir: str):
             pass  # dsm == dtm (fallback bez DSM) → už smazáno
         except OSError as e:
             print(f"[cleanup] Nelze smazat {real}: {e}")
+
+    # --- Stažená data (ČÚZK/GUGiK/...) — smazat, pokud je nepoužívá jiný job
+    if download_dirs:
+        in_use = _download_dirs_used_by_other_jobs(job_dir)
+        for d in download_dirs - in_use:
+            shutil.rmtree(d, ignore_errors=True)
+            print(f"[cleanup] Smazána stažená data {d}")
+
+    # --- Nahrané SHP (ZABAGED/ISOM) včetně sidecarů (.dbf/.shx/.prj/.cpg) ---
+    for key in ("zabaged", "isom"):
+        for shp in fp.get(key) or []:
+            real = os.path.realpath(shp)
+            if not real.startswith(job_prefix):
+                continue
+            stem = os.path.splitext(os.path.basename(real))[0]
+            folder = os.path.dirname(real)
+            try:
+                names = os.listdir(folder)
+            except OSError:
+                continue
+            for name in names:
+                if os.path.splitext(name)[0] == stem:
+                    try:
+                        os.remove(os.path.join(folder, name))
+                    except OSError:
+                        pass
