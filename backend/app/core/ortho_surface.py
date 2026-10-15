@@ -160,8 +160,11 @@ def _osm_masks(gdf_osm, out_shape, transform):
 
     def col(name):
         if name in gdf_osm.columns:
-            return gdf_osm[name].astype(str)
-        return pd.Series("nan", index=gdf_osm.index)
+            # fillna PŘED astype: v pandas 3 astype(str) nechá NaN jako NaN
+            # (ne řetězec "nan"), takže porovnání ne("nan") bylo vždy True
+            # a každý polygon se bral jako budova → vše vyřazeno
+            return gdf_osm[name].fillna("").astype(str)
+        return pd.Series("", index=gdf_osm.index)
 
     gt = gdf_osm.geometry.geom_type
     polys = gt.isin(["Polygon", "MultiPolygon"])
@@ -174,7 +177,7 @@ def _osm_masks(gdf_osm, out_shape, transform):
         return rasterize(((g, 1) for g in geoms), out_shape=out_shape,
                          transform=transform, fill=0, dtype="uint8").astype(bool)
 
-    building = polys & col("building").ne("nan") & col("building").ne("roof")
+    building = polys & col("building").ne("") & col("building").ne("roof")
     water = polys & (col("natural").isin(WATER_NATURAL) |
                      col("landuse").isin(WATER_LANDUSE) |
                      col("waterway").isin({"riverbank", "dock"}))
@@ -189,7 +192,7 @@ def _osm_masks(gdf_osm, out_shape, transform):
     road_geoms = [g.buffer(ROAD_HALF_WIDTH[h], cap_style=2)
                   for g, h in zip(gdf_osm.geometry[road], hw[road])]
     # pěší zóny / náměstí jako plochy
-    plaza = polys & (hw.isin({"pedestrian", "footway"}) | col("area:highway").ne("nan") |
+    plaza = polys & (hw.isin({"pedestrian", "footway"}) | col("area:highway").ne("") |
                      col("place").eq("square") | col("amenity").eq("parking"))
     road_geoms += list(gdf_osm.geometry[plaza])
     force_paved = burn(road_geoms)
