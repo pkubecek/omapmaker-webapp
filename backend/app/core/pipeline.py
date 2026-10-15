@@ -421,6 +421,9 @@ def run_pipeline(job_id: str, params: dict, file_paths: dict,
     })
     # Zpevněné plochy / zeleň z ortofota — jen sprintový klíč 1:4000
     ORTHO_SURFACE = bool(params.get("ortho_surface", False)) and SCALE == 4000
+    if SCALE == 4000 or params.get("ortho_surface"):
+        cb(1, f"Ortofoto: ortho_surface={params.get('ortho_surface')!r}, měřítko={SCALE} "
+              f"→ {'zapnuto' if ORTHO_SURFACE else 'vypnuto'}")
     _sel = params.get("selected_codes")
     SELECTED_CODES = set(_sel) if _sel else None
 
