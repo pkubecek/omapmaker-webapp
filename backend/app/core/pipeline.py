@@ -551,8 +551,11 @@ def run_pipeline(job_id: str, params: dict, file_paths: dict,
             # a nikdo je nemazal (rostlo to s každým jobem navždy).
             ox.settings.use_cache = False
             ox.settings.user_agent = "OMapMaker-Web-v7"
-            # 120 s místo 300 s — zaseknuté zrcadlo nesmí blokovat job 5 minut
-            ox.settings.timeout = 120
+            # 90 s — zaseknuté zrcadlo nesmí blokovat job dlouho
+            ox.settings.timeout = 90
+            # osmnx se před každým dotazem ptá na /api/status kvůli rate limitu;
+            # u nedostupného zrcadla tam zbytečně čeká (default až 60 s)
+            ox.settings.overpass_rate_limit = False
             to_wgs = Transformer.from_crs(CURRENT_CRS, "EPSG:4326", always_xy=True)
             buf = 300
             mn_lon, mn_lat = to_wgs.transform(global_minx - buf, global_miny - buf)
@@ -570,14 +573,19 @@ def run_pipeline(job_id: str, params: dict, file_paths: dict,
             # Hlavní instance overpass-api.de u cloudových IP adres (Railway, AWS, ...)
             # občas tvrdě odmítá spojení ("Connection refused") kvůli ochraně proti
             # zahlcení. Zkusíme postupně i veřejná zrcadla, než to celé vzdáme.
+            # Pořadí podle spolehlivosti (podzim 2026): z./lz4. jsou přímé
+            # instance za overpass-api.de; kumi.systems = private.coffee.
+            # overpass.osm.ch (jen data Švýcarska) a overpass.openstreetmap.ru
+            # (nefunkční) vyřazeny. Výpadky bývají krátké → dvě kola.
             OVERPASS_MIRRORS = [
+                "https://z.overpass-api.de/api",
+                "https://lz4.overpass-api.de/api",
                 "https://overpass-api.de/api",
-                "https://overpass.kumi.systems/api",
-                "https://overpass.osm.ch/api",
-                "https://overpass.openstreetmap.ru/api",
+                "https://overpass.private.coffee/api",
+                "https://maps.mail.ru/osm/tools/overpass/api",
             ]
             last_err = None
-            for mirror in OVERPASS_MIRRORS:
+            for mirror in OVERPASS_MIRRORS * 2:
                 ox.settings.overpass_url = mirror
                 try:
                     cb(7, f"OSM: zkouším {mirror} ...")
