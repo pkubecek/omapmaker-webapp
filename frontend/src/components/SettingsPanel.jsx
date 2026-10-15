@@ -556,6 +556,23 @@ export default function SettingsPanel({ settings, onSettings, files, onFiles, is
           </label>
           <Tooltip text="Automaticky stáhne vektorová data ZABAGED® pro oblast přes WFS službu ČÚZK." />
         </div>
+
+        {/* Checkbox: zpevněné plochy a zeleň z ortofota — jen sprint 1:4000 */}
+        {String(settings.scale) === '4000' && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+            <input
+              type="checkbox"
+              id="orthoSurface"
+              checked={!!settings.ortho_surface}
+              onChange={(e) => set('ortho_surface', e.target.checked)}
+              style={{ cursor: 'pointer', width: 14, height: 14 }}
+            />
+            <label htmlFor="orthoSurface" style={{ fontSize: 12, color: 'var(--text-secondary)', cursor: 'pointer', userSelect: 'none' }}>
+              Zpevněné plochy a zeleň z ortofota
+            </label>
+            <Tooltip text="Stáhne ortofoto (ČÚZK / GUGiK) a podle barvy rozliší zeleň (401) a zpevněné plochy (501). Jen pro sprint 1:4000, prodlouží výpočet o desítky sekund." />
+          </div>
+        )}
         {/*
         {!settings.download_zabaged && (
         <>
@@ -652,6 +669,7 @@ export const DEFAULT_SETTINGS = {
   depMinDiameter: 2, depMaxDiameter: 5, depMinDepth: 0.7,
   knoMinDiameter: 1.5, knoMaxDiameter: 10, knoMinHeight: 0.5,
   download_zabaged: false,
+  ortho_surface: false,
   layers: {
     contours: true, rocks: true, water: true,
     vegetation: true, roads: true, buildings: true,

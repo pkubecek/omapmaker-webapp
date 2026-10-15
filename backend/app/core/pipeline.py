@@ -41,6 +41,7 @@ from .renderer import generate_contour_layers, setup_map_figure
 from .symbols import SymbolLibrary
 from .exporter import OomCollector
 from .zabaged_wfs import download_zabaged_wfs
+from .ortho_surface import fetch_ortho, ortho_surface_gdf
 
 # Max velikost dlaždice v metrech. 1500×1500 m (+ překryv) při 0.5m pixelu ≈ 13M pixelů,
 # špička paměti jedné dlaždice ~1,5–2 GB (měřeno; dominuje Delaunayova triangulace).
@@ -83,6 +84,7 @@ def render_from_cache(job_id: str, output_dir: str, selected_codes=None,
         contour_layers=cache["merged"]["contour_layers"],
         depressions=cache["merged"]["depressions"],
         knolls=cache["merged"]["knolls"],
+        gdf_ortho=cache["merged"].get("gdf_ortho"),
         gdf_osm=cache["gdf_osm"],
         zabaged_gdfs=cache["zabaged_gdfs"],
         isom_gdfs=cache["isom_gdfs"],
@@ -417,6 +419,8 @@ def run_pipeline(job_id: str, params: dict, file_paths: dict,
         "vegetation": True, "roads": True, "buildings": True,
         "man_made": True, "magnetic_lines": False,
     })
+    # Zpevněné plochy / zeleň z ortofota — jen sprintový klíč 1:4000
+    ORTHO_SURFACE = bool(params.get("ortho_surface", False)) and SCALE == 4000
     _sel = params.get("selected_codes")
     SELECTED_CODES = set(_sel) if _sel else None
 
@@ -624,10 +628,22 @@ def run_pipeline(job_id: str, params: dict, file_paths: dict,
         return zabaged_gdfs
 
     from concurrent.futures import ThreadPoolExecutor
-    _net_pool = ThreadPoolExecutor(max_workers=2)
+    _net_pool = ThreadPoolExecutor(max_workers=3)
     cb(6, "Stahuji OSM data (souběžně s načítáním LiDARu)...")
     _osm_future = _net_pool.submit(_fetch_osm)
     _zab_future = _net_pool.submit(_fetch_zabaged_rest)
+    _ortho_future = None
+    if ORTHO_SURFACE:
+        cb(6, "Stahuji ortofoto (souběžně s načítáním LiDARu)...")
+        _ortho_extent = (global_minx, global_maxx, global_miny, global_maxy)
+
+        def _fetch_ortho_safe():
+            try:
+                return fetch_ortho(_ortho_extent, CURRENT_CRS, lambda m: cb(9, m))
+            except Exception as e:
+                cb(9, f"Varování ortofoto: {e} — pokračuji bez zpevněných ploch")
+                return None
+        _ortho_future = _net_pool.submit(_fetch_ortho_safe)
 
     # LAZ se čte JEDNOU a body se rozdělí po dlaždicích do dočasných souborů
     # (dřív každá dlaždice dekomprimovala celý soubor znovu).
@@ -736,6 +752,19 @@ def run_pipeline(job_id: str, params: dict, file_paths: dict,
 
     global_extent = (global_minx, global_maxx, global_miny, global_maxy)
 
+    # Ortofoto → zpevněné plochy (501) a zeleň (401). Klasifikace až teď,
+    # protože potřebuje OSM (budovy, voda, silnice) jako masky.
+    merged["gdf_ortho"] = None
+    if _ortho_future is not None:
+        rgb_result = _ortho_future.result()
+        if rgb_result is not None:
+            cb(82, "Klasifikuji ortofoto (zpevněné plochy / zeleň)...")
+            merged["gdf_ortho"] = ortho_surface_gdf(
+                global_extent, CURRENT_CRS, gdf_osm=gdf_osm,
+                rgb_result=rgb_result, progress_cb=lambda m: cb(82, m))
+        del rgb_result
+        gc.collect()
+
     # Cache vektorových dat pro pozdější re-render s jiným výběrem vrstev
     # (viz render_from_cache) — bez opětovného zpracování LiDAR dlaždic.
     try:
@@ -795,6 +824,15 @@ def run_pipeline(job_id: str, params: dict, file_paths: dict,
             if not subset.empty:
                 collector.collect(sym_key, subset, group="vegetation")
 
+    # Ortofoto plochy
+    gdf_ortho = merged.get("gdf_ortho")
+    if gdf_ortho is not None and not gdf_ortho.empty:
+        for class_name, sym_key, group in [("Orto_zpevneno", "sym501", "roads"),
+                                           ("Orto_zelen", "sym401", "vegetation")]:
+            subset = gdf_ortho[gdf_ortho["class_name"] == class_name]
+            if not subset.empty:
+                collector.collect(sym_key, subset, group=group)
+
     # Render — add_vector_layers (volaný uvnitř render_map) zároveň
     # naplní collector přesně tím, co kreslí do PNG (OSM + ZABAGED + ISOM).
     cb(85, "Sestavuji mapu...")
@@ -809,6 +847,7 @@ def run_pipeline(job_id: str, params: dict, file_paths: dict,
         contour_layers=merged["contour_layers"],
         depressions=merged["depressions"],
         knolls=merged["knolls"],
+        gdf_ortho=merged.get("gdf_ortho"),
         gdf_osm=gdf_osm,
         zabaged_gdfs=zabaged_gdfs,
         isom_gdfs=isom_gdfs,

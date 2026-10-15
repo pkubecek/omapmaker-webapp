@@ -42,6 +42,7 @@ const DEFAULT_SETTINGS = {
     magnetic_lines: false,
   },
   download_zabaged: false,
+  ortho_surface: false,
 };
 
 const DEFAULT_FILES = {
@@ -218,6 +219,7 @@ export default function App() {
       },
       layers: settings.layers,
       download_zabaged: !!settings.download_zabaged,
+      ortho_surface: String(settings.scale) === '4000' && !!settings.ortho_surface,
       bbox: bbox || null,
     };
 
