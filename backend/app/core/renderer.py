@@ -333,6 +333,7 @@ def render_map(
     progress_cb=None,
     collector=None,
     selected_codes: set | None = None,
+    gdf_ortho=None,
 ) -> dict:
     """
     Sestaví matplotlib mapu a uloží ji jako PNG + world file.
@@ -400,6 +401,30 @@ def render_map(
                                     sym_library, current_crs, scale=scale)
         except Exception as e:
             print(f"[renderer] Chyba vegetace: {e}")
+
+    # Ortofoto (jen 1:4000, volitelné): zeleň 401 nad LiDAR otevřeným
+    # prostorem (1.0/1.1), ale pod lesem (1.2+), aby koruny stromů zůstaly.
+    # Zpevněná plocha 501 nad vší LiDAR vegetací (1.0–1.5) — auta a
+    # pouliční mobiliář jinak v nDSM vypadají jako nízký porost. Je i nad
+    # 520 (1.5): OSM fallback 520 bere celé landuse=residential/industrial,
+    # takže by jinak ve městě zakryl všechno; zelené zahrady pod 520 zůstanou.
+    if gdf_ortho is not None and not gdf_ortho.empty:
+        _cb("Kreslím zpevněné plochy a zeleň z ortofota...")
+        try:
+            ortho_cl = gpd.clip(gdf_ortho, clip_box_map)
+            for class_name, sym_key, zo, vis_key in [
+                ("Orto_zelen", "sym401", 1.15, "vegetation"),
+                ("Orto_zpevneno", "sym501", 1.55, "roads"),
+            ]:
+                if not layer_visibility.get(vis_key, True):
+                    continue
+                if selected_codes is not None and _oom_isom_code(sym_key) not in selected_codes:
+                    continue
+                sub = ortho_cl[ortho_cl["class_name"] == class_name]
+                if not sub.empty:
+                    plot_symbol(ax, sym_key, sub, zo, sym_library, current_crs, scale=scale)
+        except Exception as e:
+            print(f"[renderer] Chyba ortofoto ploch: {e}")
 
     # Skály
     if layer_visibility.get("rocks", True):
