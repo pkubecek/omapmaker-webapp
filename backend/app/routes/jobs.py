@@ -4,6 +4,7 @@ Joby se ukládají na disk (JSON) aby přežily restart kontejneru.
 """
 import os
 import uuid
+import hashlib
 import json
 import shutil
 import sys
@@ -342,7 +343,10 @@ async def get_png(job_id: str):
 
 
 @router.get("/jobs/{job_id}/gpkg")
-async def get_gpkg(job_id: str):
+async def get_gpkg(job_id: str, codes: str | None = None):
+    """GPKG pro OOM. Bez `codes` celý export; s `codes` (čárkami oddělené
+    kódy z výběru vrstev, stejné jako selected_codes u /render) jen
+    vybrané vrstvy — vyfiltrováno z plného GPKG, bez nového zpracování."""
     job = _read_job(job_id)
     if job is None:
         raise HTTPException(status_code=404, detail="Job nenalezen.")
@@ -352,7 +356,33 @@ async def get_gpkg(job_id: str):
     gpkg_path = job.get("gpkg_path")
     if not gpkg_path or not os.path.exists(gpkg_path):
         raise HTTPException(status_code=404, detail="GPKG nenalezeno.")
-    return FileResponse(gpkg_path, media_type="application/geopackage+sqlite3",
+
+    if codes is None:
+        return FileResponse(gpkg_path, media_type="application/geopackage+sqlite3",
+                            filename=f"OOM_{job_id}.gpkg")
+
+    selected = sorted({c.strip() for c in codes.split(",") if c.strip()})
+    if not selected:
+        raise HTTPException(status_code=400, detail="Není vybraná žádná vrstva.")
+
+    # Stejný výběr → stejný soubor; úklid jobu ho smaže spolu se zbytkem
+    sel_hash = hashlib.sha1(",".join(selected).encode()).hexdigest()[:10]
+    filtered_path = os.path.join(os.path.dirname(gpkg_path), f"{job_id}_OOM_sel_{sel_hash}.gpkg")
+    if not os.path.exists(filtered_path):
+        from ..core.exporter import filter_gpkg
+        tmp_path = filtered_path + ".tmp.gpkg"
+        try:
+            written = await asyncio.to_thread(filter_gpkg, gpkg_path, tmp_path, selected)
+        except Exception as e:
+            if os.path.exists(tmp_path):
+                os.remove(tmp_path)
+            raise HTTPException(status_code=500, detail=f"Filtrování GPKG selhalo: {e}")
+        if written == 0:
+            if os.path.exists(tmp_path):
+                os.remove(tmp_path)
+            raise HTTPException(status_code=404, detail="Vybrané vrstvy neobsahují žádná data.")
+        os.replace(tmp_path, filtered_path)
+    return FileResponse(filtered_path, media_type="application/geopackage+sqlite3",
                         filename=f"OOM_{job_id}.gpkg")
 
 

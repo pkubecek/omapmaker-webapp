@@ -52,8 +52,12 @@ export function getPngUrl(jobId) {
   return `${BASE}/api/jobs/${jobId}/png`;
 }
 
-export function getGpkgUrl(jobId) {
-  return `${BASE}/api/jobs/${jobId}/gpkg`;
+// selectedCodes: null = vše, jinak Set/pole kódů z výběru vrstev
+export function getGpkgUrl(jobId, selectedCodes = null) {
+  const url = `${BASE}/api/jobs/${jobId}/gpkg`;
+  if (selectedCodes === null || selectedCodes === undefined) return url;
+  const codes = Array.from(selectedCodes).sort().join(',');
+  return `${url}?codes=${encodeURIComponent(codes)}`;
 }
 
 export function getVectorsUrl(jobId) {

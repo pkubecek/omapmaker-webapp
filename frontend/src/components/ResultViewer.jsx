@@ -180,9 +180,17 @@ export default function ResultViewer({
               <a style={{ ...S.btn, ...(hasFilter ? {} : S.btnPrimary) }} href={pngUrl} download="OMap.png">
                 ↓ Stáhnout PNG
               </a>
-              <a style={S.btn} href={gpkgUrl} download="OMap.gpkg">
-                ↓ Exportovat GPKG pro OOM
-              </a>
+              {hasFilter && selectedCodes.size === 0 ? (
+                <span style={{ ...S.btn, opacity: 0.4, cursor: 'not-allowed' }}
+                  title="Není zapnutá žádná vrstva">
+                  ↓ Exportovat GPKG pro OOM
+                </span>
+              ) : (
+                <a style={S.btn} href={gpkgUrl} download="OMap.gpkg"
+                  title={hasFilter ? 'Exportují se jen zapnuté vrstvy' : undefined}>
+                  ↓ Exportovat GPKG pro OOM{hasFilter ? ' (výběr)' : ''}
+                </a>
+              )}
             </div>
           </div>
         </div>

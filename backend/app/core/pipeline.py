@@ -800,7 +800,7 @@ def run_pipeline(job_id: str, params: dict, file_paths: dict,
     # mohl naplnit ve stejném průchodu jako kreslí PNG. Díky tomu GPKG
     # obsahuje přesně to samé, co se vykreslí (žádná oddělená/neúplná
     # kopie OSM+ZABAGED+ISOM logiky).
-    collector = OomCollector(current_crs=CURRENT_CRS)
+    collector = OomCollector(current_crs=CURRENT_CRS, scale=SCALE)
 
     # Vrstevnice
     for sym_key, layer_key in [

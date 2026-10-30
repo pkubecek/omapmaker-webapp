@@ -7,6 +7,8 @@ import re
 import geopandas as gpd
 import pandas as pd
 
+from .oom_mapping import standard_for_scale, resolve_layer
+
 
 def _oom_isom_code(sym_key: str) -> str | None:
     # Historicky pojmenované sym_keys, kde vedoucí číslo v NÁZVU symbolu
@@ -48,13 +50,20 @@ def build_color_map(sym_library) -> dict:
 
 
 class OomCollector:
-    """Sbírá GeoDataFramy podle ISOM kódů pro pozdější export do GPKG.
+    """Sbírá GeoDataFramy podle sym_keys pro pozdější export do GPKG.
     Nově navíc drží lehký paralelní store (`_geojson_rows`) pro GeoJSON
-    preview na frontendu — nezávislý na GPKG logice, takže ji nijak nemění."""
+    preview na frontendu — nezávislý na GPKG logice, takže ji nijak nemění.
 
-    def __init__(self, current_crs: str = "EPSG:5514"):
-        self._layers: dict = {}
+    GPKG vrstvy se jmenují podle čísla symbolu v cílové OOM sadě
+    (ISOM 2017-2 / ISSprOM 2019 podle měřítka, viz oom_mapping.py), ne podle
+    interního kódu — jinak se v OOM přes CRT nespárují. Každý prvek nese
+    navíc sloupec `code` (kód z výběru vrstev), podle kterého se dá GPKG
+    později vyfiltrovat (filter_gpkg)."""
+
+    def __init__(self, current_crs: str = "EPSG:5514", scale=10_000):
+        self._entries: list = []   # (sym_key, code, kind, GeoDataFrame)
         self._crs = current_crs
+        self._standard = standard_for_scale(scale)
         self._geojson_rows: list = []
 
     def collect(self, sym_key: str, gdf: gpd.GeoDataFrame, group: str | None = None):
@@ -64,10 +73,8 @@ class OomCollector:
         if code is None:
             return
 
-        # --- GPKG store (beze změny chování) ---
-        if code not in self._layers:
-            self._layers[code] = {"Point": [], "Line": [], "Polygon": []}
-        for geom_type, geom_types in [
+        # --- GPKG store ---
+        for kind, geom_types in [
             ("Point", ["Point", "MultiPoint"]),
             ("Line", ["LineString", "MultiLineString"]),
             ("Polygon", ["Polygon", "MultiPolygon"]),
@@ -75,7 +82,7 @@ class OomCollector:
             mask = gdf.geometry.geom_type.isin(geom_types)
             subset = gdf.loc[mask, ["geometry"]].copy()
             if not subset.empty:
-                self._layers[code][geom_type].append(subset)
+                self._entries.append((sym_key, code, kind, subset))
 
         # --- GeoJSON store (pro live náhled na klientu) ---
         self._geojson_rows.append({
@@ -86,24 +93,36 @@ class OomCollector:
         })
 
     def export(self, output_path: str):
-        if not self._layers:
+        if not self._entries:
             print("[exporter] Žádné vrstvy k exportu.")
             return
 
         if os.path.exists(output_path):
             os.remove(output_path)
 
+        # 1) sym_key → název vrstvy v cílové OOM sadě (+ případný převod na bod)
+        groups: dict = {}   # base_name -> {kind: [frames]}
+        for sym_key, code, kind, subset in self._entries:
+            resolved = resolve_layer(sym_key, kind, self._standard)
+            if resolved is None:
+                continue
+            base_name, action = resolved
+            frame = subset.copy()
+            if action == "to_point":
+                frame["geometry"] = frame.geometry.representative_point()
+                kind = "Point"
+            frame["code"] = code
+            groups.setdefault(base_name, {}).setdefault(kind, []).append(frame)
+
+        # 2) zápis — vrstva se smíšenou geometrií se rozdělí příponou
+        #    (_line/_poly/_point); CRT páruje i tyhle varianty
         SUFFIX = {"Point": "_point", "Line": "_line", "Polygon": "_poly"}
         written = 0
-
-        for code in sorted(self._layers.keys(), key=lambda x: float(x)):
-            buckets = self._layers[code]
-            non_empty = {k: v for k, v in buckets.items() if v}
-            if not non_empty:
-                continue
-            use_suffix = len(non_empty) > 1
-
-            for geom_type, frames in non_empty.items():
+        for base_name in sorted(groups):
+            kinds = groups[base_name]
+            use_suffix = len(kinds) > 1
+            for kind, frames in kinds.items():
+                layer_name = f"{base_name}{SUFFIX[kind] if use_suffix else ''}"
                 try:
                     merged = gpd.GeoDataFrame(
                         pd.concat(frames, ignore_index=True), crs=self._crs
@@ -111,22 +130,21 @@ class OomCollector:
                     merged = merged[merged.geometry.notna() & ~merged.geometry.is_empty]
                     if merged.empty:
                         continue
-                    if geom_type == "Polygon":
+                    if kind == "Polygon":
                         merged.geometry = merged.geometry.buffer(0)
                         merged = merged[merged.geometry.is_valid & ~merged.geometry.is_empty]
                         if merged.empty:
                             continue
                     merged = merged.drop_duplicates(subset=["geometry"])
-                    layer_name = f"isom_{code}{SUFFIX[geom_type] if use_suffix else ''}"
-                    merged = merged[["geometry"]].copy()
+                    merged = merged[["code", "geometry"]].copy()
                     merged["Layer"] = layer_name
                     merged.to_file(output_path, layer=layer_name, driver="GPKG")
-                    print(f"[exporter] {layer_name}: {len(merged)} prvků [{geom_type}]")
+                    print(f"[exporter] {layer_name}: {len(merged)} prvků [{kind}]")
                     written += 1
                 except Exception as e:
-                    print(f"[exporter] Chyba isom_{code} [{geom_type}]: {e}")
+                    print(f"[exporter] Chyba {layer_name} [{kind}]: {e}")
 
-        print(f"[exporter] GPKG export: {written} vrstev → {output_path}")
+        print(f"[exporter] GPKG export ({self._standard}): {written} vrstev → {output_path}")
 
     def export_geojson(self, output_path: str, simplify_tolerance: float | None = None):
         """
@@ -163,9 +181,37 @@ class OomCollector:
         return output_path
 
 
-def export_gpkg(layers: dict, output_path: str, current_crs: str = "EPSG:5514"):
+def export_gpkg(layers: dict, output_path: str, current_crs: str = "EPSG:5514",
+                scale=10_000):
     """Zkrácená verze pro přímé volání s dict {sym_key: GeoDataFrame}."""
-    collector = OomCollector(current_crs)
+    collector = OomCollector(current_crs, scale=scale)
     for sym_key, gdf in layers.items():
         collector.collect(sym_key, gdf)
     collector.export(output_path)
+
+
+def filter_gpkg(src_path: str, dst_path: str, codes) -> int:
+    """Zkopíruje z plného GPKG jen prvky, jejichž `code` je ve výběru
+    vrstev (stejné kódy jako LayerSelector / selected_codes). Vrátí počet
+    zapsaných vrstev."""
+    try:
+        import pyogrio
+        layer_names = [name for name, _ in pyogrio.list_layers(src_path)]
+    except ImportError:
+        import fiona
+        layer_names = fiona.listlayers(src_path)
+
+    codes = {str(c) for c in codes}
+    if os.path.exists(dst_path):
+        os.remove(dst_path)
+    written = 0
+    for layer_name in layer_names:
+        gdf = gpd.read_file(src_path, layer=layer_name)
+        if "code" not in gdf.columns:
+            continue
+        gdf = gdf[gdf["code"].astype(str).isin(codes)]
+        if gdf.empty:
+            continue
+        gdf.to_file(dst_path, layer=layer_name, driver="GPKG")
+        written += 1
+    return written

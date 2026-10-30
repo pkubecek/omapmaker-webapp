@@ -372,6 +372,8 @@ export default function OutputPanel({ job, logLines, canRun, running, onRun, onC
   };
 
   const currentPngUrl = customPngUrl || (jobId ? getPngUrl(jobId) : undefined);
+  // GPKG se exportuje jen s vrstvami zakliknutými ve výběru (null = vše)
+  const noLayersSelected = selectedCodes !== null && selectedCodes.size === 0;
 
   return (
     <div style={panelStyle}>
@@ -491,7 +493,7 @@ export default function OutputPanel({ job, logLines, canRun, running, onRun, onC
             selectedCodes={selectedCodes}
             onSelectedChange={setSelectedCodes}
             pngUrl={currentPngUrl}
-            gpkgUrl={getGpkgUrl(jobId)}
+            gpkgUrl={getGpkgUrl(jobId, selectedCodes)}
             onRenderCustom={handleExportCustomPng}
             exporting={exporting}
           />
@@ -502,8 +504,8 @@ export default function OutputPanel({ job, logLines, canRun, running, onRun, onC
           ↓ Stáhnout mapu v PNG
         </DlBtn>
 
-        <DlBtn href={isDone && jobId ? getGpkgUrl(jobId) : undefined}
-          download="OMap.gpkg" disabled={!isDone}>
+        <DlBtn href={isDone && jobId && !noLayersSelected ? getGpkgUrl(jobId, selectedCodes) : undefined}
+          download="OMap.gpkg" disabled={!isDone || noLayersSelected}>
           ↓ Exportovat GPKG pro OpenOrienteerinMapper
         </DlBtn>
 

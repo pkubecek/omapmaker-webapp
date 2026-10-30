@@ -1,0 +1,1915 @@
+diff --git a/backend/OMapMaker-OpenOrienteeringMapper_10_000.crt b/backend/OMapMaker-OpenOrienteeringMapper_10_000.crt
+index deaa960..0bea3ba 100644
+--- a/backend/OMapMaker-OpenOrienteeringMapper_10_000.crt
++++ b/backend/OMapMaker-OpenOrienteeringMapper_10_000.crt
+@@ -1,226 +1,467 @@
++101.1	Layer = isom_101.1
++103.1	Layer = isom_103.1
++104.1	Layer = isom_104.1
++104.9	Layer = isom_104.9
++109	Layer = isom_109
++110	Layer = isom_110
++111	Layer = isom_111
++112	Layer = isom_112
++113.1	Layer = isom_113.1
++115	Layer = isom_115
++201.1	Layer = isom_201.1
++201.9	Layer = isom_201.9
++202.1	Layer = isom_202.1
++202.3	Layer = isom_202.3
++202.9	Layer = isom_202.9
++203.1	Layer = isom_203.1
++203.2	Layer = isom_203.2
++203.9	Layer = isom_203.9
++204	Layer = isom_204
++204.5	Layer = isom_204.5
++205	Layer = isom_205
++207	Layer = isom_207
++207.1	Layer = isom_207.1
++208.1	Layer = isom_208.1
++208.2	Layer = isom_208.2
++210.1	Layer = isom_210.1
++303	Layer = isom_303
++308.1	Layer = isom_308.1
++310.1	Layer = isom_310.1
++311	Layer = isom_311
++312	Layer = isom_312
++313	Layer = isom_313
++417	Layer = isom_417
++418	Layer = isom_418
++419	Layer = isom_419
++512.1	Layer = isom_512.1
++512.2	Layer = isom_512.2
++519	Layer = isom_519
++521.1	Layer = isom_521.1
++523.1	Layer = isom_523.1
++524	Layer = isom_524
++525	Layer = isom_525
++526	Layer = isom_526
++527	Layer = isom_527
++530	Layer = isom_530
++531	Layer = isom_531
++602	Layer = isom_602
++603.0	Layer = isom_603.0
++701	Layer = isom_701
++702	Layer = isom_702
++703	Layer = isom_703
++706	Layer = isom_706
++710	Layer = isom_710
++711.1	Layer = isom_711.1
++712	Layer = isom_712
++713	Layer = isom_713
+ 101	Layer = isom_101
++101	Layer = isom_101_line
++101	Layer = isom_101_poly
+ 102	Layer = isom_102
++102	Layer = isom_102_line
++102	Layer = isom_102_poly
+ 103	Layer = isom_103
++103	Layer = isom_103_line
++103	Layer = isom_103_poly
+ 104	Layer = isom_104
++104	Layer = isom_104_line
++104	Layer = isom_104_poly
++104.2	Layer = isom_104.2
++104.2	Layer = isom_104.2_line
++104.2	Layer = isom_104.2_poly
++104.3	Layer = isom_104.3
++104.3	Layer = isom_104.3_line
++104.3	Layer = isom_104.3_poly
+ 105	Layer = isom_105
+ 105	Layer = isom_105_line
+ 105	Layer = isom_105_poly
+-105	Layer = isom_105_point
+ 106	Layer = isom_106
+ 106	Layer = isom_106_line
++106	Layer = isom_106_poly
+ 107	Layer = isom_107
++107	Layer = isom_107_line
++107	Layer = isom_107_poly
+ 108	Layer = isom_108
+-109	Layer = isom_109
+-110	Layer = isom_110
+-111	Layer = isom_111
+-112	Layer = isom_112
+-112	Layer = isom_112_line
+-112	Layer = isom_112_poly
+-112	Layer = isom_112_point
+-113	Layer = isom_113
+-113	Layer = isom_113_poly
+-114	Layer = isom_114
+-114	Layer = isom_114_poly
+-115	Layer = isom_115
++108	Layer = isom_108_line
++108	Layer = isom_108_poly
+ 201	Layer = isom_201
+ 201	Layer = isom_201_line
+ 201	Layer = isom_201_poly
+-201	Layer = isom_201_point
++201.3	Layer = isom_201.3
++201.3	Layer = isom_201.3_line
++201.3	Layer = isom_201.3_poly
++201.4	Layer = isom_201.4
++201.4	Layer = isom_201.4_line
++201.4	Layer = isom_201.4_poly
+ 202	Layer = isom_202
+ 202	Layer = isom_202_line
+ 202	Layer = isom_202_poly
+-202	Layer = isom_202_point
+-203.1	Layer = isom_203.1
+-203.1	Layer = isom_203.1_point
+-203.2	Layer = isom_203.2
+-203.2	Layer = isom_203.2_point
+-204	Layer = isom_204
+-205	Layer = isom_205
+-206	Layer = isom_201
++202.2	Layer = isom_202.2
++202.2	Layer = isom_202.2_line
++202.2	Layer = isom_202.2_poly
++215	Layer = isom_215
++215	Layer = isom_215_line
++215	Layer = isom_215_poly
++301.4	Layer = isom_301.4
++301.4	Layer = isom_301.4_line
++301.4	Layer = isom_301.4_poly
++302.2	Layer = isom_302.2
++302.2	Layer = isom_302.2_line
++302.2	Layer = isom_302.2_poly
++302.3	Layer = isom_302.3
++302.3	Layer = isom_302.3_line
++302.3	Layer = isom_302.3_poly
++304	Layer = isom_304
++304	Layer = isom_304_line
++304	Layer = isom_304_poly
++305	Layer = isom_305
++305	Layer = isom_305_line
++305	Layer = isom_305_poly
++306	Layer = isom_306
++306	Layer = isom_306_line
++306	Layer = isom_306_poly
++307.2	Layer = isom_307.2
++307.2	Layer = isom_307.2_line
++307.2	Layer = isom_307.2_poly
++309	Layer = isom_309
++309	Layer = isom_309_line
++309	Layer = isom_309_poly
++410.4	Layer = isom_410.4
++410.4	Layer = isom_410.4_line
++410.4	Layer = isom_410.4_poly
++415	Layer = isom_415
++415	Layer = isom_415_line
++415	Layer = isom_415_poly
++416	Layer = isom_416
++416	Layer = isom_416_line
++416	Layer = isom_416_poly
++416.1	Layer = isom_416.1
++416.1	Layer = isom_416.1_line
++416.1	Layer = isom_416.1_poly
++501.2	Layer = isom_501.2
++501.2	Layer = isom_501.2_line
++501.2	Layer = isom_501.2_poly
++502	Layer = isom_502
++502	Layer = isom_502_line
++502	Layer = isom_502_poly
++502.1	Layer = isom_502.1
++502.1	Layer = isom_502.1_line
++502.1	Layer = isom_502.1_poly
++503	Layer = isom_503
++503	Layer = isom_503_line
++503	Layer = isom_503_poly
++504	Layer = isom_504
++504	Layer = isom_504_line
++504	Layer = isom_504_poly
++505	Layer = isom_505
++505	Layer = isom_505_line
++505	Layer = isom_505_poly
++506	Layer = isom_506
++506	Layer = isom_506_line
++506	Layer = isom_506_poly
++507	Layer = isom_507
++507	Layer = isom_507_line
++507	Layer = isom_507_poly
++508	Layer = isom_508
++508	Layer = isom_508_line
++508	Layer = isom_508_poly
++508.1.1	Layer = isom_508.1.1
++508.1.1	Layer = isom_508.1.1_line
++508.1.1	Layer = isom_508.1.1_poly
++508.4.1	Layer = isom_508.4.1
++508.4.1	Layer = isom_508.4.1_line
++508.4.1	Layer = isom_508.4.1_poly
++508.2.1	Layer = isom_508.2.1
++508.2.1	Layer = isom_508.2.1_line
++508.2.1	Layer = isom_508.2.1_poly
++508.3.1	Layer = isom_508.3.1
++508.3.1	Layer = isom_508.3.1_line
++508.3.1	Layer = isom_508.3.1_poly
++509.0.1	Layer = isom_509.0.1
++509.0.1	Layer = isom_509.0.1_line
++509.0.1	Layer = isom_509.0.1_poly
++509.0.2	Layer = isom_509.0.2
++509.0.2	Layer = isom_509.0.2_line
++509.0.2	Layer = isom_509.0.2_poly
++510	Layer = isom_510
++510	Layer = isom_510_line
++510	Layer = isom_510_poly
++511	Layer = isom_511
++511	Layer = isom_511_line
++511	Layer = isom_511_poly
++511.1	Layer = isom_511.1
++511.1	Layer = isom_511.1_line
++511.1	Layer = isom_511.1_poly
++511.9	Layer = isom_511.9
++511.9	Layer = isom_511.9_line
++511.9	Layer = isom_511.9_poly
++512	Layer = isom_512
++512	Layer = isom_512_line
++512	Layer = isom_512_poly
++513	Layer = isom_513
++513	Layer = isom_513_line
++513	Layer = isom_513_poly
++514	Layer = isom_514
++514	Layer = isom_514_line
++514	Layer = isom_514_poly
++515	Layer = isom_515
++515	Layer = isom_515_line
++515	Layer = isom_515_poly
++516	Layer = isom_516
++516	Layer = isom_516_line
++516	Layer = isom_516_poly
++517	Layer = isom_517
++517	Layer = isom_517_line
++517	Layer = isom_517_poly
++518	Layer = isom_518
++518	Layer = isom_518_line
++518	Layer = isom_518_poly
++520.1	Layer = isom_520.1
++520.1	Layer = isom_520.1_line
++520.1	Layer = isom_520.1_poly
++520.3	Layer = isom_520.3
++520.3	Layer = isom_520.3_line
++520.3	Layer = isom_520.3_poly
++521.4	Layer = isom_521.4
++521.4	Layer = isom_521.4_line
++521.4	Layer = isom_521.4_poly
++522.2	Layer = isom_522.2
++522.2	Layer = isom_522.2_line
++522.2	Layer = isom_522.2_poly
++523	Layer = isom_523
++523	Layer = isom_523_line
++523	Layer = isom_523_poly
++528	Layer = isom_528
++528	Layer = isom_528_line
++528	Layer = isom_528_poly
++529	Layer = isom_529
++529	Layer = isom_529_line
++529	Layer = isom_529_poly
++532	Layer = isom_532
++532	Layer = isom_532_line
++532	Layer = isom_532_poly
++532.1	Layer = isom_532.1
++532.1	Layer = isom_532.1_line
++532.1	Layer = isom_532.1_poly
++601.1	Layer = isom_601.1
++601.1	Layer = isom_601.1_line
++601.1	Layer = isom_601.1_poly
++601.3	Layer = isom_601.3
++601.3	Layer = isom_601.3_line
++601.3	Layer = isom_601.3_poly
++705	Layer = isom_705
++705	Layer = isom_705_line
++705	Layer = isom_705_poly
++707	Layer = isom_707
++707	Layer = isom_707_line
++707	Layer = isom_707_poly
++708	Layer = isom_708
++708	Layer = isom_708_line
++708	Layer = isom_708_poly
++709.1	Layer = isom_709.1
++709.1	Layer = isom_709.1_line
++709.1	Layer = isom_709.1_poly
++709.2	Layer = isom_709.2
++709.2	Layer = isom_709.2_line
++709.2	Layer = isom_709.2_poly
++711	Layer = isom_711
++711	Layer = isom_711_line
++711	Layer = isom_711_poly
++113	Layer = isom_113
++113	Layer = isom_113_line
++113	Layer = isom_113_poly
++114	Layer = isom_114
++114	Layer = isom_114_line
++114	Layer = isom_114_poly
++201.2	Layer = isom_201.2
++201.2	Layer = isom_201.2_line
++201.2	Layer = isom_201.2_poly
++206	Layer = isom_206
+ 206	Layer = isom_206_line
+ 206	Layer = isom_206_poly
+-206	Layer = isom_206_point
+-207	Layer = isom_207
+ 208	Layer = isom_208
+ 208	Layer = isom_208_line
+ 208	Layer = isom_208_poly
+-208	Layer = isom_208_point
+ 209	Layer = isom_209
+ 209	Layer = isom_209_line
+ 209	Layer = isom_209_poly
+-209	Layer = isom_209_point
+ 210	Layer = isom_210
+ 210	Layer = isom_210_line
+ 210	Layer = isom_210_poly
+-210	Layer = isom_210_point
+ 211	Layer = isom_211
+ 211	Layer = isom_211_line
+ 211	Layer = isom_211_poly
+-211	Layer = isom_211_point
+ 212	Layer = isom_212
+ 212	Layer = isom_212_line
+ 212	Layer = isom_212_poly
+-212	Layer = isom_212_point
+ 213	Layer = isom_213
+ 213	Layer = isom_213_line
+ 213	Layer = isom_213_poly
+-213	Layer = isom_213_point
+ 214	Layer = isom_214
+ 214	Layer = isom_214_line
+ 214	Layer = isom_214_poly
+-214	Layer = isom_214_point
+-215	Layer = isom_215
+-215	Layer = isom_215_line
+-215	Layer = isom_215_poly
+-215	Layer = isom_215_point
+-301	Layer = isom_301
+-301	Layer = isom_301_line
+-301	Layer = isom_301_poly
+-301	Layer = isom_301_point
+-302	Layer = isom_302
+-302	Layer = isom_302_line
+-302	Layer = isom_302_poly
+-302	Layer = isom_302_point
+-303	Layer = isom_303
+-303	Layer = isom_303_line
+-303	Layer = isom_303_poly
+-303	Layer = isom_303_point
+-304	Layer = isom_304
+-304	Layer = isom_304_line
+-304	Layer = isom_304_poly
+-304	Layer = isom_304_point
+-305	Layer = isom_305
+-305	Layer = isom_305_line
+-305	Layer = isom_305_poly
+-305	Layer = isom_305_point
+-306	Layer = isom_306
+-306	Layer = isom_306_line
+-307	Layer = isom_307
+-307	Layer = isom_307_line
+-307	Layer = isom_307_poly
+-307	Layer = isom_307_point
++301.1	Layer = isom_301.1
++301.1	Layer = isom_301.1_line
++301.1	Layer = isom_301.1_poly
++301.3	Layer = isom_301.3
++301.3	Layer = isom_301.3_line
++301.3	Layer = isom_301.3_poly
++302.1	Layer = isom_302.1
++302.1	Layer = isom_302.1_line
++302.1	Layer = isom_302.1_poly
++302.5	Layer = isom_302.5
++302.5	Layer = isom_302.5_line
++302.5	Layer = isom_302.5_poly
++307.1	Layer = isom_307.1
++307.1	Layer = isom_307.1_line
++307.1	Layer = isom_307.1_poly
+ 308	Layer = isom_308
+ 308	Layer = isom_308_line
+ 308	Layer = isom_308_poly
+-308	Layer = isom_308_point
+-309	Layer = isom_309
+-309	Layer = isom_309_line
+-309	Layer = isom_309_poly
+-309	Layer = isom_309_point
+ 310	Layer = isom_310
++310	Layer = isom_310_line
+ 310	Layer = isom_310_poly
+-311	Layer = isom_311
+-311	Layer = isom_311_line
+-311	Layer = isom_311_poly
+-311	Layer = isom_311_point
+-312	Layer = isom_312
+-313	Layer = isom_313
+ 401	Layer = isom_401
++401	Layer = isom_401_line
+ 401	Layer = isom_401_poly
+ 402	Layer = isom_402
++402	Layer = isom_402_line
+ 402	Layer = isom_402_poly
++402.1	Layer = isom_402.1
++402.1	Layer = isom_402.1_line
++402.1	Layer = isom_402.1_poly
+ 403	Layer = isom_403
++403	Layer = isom_403_line
+ 403	Layer = isom_403_poly
+ 404	Layer = isom_404
++404	Layer = isom_404_line
+ 404	Layer = isom_404_poly
++404.1	Layer = isom_404.1
++404.1	Layer = isom_404.1_line
++404.1	Layer = isom_404.1_poly
+ 405	Layer = isom_405
++405	Layer = isom_405_line
+ 405	Layer = isom_405_poly
+ 406	Layer = isom_406
+ 406	Layer = isom_406_line
+ 406	Layer = isom_406_poly
+-406	Layer = isom_406_point
+-406	Layer = isom_407
+-406	Layer = isom_407_poly
++406.1	Layer = isom_406.1
++406.1	Layer = isom_406.1_line
++406.1	Layer = isom_406.1_poly
++407	Layer = isom_407
++407	Layer = isom_407_line
++407	Layer = isom_407_poly
+ 408	Layer = isom_408
++408	Layer = isom_408_line
+ 408	Layer = isom_408_poly
++408.1	Layer = isom_408.1
++408.1	Layer = isom_408.1_line
++408.1	Layer = isom_408.1_poly
++408.2	Layer = isom_408.2
++408.2	Layer = isom_408.2_line
++408.2	Layer = isom_408.2_poly
+ 409	Layer = isom_409
++409	Layer = isom_409_line
+ 409	Layer = isom_409_poly
+ 410	Layer = isom_410
++410	Layer = isom_410_line
+ 410	Layer = isom_410_poly
++410.1	Layer = isom_410.1
++410.1	Layer = isom_410.1_line
++410.1	Layer = isom_410.1_poly
++410.2	Layer = isom_410.2
++410.2	Layer = isom_410.2_line
++410.2	Layer = isom_410.2_poly
++410.3	Layer = isom_410.3
++410.3	Layer = isom_410.3_line
++410.3	Layer = isom_410.3_poly
+ 411	Layer = isom_411
++411	Layer = isom_411_line
+ 411	Layer = isom_411_poly
+-412	Layer = isom_412
+-412	Layer = isom_412_line
+-412	Layer = isom_412_poly
+-412	Layer = isom_412_point
++412.1	Layer = isom_412.1
++412.1	Layer = isom_412.1_line
++412.1	Layer = isom_412.1_poly
+ 413	Layer = isom_413
+ 413	Layer = isom_413_line
+ 413	Layer = isom_413_poly
+-413	Layer = isom_413_point
++413.1	Layer = isom_413.1
++413.1	Layer = isom_413.1_line
++413.1	Layer = isom_413.1_poly
+ 414	Layer = isom_414
+ 414	Layer = isom_414_line
+ 414	Layer = isom_414_poly
+-414	Layer = isom_414_point
+-415	Layer = isom_415
+-415	Layer = isom_415_line
+-415	Layer = isom_415_poly
+-415	Layer = isom_415_point
+-416	Layer = isom_416
+-416	Layer = isom_416_line
+-416	Layer = isom_416_poly
+-416	Layer = isom_416_point
+-417	Layer = isom_417
+-418	Layer = isom_418
+-419	Layer = isom_419
+-501	Layer = isom_501
+-501	Layer = isom_501_line
+-501	Layer = isom_501_poly
+-501	Layer = isom_501_point
+-502	Layer = isom_502
+-503	Layer = isom_503
+-504	Layer = isom_504
+-505	Layer = isom_505
+-506	Layer = isom_506
+-507	Layer = isom_507
+-508	Layer = isom_508
+-509	Layer = isom_509
+-510	Layer = isom_510
+-511	Layer = isom_511
+-512	Layer = isom_512
+-513	Layer = isom_513
+-514	Layer = isom_514
+-515	Layer = isom_515
+-516	Layer = isom_516
+-517	Layer = isom_517
+-518	Layer = isom_518
+-519	Layer = isom_519
++414.1	Layer = isom_414.1
++414.1	Layer = isom_414.1_line
++414.1	Layer = isom_414.1_poly
++501.1	Layer = isom_501.1
++501.1	Layer = isom_501.1_line
++501.1	Layer = isom_501.1_poly
+ 520	Layer = isom_520
+ 520	Layer = isom_520_line
+ 520	Layer = isom_520_poly
+-520	Layer = isom_520_point
++520.2	Layer = isom_520.2
++520.2	Layer = isom_520.2_line
++520.2	Layer = isom_520.2_poly
+ 521	Layer = isom_521
+ 521	Layer = isom_521_line
+ 521	Layer = isom_521_poly
+-521	Layer = isom_521_point
++521.3	Layer = isom_521.3
++521.3	Layer = isom_521.3_line
++521.3	Layer = isom_521.3_poly
++522.1	Layer = isom_522.1
++522.1	Layer = isom_522.1_line
++522.1	Layer = isom_522.1_poly
++601.2	Layer = isom_601.2
++601.2	Layer = isom_601.2_line
++601.2	Layer = isom_601.2_poly
++601.4	Layer = isom_601.4
++601.4	Layer = isom_601.4_line
++601.4	Layer = isom_601.4_poly
++709	Layer = isom_709
++709	Layer = isom_709_line
++709	Layer = isom_709_poly
++301	Layer = isom_301
++301	Layer = isom_301_line
++301	Layer = isom_301_poly
++301.2	Layer = isom_301.2
++301.2	Layer = isom_301.2_line
++301.2	Layer = isom_301.2_poly
++302	Layer = isom_302
++302	Layer = isom_302_line
++302	Layer = isom_302_poly
++307	Layer = isom_307
++307	Layer = isom_307_line
++307	Layer = isom_307_poly
++412	Layer = isom_412
++412	Layer = isom_412_line
++412	Layer = isom_412_poly
++501	Layer = isom_501
++501	Layer = isom_501_line
++501	Layer = isom_501_poly
++502.2	Layer = isom_502.2
++502.2	Layer = isom_502.2_line
++502.2	Layer = isom_502.2_poly
++508.1	Layer = isom_508.1
++508.1	Layer = isom_508.1_line
++508.1	Layer = isom_508.1_poly
++508.2	Layer = isom_508.2
++508.2	Layer = isom_508.2_line
++508.2	Layer = isom_508.2_poly
++508.3	Layer = isom_508.3
++508.3	Layer = isom_508.3_line
++508.3	Layer = isom_508.3_poly
++508.4	Layer = isom_508.4
++508.4	Layer = isom_508.4_line
++508.4	Layer = isom_508.4_poly
++509	Layer = isom_509
++509	Layer = isom_509_line
++509	Layer = isom_509_poly
++511.2	Layer = isom_511.2
++511.2	Layer = isom_511.2_line
++511.2	Layer = isom_511.2_poly
++521.2	Layer = isom_521.2
++521.2	Layer = isom_521.2_line
++521.2	Layer = isom_521.2_poly
+ 522	Layer = isom_522
+ 522	Layer = isom_522_line
+ 522	Layer = isom_522_poly
+-522	Layer = isom_522_point
+-523	Layer = isom_523
+-523	Layer = isom_523_line
+-523	Layer = isom_523_poly
+-523	Layer = isom_523_point
+-524	Layer = isom_524
+-525	Layer = isom_525
+-526	Layer = isom_526
+-527	Layer = isom_527
+-528	Layer = isom_528
+-529	Layer = isom_529
+-530	Layer = isom_530
+-531	Layer = isom_531
+-532	Layer = isom_532
+-601	Layer = isom_601
+-602	Layer = isom_602
+-603	Layer = isom_603
+-701	Layer = isom_701
+-702	Layer = isom_702
+-703	Layer = isom_703
+-705	Layer = isom_705
+-706	Layer = isom_706
+-707	Layer = isom_707
+-708	Layer = isom_708
+-709	Layer = isom_709
+-710	Layer = isom_710
+-711	Layer = isom_711
+-712	Layer = isom_712
+-713	Layer = isom_713
+diff --git a/backend/OMapMaker-OpenOrienteeringMapper_4_000.crt b/backend/OMapMaker-OpenOrienteeringMapper_4_000.crt
+index 74758c5..3ca1a54 100644
+--- a/backend/OMapMaker-OpenOrienteeringMapper_4_000.crt
++++ b/backend/OMapMaker-OpenOrienteeringMapper_4_000.crt
+@@ -1,408 +1,450 @@
++101.1	Layer = isom_101.1
++102.1	Layer = isom_102.1
++103.1	Layer = isom_103.1
++109	Layer = isom_109
++110	Layer = isom_110
++111	Layer = isom_111
++112	Layer = isom_112
++113.1	Layer = isom_113.1
++113.6	Layer = isom_113.6
++115	Layer = isom_115
++201.1	Layer = isom_201.1
++201.8	Layer = isom_201.8
++201.9	Layer = isom_201.9
++202.2	Layer = isom_202.2
++202.8	Layer = isom_202.8
++202.9	Layer = isom_202.9
++203	Layer = isom_203
++203.1	Layer = isom_203.1
++203.9	Layer = isom_203.9
++204	Layer = isom_204
++205	Layer = isom_205
++207	Layer = isom_207
++207.1	Layer = isom_207.1
++208.1	Layer = isom_208.1
++208.2	Layer = isom_208.2
++210.1	Layer = isom_210.1
++210.3	Layer = isom_210.3
++303	Layer = isom_303
++308.1	Layer = isom_308.1
++310.1	Layer = isom_310.1
++311	Layer = isom_311
++312	Layer = isom_312
++313	Layer = isom_313
++417	Layer = isom_417
++418	Layer = isom_418
++419	Layer = isom_419
++519	Layer = isom_519
++521.1	Layer = isom_521.1
++522.1	Layer = isom_522.1
++524	Layer = isom_524
++525	Layer = isom_525
++526	Layer = isom_526
++527	Layer = isom_527
++530	Layer = isom_530
++531	Layer = isom_531
++701	Layer = isom_701
++702	Layer = isom_702
++703	Layer = isom_703
++706	Layer = isom_706
++710.1	Layer = isom_710.1
++714.1	Layer = isom_714.1
+ 101	Layer = isom_101
+ 101	Layer = isom_101_line
+ 101	Layer = isom_101_poly
+-101	Layer = isom_101_point
+ 102	Layer = isom_102
+ 102	Layer = isom_102_line
+ 102	Layer = isom_102_poly
+-102	Layer = isom_102_point
+ 103	Layer = isom_103
+ 103	Layer = isom_103_line
+ 103	Layer = isom_103_poly
+-103	Layer = isom_103_point
+ 104	Layer = isom_104
+ 104	Layer = isom_104_line
+ 104	Layer = isom_104_poly
+-104	Layer = isom_104_point
++104.1	Layer = isom_104.1
++104.1	Layer = isom_104.1_line
++104.1	Layer = isom_104.1_poly
++104.2	Layer = isom_104.2
++104.2	Layer = isom_104.2_line
++104.2	Layer = isom_104.2_poly
+ 105	Layer = isom_105
+ 105	Layer = isom_105_line
+ 105	Layer = isom_105_poly
+-105	Layer = isom_105_point
+ 107	Layer = isom_107
+ 107	Layer = isom_107_line
+ 107	Layer = isom_107_poly
+-107	Layer = isom_107_point
+ 108	Layer = isom_108
+ 108	Layer = isom_108_line
+ 108	Layer = isom_108_poly
+-108	Layer = isom_108_point
+-109	Layer = isom_109
+-109	Layer = isom_109_line
+-109	Layer = isom_109_poly
+-109	Layer = isom_109_point
+-110	Layer = isom_110
+-110	Layer = isom_110_line
+-110	Layer = isom_110_poly
+-110	Layer = isom_110_point
+-111	Layer = isom_111
+-111	Layer = isom_111_line
+-111	Layer = isom_111_poly
+-111	Layer = isom_111_point
+-112	Layer = isom_112
+-112	Layer = isom_112_line
+-112	Layer = isom_112_poly
+-112	Layer = isom_112_point
+-113	Layer = isom_113
+-113	Layer = isom_113_line
+-113	Layer = isom_113_poly
+-113	Layer = isom_113_point
+-115	Layer = isom_115
+-115	Layer = isom_115_line
+-115	Layer = isom_115_poly
+-115	Layer = isom_115_point
+ 201	Layer = isom_201
+ 201	Layer = isom_201_line
+ 201	Layer = isom_201_poly
+-201	Layer = isom_201_point
++201.3	Layer = isom_201.3
++201.3	Layer = isom_201.3_line
++201.3	Layer = isom_201.3_poly
++201.4	Layer = isom_201.4
++201.4	Layer = isom_201.4_line
++201.4	Layer = isom_201.4_poly
+ 202	Layer = isom_202
+ 202	Layer = isom_202_line
+ 202	Layer = isom_202_poly
+-202	Layer = isom_202_point
+-203.1	Layer = isom_203.1
+-203.1	Layer = isom_203.1_line
+-203.1	Layer = isom_203.1_poly
+-203.1	Layer = isom_203.1_point
+-203.2	Layer = isom_203.2
+-203.2	Layer = isom_203.2_line
+-203.2	Layer = isom_203.2_poly
+-203.2	Layer = isom_203.2_point
+-204	Layer = isom_204
+-204	Layer = isom_204_line
+-204	Layer = isom_204_poly
+-204	Layer = isom_204_point
+-205	Layer = isom_205
+-205	Layer = isom_205_line
+-205	Layer = isom_205_poly
+-205	Layer = isom_205_point
++202.1	Layer = isom_202.1
++202.1	Layer = isom_202.1_line
++202.1	Layer = isom_202.1_poly
++202.3	Layer = isom_202.3
++202.3	Layer = isom_202.3_line
++202.3	Layer = isom_202.3_poly
++202.4	Layer = isom_202.4
++202.4	Layer = isom_202.4_line
++202.4	Layer = isom_202.4_poly
++301.6	Layer = isom_301.6
++301.6	Layer = isom_301.6_line
++301.6	Layer = isom_301.6_poly
++302.6	Layer = isom_302.6
++302.6	Layer = isom_302.6_line
++302.6	Layer = isom_302.6_poly
++305	Layer = isom_305
++305	Layer = isom_305_line
++305	Layer = isom_305_poly
++306	Layer = isom_306
++306	Layer = isom_306_line
++306	Layer = isom_306_poly
++307.2	Layer = isom_307.2
++307.2	Layer = isom_307.2_line
++307.2	Layer = isom_307.2_poly
++309	Layer = isom_309
++309	Layer = isom_309_line
++309	Layer = isom_309_poly
++406.2	Layer = isom_406.2
++406.2	Layer = isom_406.2_line
++406.2	Layer = isom_406.2_poly
++408.3	Layer = isom_408.3
++408.3	Layer = isom_408.3_line
++408.3	Layer = isom_408.3_poly
++410.1	Layer = isom_410.1
++410.1	Layer = isom_410.1_line
++410.1	Layer = isom_410.1_poly
++415	Layer = isom_415
++415	Layer = isom_415_line
++415	Layer = isom_415_poly
++416	Layer = isom_416
++416	Layer = isom_416_line
++416	Layer = isom_416_poly
++501.1	Layer = isom_501.1
++501.1	Layer = isom_501.1_line
++501.1	Layer = isom_501.1_poly
++501.6	Layer = isom_501.6
++501.6	Layer = isom_501.6_line
++501.6	Layer = isom_501.6_poly
++501.7	Layer = isom_501.7
++501.7	Layer = isom_501.7_line
++501.7	Layer = isom_501.7_poly
++501.8	Layer = isom_501.8
++501.8	Layer = isom_501.8_line
++501.8	Layer = isom_501.8_poly
++501.9	Layer = isom_501.9
++501.9	Layer = isom_501.9_line
++501.9	Layer = isom_501.9_poly
++501.16	Layer = isom_501.16
++501.16	Layer = isom_501.16_line
++501.16	Layer = isom_501.16_poly
++501.17	Layer = isom_501.17
++501.17	Layer = isom_501.17_line
++501.17	Layer = isom_501.17_poly
++501.18	Layer = isom_501.18
++501.18	Layer = isom_501.18_line
++501.18	Layer = isom_501.18_poly
++501.19	Layer = isom_501.19
++501.19	Layer = isom_501.19_line
++501.19	Layer = isom_501.19_poly
++505.1	Layer = isom_505.1
++505.1	Layer = isom_505.1_line
++505.1	Layer = isom_505.1_poly
++505.2	Layer = isom_505.2
++505.2	Layer = isom_505.2_line
++505.2	Layer = isom_505.2_poly
++506	Layer = isom_506
++506	Layer = isom_506_line
++506	Layer = isom_506_poly
++507	Layer = isom_507
++507	Layer = isom_507_line
++507	Layer = isom_507_poly
++508	Layer = isom_508
++508	Layer = isom_508_line
++508	Layer = isom_508_poly
++515.1.2	Layer = isom_515.1.2
++515.1.2	Layer = isom_515.1.2_line
++515.1.2	Layer = isom_515.1.2_poly
++515.1.1	Layer = isom_515.1.1
++515.1.1	Layer = isom_515.1.1_line
++515.1.1	Layer = isom_515.1.1_poly
++509.2	Layer = isom_509.2
++509.2	Layer = isom_509.2_line
++509.2	Layer = isom_509.2_poly
++510	Layer = isom_510
++510	Layer = isom_510_line
++510	Layer = isom_510_poly
++511	Layer = isom_511
++511	Layer = isom_511_line
++511	Layer = isom_511_poly
++511.1	Layer = isom_511.1
++511.1	Layer = isom_511.1_line
++511.1	Layer = isom_511.1_poly
++512	Layer = isom_512
++512	Layer = isom_512_line
++512	Layer = isom_512_poly
++512.1	Layer = isom_512.1
++512.1	Layer = isom_512.1_line
++512.1	Layer = isom_512.1_poly
++512.2	Layer = isom_512.2
++512.2	Layer = isom_512.2_line
++512.2	Layer = isom_512.2_poly
++513.1	Layer = isom_513.1
++513.1	Layer = isom_513.1_line
++513.1	Layer = isom_513.1_poly
++513.2	Layer = isom_513.2
++513.2	Layer = isom_513.2_line
++513.2	Layer = isom_513.2_poly
++515	Layer = isom_515
++515	Layer = isom_515_line
++515	Layer = isom_515_poly
++516	Layer = isom_516
++516	Layer = isom_516_line
++516	Layer = isom_516_poly
++518	Layer = isom_518
++518	Layer = isom_518_line
++518	Layer = isom_518_poly
++520.1	Layer = isom_520.1
++520.1	Layer = isom_520.1_line
++520.1	Layer = isom_520.1_poly
++521.4	Layer = isom_521.4
++521.4	Layer = isom_521.4_line
++521.4	Layer = isom_521.4_poly
++522.4	Layer = isom_522.4
++522.4	Layer = isom_522.4_line
++522.4	Layer = isom_522.4_poly
++528	Layer = isom_528
++528	Layer = isom_528_line
++528	Layer = isom_528_poly
++529	Layer = isom_529
++529	Layer = isom_529_line
++529	Layer = isom_529_poly
++532.6	Layer = isom_532.6
++532.6	Layer = isom_532.6_line
++532.6	Layer = isom_532.6_poly
++532.7	Layer = isom_532.7
++532.7	Layer = isom_532.7_line
++532.7	Layer = isom_532.7_poly
++532.8	Layer = isom_532.8
++532.8	Layer = isom_532.8_line
++532.8	Layer = isom_532.8_poly
++532.9	Layer = isom_532.9
++532.9	Layer = isom_532.9_line
++532.9	Layer = isom_532.9_poly
++601	Layer = isom_601
++601	Layer = isom_601_line
++601	Layer = isom_601_poly
++601.4	Layer = isom_601.4
++601.4	Layer = isom_601.4_line
++601.4	Layer = isom_601.4_poly
++601.5	Layer = isom_601.5
++601.5	Layer = isom_601.5_line
++601.5	Layer = isom_601.5_poly
++601.9	Layer = isom_601.9
++601.9	Layer = isom_601.9_line
++601.9	Layer = isom_601.9_poly
++705	Layer = isom_705
++705	Layer = isom_705_line
++705	Layer = isom_705_poly
++707	Layer = isom_707
++707	Layer = isom_707_line
++707	Layer = isom_707_poly
++708	Layer = isom_708
++708	Layer = isom_708_line
++708	Layer = isom_708_poly
++709.1	Layer = isom_709.1
++709.1	Layer = isom_709.1_line
++709.1	Layer = isom_709.1_poly
++709.2	Layer = isom_709.2
++709.2	Layer = isom_709.2_line
++709.2	Layer = isom_709.2_poly
++710.2	Layer = isom_710.2
++710.2	Layer = isom_710.2_line
++710.2	Layer = isom_710.2_poly
++714.0.2	Layer = isom_714.0.2
++714.0.2	Layer = isom_714.0.2_line
++714.0.2	Layer = isom_714.0.2_poly
++113	Layer = isom_113
++113	Layer = isom_113_line
++113	Layer = isom_113_poly
++113.2	Layer = isom_113.2
++113.2	Layer = isom_113.2_line
++113.2	Layer = isom_113.2_poly
+ 206	Layer = isom_206
+ 206	Layer = isom_206_line
+ 206	Layer = isom_206_poly
+-206	Layer = isom_206_point
+-207	Layer = isom_207
+-207	Layer = isom_207_line
+-207	Layer = isom_207_poly
+-207	Layer = isom_207_point
+ 208	Layer = isom_208
+ 208	Layer = isom_208_line
+ 208	Layer = isom_208_poly
+-208	Layer = isom_208_point
+-209	Layer = isom_209
+-209	Layer = isom_209_line
+-209	Layer = isom_209_poly
+-209	Layer = isom_209_point
++208.5	Layer = isom_208.5
++208.5	Layer = isom_208.5_line
++208.5	Layer = isom_208.5_poly
+ 210	Layer = isom_210
+ 210	Layer = isom_210_line
+ 210	Layer = isom_210_poly
+-210	Layer = isom_210_point
++210.2	Layer = isom_210.2
++210.2	Layer = isom_210.2_line
++210.2	Layer = isom_210.2_poly
+ 213	Layer = isom_213
+ 213	Layer = isom_213_line
+ 213	Layer = isom_213_poly
+-213	Layer = isom_213_point
+ 214	Layer = isom_214
+ 214	Layer = isom_214_line
+ 214	Layer = isom_214_poly
+-214	Layer = isom_214_point
+-215	Layer = isom_215
+-215	Layer = isom_215_line
+-215	Layer = isom_215_poly
+-215	Layer = isom_215_point
+-301	Layer = isom_301
+-301	Layer = isom_301_line
+-301	Layer = isom_301_poly
+-301	Layer = isom_301_point
+-302	Layer = isom_302
+-302	Layer = isom_302_line
+-302	Layer = isom_302_poly
+-302	Layer = isom_302_point
+-303	Layer = isom_303
+-303	Layer = isom_303_line
+-303	Layer = isom_303_poly
+-303	Layer = isom_303_point
+-304	Layer = isom_304
+-304	Layer = isom_304_line
+-304	Layer = isom_304_poly
+-304	Layer = isom_304_point
+-305	Layer = isom_305
+-305	Layer = isom_305_line
+-305	Layer = isom_305_poly
+-305	Layer = isom_305_point
+-306	Layer = isom_306
+-306	Layer = isom_306_line
+-306	Layer = isom_306_poly
+-306	Layer = isom_306_point
+-307	Layer = isom_307
+-307	Layer = isom_307_line
+-307	Layer = isom_307_poly
+-307	Layer = isom_307_point
++301.1	Layer = isom_301.1
++301.1	Layer = isom_301.1_line
++301.1	Layer = isom_301.1_poly
++301.3	Layer = isom_301.3
++301.3	Layer = isom_301.3_line
++301.3	Layer = isom_301.3_poly
++302.1	Layer = isom_302.1
++302.1	Layer = isom_302.1_line
++302.1	Layer = isom_302.1_poly
++307.1	Layer = isom_307.1
++307.1	Layer = isom_307.1_line
++307.1	Layer = isom_307.1_poly
+ 308	Layer = isom_308
+ 308	Layer = isom_308_line
+ 308	Layer = isom_308_poly
+-308	Layer = isom_308_point
+-309	Layer = isom_309
+-309	Layer = isom_309_line
+-309	Layer = isom_309_poly
+-309	Layer = isom_309_point
+ 310	Layer = isom_310
+ 310	Layer = isom_310_line
+ 310	Layer = isom_310_poly
+-310	Layer = isom_310_point
+-311	Layer = isom_311
+-311	Layer = isom_311_line
+-311	Layer = isom_311_poly
+-311	Layer = isom_311_point
+-312	Layer = isom_312
+-312	Layer = isom_312_line
+-312	Layer = isom_312_poly
+-312	Layer = isom_312_point
+-313	Layer = isom_313
+-313	Layer = isom_313_line
+-313	Layer = isom_313_poly
+-313	Layer = isom_313_point
+ 401	Layer = isom_401
+ 401	Layer = isom_401_line
+ 401	Layer = isom_401_poly
+-401	Layer = isom_401_point
+ 402	Layer = isom_402
+ 402	Layer = isom_402_line
+ 402	Layer = isom_402_poly
+-402	Layer = isom_402_point
++402.1	Layer = isom_402.1
++402.1	Layer = isom_402.1_line
++402.1	Layer = isom_402.1_poly
+ 403	Layer = isom_403
+ 403	Layer = isom_403_line
+ 403	Layer = isom_403_poly
+-403	Layer = isom_403_point
+ 404	Layer = isom_404
+ 404	Layer = isom_404_line
+ 404	Layer = isom_404_poly
+-404	Layer = isom_404_point
++404.1	Layer = isom_404.1
++404.1	Layer = isom_404.1_line
++404.1	Layer = isom_404.1_poly
+ 405	Layer = isom_405
+ 405	Layer = isom_405_line
+ 405	Layer = isom_405_poly
+-405	Layer = isom_405_point
+ 406	Layer = isom_406
+ 406	Layer = isom_406_line
+ 406	Layer = isom_406_poly
+-406	Layer = isom_406_point
++406.1	Layer = isom_406.1
++406.1	Layer = isom_406.1_line
++406.1	Layer = isom_406.1_poly
+ 407	Layer = isom_407
+ 407	Layer = isom_407_line
+ 407	Layer = isom_407_poly
+-407	Layer = isom_407_point
+ 408	Layer = isom_408
+ 408	Layer = isom_408_line
+ 408	Layer = isom_408_poly
+-408	Layer = isom_408_point
++408.1	Layer = isom_408.1
++408.1	Layer = isom_408.1_line
++408.1	Layer = isom_408.1_poly
++408.2	Layer = isom_408.2
++408.2	Layer = isom_408.2_line
++408.2	Layer = isom_408.2_poly
+ 409	Layer = isom_409
+ 409	Layer = isom_409_line
+ 409	Layer = isom_409_poly
+-409	Layer = isom_409_point
+ 410	Layer = isom_410
+ 410	Layer = isom_410_line
+ 410	Layer = isom_410_poly
+-410	Layer = isom_410_point
+-411	Layer = isom_411
+-411	Layer = isom_411_line
+-411	Layer = isom_411_poly
+-411	Layer = isom_411_point
+-412	Layer = isom_412
+-412	Layer = isom_412_line
+-412	Layer = isom_412_poly
+-412	Layer = isom_412_point
++412.1	Layer = isom_412.1
++412.1	Layer = isom_412.1_line
++412.1	Layer = isom_412.1_poly
+ 413	Layer = isom_413
+ 413	Layer = isom_413_line
+ 413	Layer = isom_413_poly
+-413	Layer = isom_413_point
++413.1	Layer = isom_413.1
++413.1	Layer = isom_413.1_line
++413.1	Layer = isom_413.1_poly
+ 414	Layer = isom_414
+ 414	Layer = isom_414_line
+ 414	Layer = isom_414_poly
+-414	Layer = isom_414_point
+-415	Layer = isom_415
+-415	Layer = isom_415_line
+-415	Layer = isom_415_poly
+-415	Layer = isom_415_point
+-416	Layer = isom_416
+-416	Layer = isom_416_line
+-416	Layer = isom_416_poly
+-416	Layer = isom_416_point
+-417	Layer = isom_417
+-417	Layer = isom_417_line
+-417	Layer = isom_417_poly
+-417	Layer = isom_417_point
+-418	Layer = isom_418
+-418	Layer = isom_418_line
+-418	Layer = isom_418_poly
+-418	Layer = isom_418_point
+-419	Layer = isom_419
+-419	Layer = isom_419_line
+-419	Layer = isom_419_poly
+-419	Layer = isom_419_point
+-501	Layer = isom_501
+-501	Layer = isom_501_line
+-501	Layer = isom_501_poly
+-501	Layer = isom_501_point
+-502	Layer = isom_502
+-502	Layer = isom_502_line
+-502	Layer = isom_502_poly
+-502	Layer = isom_502_point
+-503	Layer = isom_503
+-503	Layer = isom_503_line
+-503	Layer = isom_503_poly
+-503	Layer = isom_503_point
+-504	Layer = isom_504
+-504	Layer = isom_504_line
+-504	Layer = isom_504_poly
+-504	Layer = isom_504_point
+-505	Layer = isom_505
+-505	Layer = isom_505_line
+-505	Layer = isom_505_poly
+-505	Layer = isom_505_point
+-506	Layer = isom_506
+-506	Layer = isom_506_line
+-506	Layer = isom_506_poly
+-506	Layer = isom_506_point
+-507	Layer = isom_507
+-507	Layer = isom_507_line
+-507	Layer = isom_507_poly
+-507	Layer = isom_507_point
+-508	Layer = isom_508
+-508	Layer = isom_508_line
+-508	Layer = isom_508_poly
+-508	Layer = isom_508_point
+-509	Layer = isom_509
+-509	Layer = isom_509_line
+-509	Layer = isom_509_poly
+-509	Layer = isom_509_point
+-510	Layer = isom_510
+-510	Layer = isom_510_line
+-510	Layer = isom_510_poly
+-510	Layer = isom_510_point
+-511	Layer = isom_511
+-511	Layer = isom_511_line
+-511	Layer = isom_511_poly
+-511	Layer = isom_511_point
+-512	Layer = isom_512
+-512	Layer = isom_512_line
+-512	Layer = isom_512_poly
+-512	Layer = isom_512_point
+-513	Layer = isom_513
+-513	Layer = isom_513_line
+-513	Layer = isom_513_poly
+-513	Layer = isom_513_point
+-515	Layer = isom_515
+-515	Layer = isom_515_line
+-515	Layer = isom_515_poly
+-515	Layer = isom_515_point
+-516	Layer = isom_516
+-516	Layer = isom_516_line
+-516	Layer = isom_516_poly
+-516	Layer = isom_516_point
+-518	Layer = isom_518
+-518	Layer = isom_518_line
+-518	Layer = isom_518_poly
+-518	Layer = isom_518_point
+-519	Layer = isom_519
+-519	Layer = isom_519_line
+-519	Layer = isom_519_poly
+-519	Layer = isom_519_point
++414.1	Layer = isom_414.1
++414.1	Layer = isom_414.1_line
++414.1	Layer = isom_414.1_poly
++501.5	Layer = isom_501.5
++501.5	Layer = isom_501.5_line
++501.5	Layer = isom_501.5_poly
++501.2	Layer = isom_501.2
++501.2	Layer = isom_501.2_line
++501.2	Layer = isom_501.2_poly
++501.3	Layer = isom_501.3
++501.3	Layer = isom_501.3_line
++501.3	Layer = isom_501.3_poly
++501.11	Layer = isom_501.11
++501.11	Layer = isom_501.11_line
++501.11	Layer = isom_501.11_poly
++501.12	Layer = isom_501.12
++501.12	Layer = isom_501.12_line
++501.12	Layer = isom_501.12_poly
+ 520	Layer = isom_520
+ 520	Layer = isom_520_line
+ 520	Layer = isom_520_poly
+-520	Layer = isom_520_point
++521.3	Layer = isom_521.3
++521.3	Layer = isom_521.3_line
++521.3	Layer = isom_521.3_poly
++522.3	Layer = isom_522.3
++522.3	Layer = isom_522.3_line
++522.3	Layer = isom_522.3_poly
++601.1	Layer = isom_601.1
++601.1	Layer = isom_601.1_line
++601.1	Layer = isom_601.1_poly
++601.6	Layer = isom_601.6
++601.6	Layer = isom_601.6_line
++601.6	Layer = isom_601.6_poly
++709	Layer = isom_709
++709	Layer = isom_709_line
++709	Layer = isom_709_poly
++714.0.1	Layer = isom_714.0.1
++714.0.1	Layer = isom_714.0.1_line
++714.0.1	Layer = isom_714.0.1_poly
++301	Layer = isom_301
++301	Layer = isom_301_line
++301	Layer = isom_301_poly
++301.2	Layer = isom_301.2
++301.2	Layer = isom_301.2_line
++301.2	Layer = isom_301.2_poly
++302	Layer = isom_302
++302	Layer = isom_302_line
++302	Layer = isom_302_poly
++307	Layer = isom_307
++307	Layer = isom_307_line
++307	Layer = isom_307_poly
++412	Layer = isom_412
++412	Layer = isom_412_line
++412	Layer = isom_412_poly
++501	Layer = isom_501
++501	Layer = isom_501_line
++501	Layer = isom_501_poly
++501.10	Layer = isom_501.10
++501.10	Layer = isom_501.10_line
++501.10	Layer = isom_501.10_poly
++509.1	Layer = isom_509.1
++509.1	Layer = isom_509.1_line
++509.1	Layer = isom_509.1_poly
+ 521	Layer = isom_521
+ 521	Layer = isom_521_line
+ 521	Layer = isom_521_poly
+-521	Layer = isom_521_point
+ 522	Layer = isom_522
+ 522	Layer = isom_522_line
+ 522	Layer = isom_522_poly
+-522	Layer = isom_522_point
+-523	Layer = isom_523
+-523	Layer = isom_523_line
+-523	Layer = isom_523_poly
+-523	Layer = isom_523_point
+-524	Layer = isom_524
+-524	Layer = isom_524_line
+-524	Layer = isom_524_poly
+-524	Layer = isom_524_point
+-525	Layer = isom_525
+-525	Layer = isom_525_line
+-525	Layer = isom_525_poly
+-525	Layer = isom_525_point
+-526	Layer = isom_526
+-526	Layer = isom_526_line
+-526	Layer = isom_526_poly
+-526	Layer = isom_526_point
+-527	Layer = isom_527
+-527	Layer = isom_527_line
+-527	Layer = isom_527_poly
+-527	Layer = isom_527_point
+-528	Layer = isom_528
+-528	Layer = isom_528_line
+-528	Layer = isom_528_poly
+-528	Layer = isom_528_point
+-529	Layer = isom_529
+-529	Layer = isom_529_line
+-529	Layer = isom_529_poly
+-529	Layer = isom_529_point
+-530	Layer = isom_530
+-530	Layer = isom_530_line
+-530	Layer = isom_530_poly
+-530	Layer = isom_530_point
+-531	Layer = isom_531
+-531	Layer = isom_531_line
+-531	Layer = isom_531_poly
+-531	Layer = isom_531_point
+-532	Layer = isom_532
+-532	Layer = isom_532_line
+-532	Layer = isom_532_poly
+-532	Layer = isom_532_point
+-533	Layer = isom_533
+-533	Layer = isom_533_line
+-533	Layer = isom_533_poly
+-533	Layer = isom_533_point
+-601	Layer = isom_601
+-601	Layer = isom_601_line
+-601	Layer = isom_601_poly
+-601	Layer = isom_601_point
+-701	Layer = isom_701
+-701	Layer = isom_701_line
+-701	Layer = isom_701_poly
+-701	Layer = isom_701_point
+-702	Layer = isom_702
+-702	Layer = isom_702_line
+-702	Layer = isom_702_poly
+-702	Layer = isom_702_point
+-703	Layer = isom_703
+-703	Layer = isom_703_line
+-703	Layer = isom_703_poly
+-703	Layer = isom_703_point
+-705	Layer = isom_705
+-705	Layer = isom_705_line
+-705	Layer = isom_705_poly
+-705	Layer = isom_705_point
+-706	Layer = isom_706
+-706	Layer = isom_706_line
+-706	Layer = isom_706_poly
+-706	Layer = isom_706_point
+-707	Layer = isom_707
+-707	Layer = isom_707_line
+-707	Layer = isom_707_poly
+-707	Layer = isom_707_point
+-708	Layer = isom_708
+-708	Layer = isom_708_line
+-708	Layer = isom_708_poly
+-708	Layer = isom_708_point
+-709	Layer = isom_709
+-709	Layer = isom_709_line
+-709	Layer = isom_709_poly
+-709	Layer = isom_709_point
+-710	Layer = isom_710
+-710	Layer = isom_710_line
+-710	Layer = isom_710_poly
+-710	Layer = isom_710_point
+ 714	Layer = isom_714
+ 714	Layer = isom_714_line
+ 714	Layer = isom_714_poly
+-714	Layer = isom_714_point
+-715	Layer = isom_715
+-715	Layer = isom_715_line
+-715	Layer = isom_715_poly
+-715	Layer = isom_715_point
+diff --git a/backend/app/core/exporter.py b/backend/app/core/exporter.py
+index 2f2c4f2..131146b 100644
+--- a/backend/app/core/exporter.py
++++ b/backend/app/core/exporter.py
+@@ -7,6 +7,8 @@ import re
+ import geopandas as gpd
+ import pandas as pd
+ 
++from .oom_mapping import standard_for_scale, resolve_layer
++
+ 
+ def _oom_isom_code(sym_key: str) -> str | None:
+     # Historicky pojmenované sym_keys, kde vedoucí číslo v NÁZVU symbolu
+@@ -48,13 +50,20 @@ def build_color_map(sym_library) -> dict:
+ 
+ 
+ class OomCollector:
+-    """Sbírá GeoDataFramy podle ISOM kódů pro pozdější export do GPKG.
++    """Sbírá GeoDataFramy podle sym_keys pro pozdější export do GPKG.
+     Nově navíc drží lehký paralelní store (`_geojson_rows`) pro GeoJSON
+-    preview na frontendu — nezávislý na GPKG logice, takže ji nijak nemění."""
++    preview na frontendu — nezávislý na GPKG logice, takže ji nijak nemění.
++
++    GPKG vrstvy se jmenují podle čísla symbolu v cílové OOM sadě
++    (ISOM 2017-2 / ISSprOM 2019 podle měřítka, viz oom_mapping.py), ne podle
++    interního kódu — jinak se v OOM přes CRT nespárují. Každý prvek nese
++    navíc sloupec `code` (kód z výběru vrstev), podle kterého se dá GPKG
++    později vyfiltrovat (filter_gpkg)."""
+ 
+-    def __init__(self, current_crs: str = "EPSG:5514"):
+-        self._layers: dict = {}
++    def __init__(self, current_crs: str = "EPSG:5514", scale=10_000):
++        self._entries: list = []   # (sym_key, code, kind, GeoDataFrame)
+         self._crs = current_crs
++        self._standard = standard_for_scale(scale)
+         self._geojson_rows: list = []
+ 
+     def collect(self, sym_key: str, gdf: gpd.GeoDataFrame, group: str | None = None):
+@@ -64,10 +73,8 @@ class OomCollector:
+         if code is None:
+             return
+ 
+-        # --- GPKG store (beze změny chování) ---
+-        if code not in self._layers:
+-            self._layers[code] = {"Point": [], "Line": [], "Polygon": []}
+-        for geom_type, geom_types in [
++        # --- GPKG store ---
++        for kind, geom_types in [
+             ("Point", ["Point", "MultiPoint"]),
+             ("Line", ["LineString", "MultiLineString"]),
+             ("Polygon", ["Polygon", "MultiPolygon"]),
+@@ -75,7 +82,7 @@ class OomCollector:
+             mask = gdf.geometry.geom_type.isin(geom_types)
+             subset = gdf.loc[mask, ["geometry"]].copy()
+             if not subset.empty:
+-                self._layers[code][geom_type].append(subset)
++                self._entries.append((sym_key, code, kind, subset))
+ 
+         # --- GeoJSON store (pro live náhled na klientu) ---
+         self._geojson_rows.append({
+@@ -86,24 +93,36 @@ class OomCollector:
+         })
+ 
+     def export(self, output_path: str):
+-        if not self._layers:
++        if not self._entries:
+             print("[exporter] Žádné vrstvy k exportu.")
+             return
+ 
+         if os.path.exists(output_path):
+             os.remove(output_path)
+ 
++        # 1) sym_key → název vrstvy v cílové OOM sadě (+ případný převod na bod)
++        groups: dict = {}   # base_name -> {kind: [frames]}
++        for sym_key, code, kind, subset in self._entries:
++            resolved = resolve_layer(sym_key, kind, self._standard)
++            if resolved is None:
++                continue
++            base_name, action = resolved
++            frame = subset.copy()
++            if action == "to_point":
++                frame["geometry"] = frame.geometry.representative_point()
++                kind = "Point"
++            frame["code"] = code
++            groups.setdefault(base_name, {}).setdefault(kind, []).append(frame)
++
++        # 2) zápis — vrstva se smíšenou geometrií se rozdělí příponou
++        #    (_line/_poly/_point); CRT páruje i tyhle varianty
+         SUFFIX = {"Point": "_point", "Line": "_line", "Polygon": "_poly"}
+         written = 0
+-
+-        for code in sorted(self._layers.keys(), key=lambda x: float(x)):
+-            buckets = self._layers[code]
+-            non_empty = {k: v for k, v in buckets.items() if v}
+-            if not non_empty:
+-                continue
+-            use_suffix = len(non_empty) > 1
+-
+-            for geom_type, frames in non_empty.items():
++        for base_name in sorted(groups):
++            kinds = groups[base_name]
++            use_suffix = len(kinds) > 1
++            for kind, frames in kinds.items():
++                layer_name = f"{base_name}{SUFFIX[kind] if use_suffix else ''}"
+                 try:
+                     merged = gpd.GeoDataFrame(
+                         pd.concat(frames, ignore_index=True), crs=self._crs
+@@ -111,22 +130,21 @@ class OomCollector:
+                     merged = merged[merged.geometry.notna() & ~merged.geometry.is_empty]
+                     if merged.empty:
+                         continue
+-                    if geom_type == "Polygon":
++                    if kind == "Polygon":
+                         merged.geometry = merged.geometry.buffer(0)
+                         merged = merged[merged.geometry.is_valid & ~merged.geometry.is_empty]
+                         if merged.empty:
+                             continue
+                     merged = merged.drop_duplicates(subset=["geometry"])
+-                    layer_name = f"isom_{code}{SUFFIX[geom_type] if use_suffix else ''}"
+-                    merged = merged[["geometry"]].copy()
++                    merged = merged[["code", "geometry"]].copy()
+                     merged["Layer"] = layer_name
+                     merged.to_file(output_path, layer=layer_name, driver="GPKG")
+-                    print(f"[exporter] {layer_name}: {len(merged)} prvků [{geom_type}]")
++                    print(f"[exporter] {layer_name}: {len(merged)} prvků [{kind}]")
+                     written += 1
+                 except Exception as e:
+-                    print(f"[exporter] Chyba isom_{code} [{geom_type}]: {e}")
++                    print(f"[exporter] Chyba {layer_name} [{kind}]: {e}")
+ 
+-        print(f"[exporter] GPKG export: {written} vrstev → {output_path}")
++        print(f"[exporter] GPKG export ({self._standard}): {written} vrstev → {output_path}")
+ 
+     def export_geojson(self, output_path: str, simplify_tolerance: float | None = None):
+         """
+@@ -163,9 +181,37 @@ class OomCollector:
+         return output_path
+ 
+ 
+-def export_gpkg(layers: dict, output_path: str, current_crs: str = "EPSG:5514"):
++def export_gpkg(layers: dict, output_path: str, current_crs: str = "EPSG:5514",
++                scale=10_000):
+     """Zkrácená verze pro přímé volání s dict {sym_key: GeoDataFrame}."""
+-    collector = OomCollector(current_crs)
++    collector = OomCollector(current_crs, scale=scale)
+     for sym_key, gdf in layers.items():
+         collector.collect(sym_key, gdf)
+-    collector.export(output_path)
+\ No newline at end of file
++    collector.export(output_path)
++
++
++def filter_gpkg(src_path: str, dst_path: str, codes) -> int:
++    """Zkopíruje z plného GPKG jen prvky, jejichž `code` je ve výběru
++    vrstev (stejné kódy jako LayerSelector / selected_codes). Vrátí počet
++    zapsaných vrstev."""
++    try:
++        import pyogrio
++        layer_names = [name for name, _ in pyogrio.list_layers(src_path)]
++    except ImportError:
++        import fiona
++        layer_names = fiona.listlayers(src_path)
++
++    codes = {str(c) for c in codes}
++    if os.path.exists(dst_path):
++        os.remove(dst_path)
++    written = 0
++    for layer_name in layer_names:
++        gdf = gpd.read_file(src_path, layer=layer_name)
++        if "code" not in gdf.columns:
++            continue
++        gdf = gdf[gdf["code"].astype(str).isin(codes)]
++        if gdf.empty:
++            continue
++        gdf.to_file(dst_path, layer=layer_name, driver="GPKG")
++        written += 1
++    return written
+diff --git a/backend/app/core/oom_mapping.py b/backend/app/core/oom_mapping.py
+new file mode 100644
+index 0000000..58e9453
+--- /dev/null
++++ b/backend/app/core/oom_mapping.py
+@@ -0,0 +1,199 @@
++"""
++oom_mapping.py — převod interních sym_keys (symbols*.xml) na čísla symbolů
++v oficiálních OOM sadách (OpenOrienteering Mapper "symbol sets"):
++
++  - ISOM 2017-2   (1:10 000 / 1:15 000)  → standard "isom"
++  - ISSprOM 2019  (1:4 000)              → standard "issprom"
++
++Proč: GPKG vrstvy se v OOM párují se symboly přes CRT soubor
++(`<číslo symbolu>  Layer = <název vrstvy>`). OOM přiřadí symbol jen když
++  1) číslo symbolu v CRT v cílové sadě opravdu existuje, a
++  2) typ objektu sedí s typem symbolu (bodový objekt ↔ bodový symbol,
++     linie/polygon ↔ liniový/plošný/kombinovaný symbol) — jinak
++     Object::setSymbol() potichu selže a objekt zůstane s importním symbolem.
++Proto exporter pojmenovává vrstvy rovnou cílovým OOM číslem (`isom_<číslo>`)
++a geometrii případně převede na typ, který cílový symbol přijme. CRT je pak
++jen identita "číslo → isom_<číslo>" (viz write_crt()).
++
++Tabulky typů jsou vytažené z OOM šablon
++  symbol sets/10000/ISOM 2017-2_10000.omap  (15000 má identická čísla i typy)
++  symbol sets/4000/ISSprOM 2019_4000.omap
++p = bod, l = linie, a = plocha, c = kombinovaný (linie/plocha).
++"""
++import re
++
++
++def _types(**groups) -> dict:
++    out = {}
++    for t, codes in groups.items():
++        for code in codes.split():
++            out.setdefault(code, t)
++    return out
++
++
++_ISOM_TYPES = _types(
++    p="101.1 103.1 104.1 104.9 109 110 111 112 113.1 115 201.1 201.9 202.1 202.3 202.9 203.1 203.2 203.9 204 204.5 205 207 207.1 208.1 208.2 210.1 303 308.1 310.1 311 312 313 417 418 419 512.1 512.2 519 521.1 523.1 524 525 526 527 530 531 602 603.0 701 702 703 706 710 711.1 712 713",
++    l="101 102 103 104 104.2 104.3 105 106 107 108 201 201.3 201.4 202 202.2 215 301.4 302.2 302.3 304 305 306 307.2 309 410.4 415 416 416.1 501.2 502 502.1 503 504 505 506 507 508 508.1.1 508.4.1 508.2.1 508.3.1 509.0.1 509.0.2 510 511 511.1 511.9 512 513 514 515 516 517 518 520.1 520.3 521.4 522.2 523 528 529 532 532.1 601.1 601.3 705 707 708 709.1 709.2 711",
++    a="113 114 201.2 206 208 209 210 211 212 213 214 301.1 301.3 302.1 302.5 307.1 308 310 401 402 402.1 403 404 404.1 405 406 406.1 407 408 408.1 408.2 409 410 410.1 410.2 410.3 411 412.1 413 413.1 414 414.1 501.1 520 520.2 521 521.3 522.1 601.2 601.4 709",
++    c="301 301.2 302 307 412 501 502.2 508.1 508.2 508.3 508.4 509 511.2 521.2 522",
++)
++_ISSPROM_TYPES = _types(
++    p="101.1 102.1 103.1 109 110 111 112 113.1 113.6 115 201.1 201.8 201.9 202.2 202.8 202.9 203 203.1 203.9 204 205 207 207.1 208.1 208.2 210.1 210.3 303 308.1 310.1 311 312 313 417 418 419 519 521.1 522.1 524 525 526 527 530 531 701 702 703 706 710.1 714.1",
++    l="101 102 103 104 104.1 104.2 105 107 108 201 201.3 201.4 202 202.1 202.3 202.4 301.6 302.6 305 306 307.2 309 406.2 408.3 410.1 415 416 501.1 501.6 501.7 501.8 501.9 501.16 501.17 501.18 501.19 505.1 505.2 506 507 508 515.1.2 515.1.1 509.2 510 511 511.1 512 512.1 512.2 513.1 513.2 515 516 518 520.1 521.4 522.4 528 529 532.6 532.7 532.8 532.9 601 601.4 601.5 601.9 705 707 708 709.1 709.2 710.2 714.0.2",
++    a="113 113.2 206 208 208.5 210 210.2 213 214 301.1 301.3 302.1 307.1 308 310 401 402 402.1 403 404 404.1 405 406 406.1 407 408 408.1 408.2 409 410 412.1 413 413.1 414 414.1 501.5 501.2 501.3 501.11 501.12 520 521.3 522.3 601.1 601.6 709 714.0.1",
++    c="301 301.2 302 307 412 501 501.10 509.1 521 522 714",
++)
++
++# ---------------------------------------------------------------------------
++# sym_key → číslo OOM symbolu. Co tu není, odvodí se z čísla v názvu
++# (sym104 → "104", sym412a → "412"). None = cílová sada nemá ekvivalent;
++# vrstva se exportuje jako unmapped_<klíč> bez CRT pravidla, takže v OOM
++# zůstane vidět s importním symbolem a dá se přiřadit ručně.
++# ---------------------------------------------------------------------------
++_COMMON_OVERRIDES = {
++    "sym216l": "415",     # historický název, ve skutečnosti 415
++    "sym511P": None,      # stožáry jako body — OOM nemá bodový symbol
++}
++
++_ISOM_OVERRIDES = {
++    **_COMMON_OVERRIDES,
++    "sym203-1": "203.1",  # Rocky pit or cave (without entrance)
++    "sym203-2": "203.2",  # Cave or rocky pit (with entrance)
++    "sym408l": "410.4",   # liniová vegetace → Vegetation: fight, minimum width
++    "sym501l": "505",     # OSM footway/pedestrian jako linie → Footpath
++    "sym502DBa": "502.2", # dvouproudá silnice → Road with two carriageways
++    "sym502DBb": "502.2",
++    "sym523": "523.1",    # zřícenina jako bod → Ruin, minimum size
++    "sym601": "601.1",    # Magnetic north line
++    "sym603": "603.0",    # Spot height, dot
++}
++
++_ISSPROM_OVERRIDES = {
++    **_COMMON_OVERRIDES,
++    "sym105-2": "105",    # šablona nemá 105.2
++    "sym203-1": "203",    # Rocky pit or cave (without a distinct entrance)
++    "sym203-2": "203.1",  # Cave (with a distinct entrance)
++    "sym209": "208.5",    # Dense boulder field
++    "sym215a": "107",     # ISSprOM nemá 215 → Erosion gully or trench
++    "sym215b": "107",
++    "sym304": "305",      # ISSprOM nemá 304 → Small crossable watercourse
++    "sym408l": "408.3",   # Vegetation: walk, minimum width
++    "sym411": "410",      # Impassable vegetation
++    "sym501-1": "501.1",  # Step or edge of paved area
++    "sym501-2": "501.1",  # šablona nemá zvláštní symbol pro spodní úroveň
++    "sym501-3": "501.3",  # Paved area with scattered trees
++    "sym501l": "501.6",   # Paved area, footprint 1.4 m (linie)
++    # Silnice 502–504 nejsou v ISSprOM — mapují se na liniové zpevněné plochy
++    "sym502Da": "501.19", "sym502Db": "501.19", "sym502Dc": "501.19",
++    "sym502DBa": "501.19", "sym502DBb": "501.19",
++    "sym502a": "501.18", "sym502b": "501.18", "sym502Ba": "501.18", "sym502Bb": "501.18",
++    "sym503": "501.8", "sym503Ba": "501.8", "sym503Bb": "501.8",
++    "sym504": "505.2",    # Unpaved footpath or track, 2 m
++    "sym505": "505.1",    # Unpaved footpath or track, 1.4 m
++    "sym509a": "509.1", "sym509b": "509.1", "sym509Ba": "509.1", "sym509Bb": "509.1",
++    "sym509-2": "509.2",  # Tramway
++    "sym511a": "511",
++    "sym512-1": "512",    # Bridge, one side (vstup pod most/do tunelu)
++    "sym512-2": "512.2",  # Underpass or tunnel
++    "sym512-3": None,     # 512.3 šablona nemá
++    "sym513-1a": "513.1", "sym513-1b": "513.1",
++    "sym513-2a": "513.2", "sym513-2b": "513.2",
++    "sym522-1": "522.1",  # Pillar
++    "sym523": None,       # ISSprOM nemá zříceninu
++    "sym532a": "532.7", "sym532b": "532.7", "sym532c": "532.7",  # Stairway 2 m
++    "sym533": None,
++    "sym710-1": "710.1", "sym710-2": "710.2",
++    "sym715": None,
++}
++
++# Bodová geometrie pro plošný/liniový symbol → bodová varianta "minimum size",
++# pokud ji šablona má. Jinak jde do vrstvy isom_<číslo>_point bez CRT pravidla.
++_POINT_FALLBACK = {
++    "isom": {"201": "201.1", "202": "202.1", "208": "208.1", "210": "210.1",
++             "113": "113.1", "308": "308.1", "310": "310.1", "512": "512.1",
++             "521": "521.1", "523": "523.1"},
++    "issprom": {"201": "201.1", "202": "202.2", "208": "208.1", "210": "210.1",
++                "113": "113.1", "308": "308.1", "310": "310.1", "521": "521.1",
++                "714": "714.1"},
++}
++
++_STANDARDS = {
++    "isom": (_ISOM_TYPES, _ISOM_OVERRIDES),
++    "issprom": (_ISSPROM_TYPES, _ISSPROM_OVERRIDES),
++}
++
++_UNMAPPED = object()
++
++
++def standard_for_scale(scale) -> str:
++    try:
++        return "issprom" if int(scale) <= 5000 else "isom"
++    except (TypeError, ValueError):
++        return "isom"
++
++
++def _default_code(sym_key: str) -> str | None:
++    raw = sym_key[3:] if sym_key.startswith("sym") else sym_key
++    m = re.match(r"^(\d+)", raw)
++    return m.group(1) if m else None
++
++
++def oom_code(sym_key: str, standard: str):
++    """Vrátí (číslo, je_v_šabloně). Číslo je None jen když z klíče nejde
++    odvodit vůbec nic."""
++    types, overrides = _STANDARDS[standard]
++    raw = sym_key[3:] if sym_key.startswith("sym") else sym_key
++    if sym_key in overrides:
++        code = overrides[sym_key]
++        if code is None:
++            return _default_code(sym_key), False
++        return code, code in types
++    # Vlastní ISOM vrstvy (klíč = název souboru, např. "501.1") — pokud
++    # přesně odpovídá číslu v šabloně, použije se beze změny.
++    if not sym_key.startswith("sym") and raw in types:
++        return raw, True
++    code = _default_code(sym_key)
++    return code, (code in types) if code else False
++
++
++def resolve_layer(sym_key: str, geom_kind: str, standard: str):
++    """geom_kind: "Point" | "Line" | "Polygon".
++    Vrátí (layer_name, action), action ∈ {"keep", "to_point"}; None pokud
++    z klíče nejde odvodit číslo."""
++    types, _ = _STANDARDS[standard]
++    code, known = oom_code(sym_key, standard)
++    if code is None:
++        return None
++    if not known:
++        # Vlastní prefix, ať se nesrazí se skutečným číslem v šabloně
++        # (např. 512.3 → "512" by jinak spadlo pod "Bridge, one side")
++        raw = sym_key[3:] if sym_key.startswith("sym") else sym_key
++        suffix = "_point" if geom_kind == "Point" else ""
++        return f"unmapped_{raw}{suffix}", "keep"
++    sym_type = types[code]
++    if sym_type == "p":
++        # Bodový symbol: linie/polygon se převede na reprezentativní bod
++        return f"isom_{code}", ("keep" if geom_kind == "Point" else "to_point")
++    # Liniový/plošný/kombinovaný symbol
++    if geom_kind != "Point":
++        return f"isom_{code}", "keep"
++    fb = _POINT_FALLBACK[standard].get(code)
++    if fb and types.get(fb) == "p":
++        return f"isom_{fb}", "keep"
++    # Bod bez bodové varianty — vlastní vrstva, CRT ji nepáruje
++    return f"isom_{code}_point", "keep"
++
++
++def write_crt(standard: str, path: str):
++    """CRT pro OOM: každé číslo symbolu cílové sady ↔ vrstva isom_<číslo>.
++    Liniové/plošné symboly navíc i pro varianty _line/_poly (vrstva se
++    smíšenou geometrií se v exporteru rozdělí). Vrstvy isom_<číslo>_point
++    u neliniových symbolů záměrně pravidlo nemají — OOM by bodu liniový
++    symbol stejně nepřiřadil."""
++    types, _ = _STANDARDS[standard]
++    with open(path, "w", encoding="utf-8", newline="\n") as f:
++        for code, sym_type in types.items():
++            f.write(f"{code}\tLayer = isom_{code}\n")
++            if sym_type != "p":
++                f.write(f"{code}\tLayer = isom_{code}_line\n")
++                f.write(f"{code}\tLayer = isom_{code}_poly\n")
+diff --git a/backend/app/core/pipeline.py b/backend/app/core/pipeline.py
+index 89cbee6..0fbdc80 100644
+--- a/backend/app/core/pipeline.py
++++ b/backend/app/core/pipeline.py
+@@ -789,7 +789,7 @@ def run_pipeline(job_id: str, params: dict, file_paths: dict,
+     # mohl naplnit ve stejném průchodu jako kreslí PNG. Díky tomu GPKG
+     # obsahuje přesně to samé, co se vykreslí (žádná oddělená/neúplná
+     # kopie OSM+ZABAGED+ISOM logiky).
+-    collector = OomCollector(current_crs=CURRENT_CRS)
++    collector = OomCollector(current_crs=CURRENT_CRS, scale=SCALE)
+ 
+     # Vrstevnice
+     for sym_key, layer_key in [
+diff --git a/backend/app/routes/jobs.py b/backend/app/routes/jobs.py
+index 8639286..b4c6d98 100644
+--- a/backend/app/routes/jobs.py
++++ b/backend/app/routes/jobs.py
+@@ -4,6 +4,7 @@ Joby se ukládají na disk (JSON) aby přežily restart kontejneru.
+ """
+ import os
+ import uuid
++import hashlib
+ import json
+ import shutil
+ import sys
+@@ -342,7 +343,10 @@ async def get_png(job_id: str):
+ 
+ 
+ @router.get("/jobs/{job_id}/gpkg")
+-async def get_gpkg(job_id: str):
++async def get_gpkg(job_id: str, codes: str | None = None):
++    """GPKG pro OOM. Bez `codes` celý export; s `codes` (čárkami oddělené
++    kódy z výběru vrstev, stejné jako selected_codes u /render) jen
++    vybrané vrstvy — vyfiltrováno z plného GPKG, bez nového zpracování."""
+     job = _read_job(job_id)
+     if job is None:
+         raise HTTPException(status_code=404, detail="Job nenalezen.")
+@@ -352,7 +356,33 @@ async def get_gpkg(job_id: str):
+     gpkg_path = job.get("gpkg_path")
+     if not gpkg_path or not os.path.exists(gpkg_path):
+         raise HTTPException(status_code=404, detail="GPKG nenalezeno.")
+-    return FileResponse(gpkg_path, media_type="application/geopackage+sqlite3",
++
++    if codes is None:
++        return FileResponse(gpkg_path, media_type="application/geopackage+sqlite3",
++                            filename=f"OOM_{job_id}.gpkg")
++
++    selected = sorted({c.strip() for c in codes.split(",") if c.strip()})
++    if not selected:
++        raise HTTPException(status_code=400, detail="Není vybraná žádná vrstva.")
++
++    # Stejný výběr → stejný soubor; úklid jobu ho smaže spolu se zbytkem
++    sel_hash = hashlib.sha1(",".join(selected).encode()).hexdigest()[:10]
++    filtered_path = os.path.join(os.path.dirname(gpkg_path), f"{job_id}_OOM_sel_{sel_hash}.gpkg")
++    if not os.path.exists(filtered_path):
++        from ..core.exporter import filter_gpkg
++        tmp_path = filtered_path + ".tmp.gpkg"
++        try:
++            written = await asyncio.to_thread(filter_gpkg, gpkg_path, tmp_path, selected)
++        except Exception as e:
++            if os.path.exists(tmp_path):
++                os.remove(tmp_path)
++            raise HTTPException(status_code=500, detail=f"Filtrování GPKG selhalo: {e}")
++        if written == 0:
++            if os.path.exists(tmp_path):
++                os.remove(tmp_path)
++            raise HTTPException(status_code=404, detail="Vybrané vrstvy neobsahují žádná data.")
++        os.replace(tmp_path, filtered_path)
++    return FileResponse(filtered_path, media_type="application/geopackage+sqlite3",
+                         filename=f"OOM_{job_id}.gpkg")
+ 
+ 
+diff --git a/frontend/src/api.js b/frontend/src/api.js
+index 576c680..8b72d2d 100644
+--- a/frontend/src/api.js
++++ b/frontend/src/api.js
+@@ -52,8 +52,12 @@ export function getPngUrl(jobId) {
+   return `${BASE}/api/jobs/${jobId}/png`;
+ }
+ 
+-export function getGpkgUrl(jobId) {
+-  return `${BASE}/api/jobs/${jobId}/gpkg`;
++// selectedCodes: null = vše, jinak Set/pole kódů z výběru vrstev
++export function getGpkgUrl(jobId, selectedCodes = null) {
++  const url = `${BASE}/api/jobs/${jobId}/gpkg`;
++  if (selectedCodes === null || selectedCodes === undefined) return url;
++  const codes = Array.from(selectedCodes).sort().join(',');
++  return `${url}?codes=${encodeURIComponent(codes)}`;
+ }
+ 
+ export function getVectorsUrl(jobId) {
+diff --git a/frontend/src/components/OutputPanel.jsx b/frontend/src/components/OutputPanel.jsx
+index cdc7d4e..46539e3 100644
+--- a/frontend/src/components/OutputPanel.jsx
++++ b/frontend/src/components/OutputPanel.jsx
+@@ -372,6 +372,8 @@ export default function OutputPanel({ job, logLines, canRun, running, onRun, onC
+   };
+ 
+   const currentPngUrl = customPngUrl || (jobId ? getPngUrl(jobId) : undefined);
++  // GPKG se exportuje jen s vrstvami zakliknutými ve výběru (null = vše)
++  const noLayersSelected = selectedCodes !== null && selectedCodes.size === 0;
+ 
+   return (
+     <div style={panelStyle}>
+@@ -491,7 +493,7 @@ export default function OutputPanel({ job, logLines, canRun, running, onRun, onC
+             selectedCodes={selectedCodes}
+             onSelectedChange={setSelectedCodes}
+             pngUrl={currentPngUrl}
+-            gpkgUrl={getGpkgUrl(jobId)}
++            gpkgUrl={getGpkgUrl(jobId, selectedCodes)}
+             onRenderCustom={handleExportCustomPng}
+             exporting={exporting}
+           />
+@@ -502,8 +504,8 @@ export default function OutputPanel({ job, logLines, canRun, running, onRun, onC
+           ↓ Stáhnout mapu v PNG
+         </DlBtn>
+ 
+-        <DlBtn href={isDone && jobId ? getGpkgUrl(jobId) : undefined}
+-          download="OMap.gpkg" disabled={!isDone}>
++        <DlBtn href={isDone && jobId && !noLayersSelected ? getGpkgUrl(jobId, selectedCodes) : undefined}
++          download="OMap.gpkg" disabled={!isDone || noLayersSelected}>
+           ↓ Exportovat GPKG pro OpenOrienteerinMapper
+         </DlBtn>
+ 
+diff --git a/frontend/src/components/ResultViewer.jsx b/frontend/src/components/ResultViewer.jsx
+index b012503..0ce9bd0 100644
+--- a/frontend/src/components/ResultViewer.jsx
++++ b/frontend/src/components/ResultViewer.jsx
+@@ -180,9 +180,17 @@ export default function ResultViewer({
+               <a style={{ ...S.btn, ...(hasFilter ? {} : S.btnPrimary) }} href={pngUrl} download="OMap.png">
+                 ↓ Stáhnout PNG
+               </a>
+-              <a style={S.btn} href={gpkgUrl} download="OMap.gpkg">
+-                ↓ Exportovat GPKG pro OOM
+-              </a>
++              {hasFilter && selectedCodes.size === 0 ? (
++                <span style={{ ...S.btn, opacity: 0.4, cursor: 'not-allowed' }}
++                  title="Není zapnutá žádná vrstva">
++                  ↓ Exportovat GPKG pro OOM
++                </span>
++              ) : (
++                <a style={S.btn} href={gpkgUrl} download="OMap.gpkg"
++                  title={hasFilter ? 'Exportují se jen zapnuté vrstvy' : undefined}>
++                  ↓ Exportovat GPKG pro OOM{hasFilter ? ' (výběr)' : ''}
++                </a>
++              )}
+             </div>
+           </div>
+         </div>
