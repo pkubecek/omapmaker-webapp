@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import MapCanvas from './MapCanvas';
 import LayerSelector from './LayerSelector';
 import { useVectorElements, MAP_PAPER } from './VectorPreview';
+import { downloadFile } from '../api';
 
 const S = {
   overlay: {
@@ -92,6 +93,25 @@ export default function ResultViewer({
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
 
+  // Stahování přes fetch, ne navigací — chybová odpověď backendu by jinak
+  // odvedla stránku pryč, spustila 'pagehide' → release a smazala job.
+  const [dlBusy, setDlBusy] = useState(null);
+  const [dlError, setDlError] = useState(null);
+  const handleDownload = (url, filename) => async (e) => {
+    e.preventDefault();
+    if (dlBusy) return;
+    setDlBusy(filename);
+    setDlError(null);
+    try {
+      await downloadFile(url, filename);
+    } catch (err) {
+      console.error('Stažení selhalo', err);
+      setDlError(err.message || 'Stažení selhalo');
+    } finally {
+      setDlBusy(null);
+    }
+  };
+
   const handleRender = async () => {
     await onRenderCustom();
     setMode('png');
@@ -177,7 +197,8 @@ export default function ResultViewer({
                   {exporting ? '⏳ Renderuji výběr…' : '⚙ Vyrenderovat PNG s vybranými vrstvami'}
                 </button>
               )}
-              <a style={{ ...S.btn, ...(hasFilter ? {} : S.btnPrimary) }} href={pngUrl} download="OMap.png">
+              <a style={{ ...S.btn, ...(hasFilter ? {} : S.btnPrimary) }} href={pngUrl} download="OMap.png"
+                onClick={handleDownload(pngUrl, 'OMap.png')}>
                 ↓ Stáhnout PNG
               </a>
               {hasFilter && selectedCodes.size === 0 ? (
@@ -187,9 +208,13 @@ export default function ResultViewer({
                 </span>
               ) : (
                 <a style={S.btn} href={gpkgUrl} download="OMap.gpkg"
+                  onClick={handleDownload(gpkgUrl, 'OMap.gpkg')}
                   title={hasFilter ? 'Exportují se jen zapnuté vrstvy' : undefined}>
-                  ↓ Exportovat GPKG pro OOM{hasFilter ? ' (výběr)' : ''}
+                  {dlBusy === 'OMap.gpkg' ? '⏳ Připravuji GPKG…' : `↓ Exportovat GPKG pro OOM${hasFilter ? ' (výběr)' : ''}`}
                 </a>
+              )}
+              {dlError && (
+                <div style={{ fontSize: 11, color: '#c0392b', marginTop: 4 }}>{dlError}</div>
               )}
             </div>
           </div>

@@ -44,6 +44,28 @@ export function releaseJob(jobId) {
   api.post(`/api/jobs/${jobId}/release`).catch(() => {});
 }
 
+// Stažení souboru z backendu bez navigace stránky. Odkaz <a href download>
+// na jinou doménu (backend) atribut download ignoruje a stránku naviguje —
+// když backend vrátí chybu (404/500 JSON), prohlížeč odejde na chybovou
+// stránku, spustí se 'pagehide' → releaseJob() a job se na serveru smaže.
+export async function downloadFile(url, filename) {
+  const res = await fetch(url);
+  if (!res.ok) {
+    let detail = `HTTP ${res.status}`;
+    try { detail = (await res.json()).detail || detail; } catch { /* ne-JSON */ }
+    throw new Error(detail);
+  }
+  const blob = await res.blob();
+  const objUrl = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = objUrl;
+  a.download = filename || '';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(objUrl), 10000);
+}
+
 export function getPreviewUrl(jobId) {
   return `${BASE}/api/jobs/${jobId}/preview`;
 }

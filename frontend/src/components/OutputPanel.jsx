@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { getPngUrl, getPreviewUrl, getGpkgUrl, getVectorsUrl, getColorsUrl, renderCustomPng } from '../api';
+import { getPngUrl, getPreviewUrl, getGpkgUrl, getVectorsUrl, getColorsUrl, renderCustomPng, downloadFile } from '../api';
 import ResultViewer from './ResultViewer';
 
 const S = {
@@ -174,6 +174,8 @@ function RunBtn({ disabled, onClick, children }) {
 // Tlačítko se stažením + hover efekt
 function DlBtn({ href, download, disabled, primary, onClick, children }) {
   const [hovered, setHovered] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState(null);
 
   const baseStyle = {
     display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
@@ -210,16 +212,41 @@ function DlBtn({ href, download, disabled, primary, onClick, children }) {
     );
   }
 
+  // Stahuje se přes fetch (downloadFile), ne navigací — chyba backendu tak
+  // neodvede stránku pryč a nesmaže job (viz api.js).
+  const handleDownload = async (e) => {
+    e.preventDefault();
+    if (busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await downloadFile(href, download);
+    } catch (err) {
+      console.error('Stažení selhalo', err);
+      setError(err.message || 'Stažení selhalo');
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
-    <a
-      href={href}
-      download={download}
-      style={baseStyle}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-    >
-      {children}
-    </a>
+    <>
+      <a
+        href={href}
+        download={download}
+        onClick={handleDownload}
+        style={{ ...baseStyle, opacity: busy ? 0.6 : baseStyle.opacity }}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+      >
+        {busy ? '⏳ Stahuji…' : children}
+      </a>
+      {error && (
+        <div style={{ fontSize: 11, color: 'var(--danger, #c0392b)', margin: '-2px 0 6px' }}>
+          {error}
+        </div>
+      )}
+    </>
   );
 }
 
