@@ -2,8 +2,14 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { startCuzkDownload, getCuzkStatus, cancelCuzkDownload, startPolandDownload, getPolandStatus, cancelPolandDownload,
+<<<<<<< Updated upstream
   startItalyDownload, getItalyStatus, cancelItalyDownload } from '../api';
 import EUROPE_BORDERS from './europeBorders';
+=======
+  startItalyDownload, getItalyStatus, cancelItalyDownload,
+  startAutoDownload, getAutoStatus, cancelAutoDownload } from '../api';
+import COVERAGE from './coverage';
+>>>>>>> Stashed changes
 
 // Tooltip styl pro country polygony
 if (typeof document !== 'undefined') {
@@ -140,12 +146,21 @@ function fmtCoord(v) { return v.toFixed(4); }
 
 // Dostupné zdroje dat
 const DATA_SOURCES = [
+  { key: 'auto', flag: '🌍', label: 'Automaticky', sublabel: 'podle oblasti, i přes hranice', available: true },
   { key: 'cz',  flag: '🇨🇿', label: 'ČÚZK',   sublabel: 'Česká republika',     available: true  },
   { key: 'pl',  flag: '🇵🇱', label: 'GUGiK',   sublabel: 'Polsko',             available: true  },
   { key: 'it',  flag: '🇮🇹', label: 'SITR',    sublabel: 'Sicílie (pouze DMR)',available: true  },
   { key: 'sk',  flag: '🇸🇰', label: 'ÚGKK SR', sublabel: 'Slovensko',          available: false },
+<<<<<<< Updated upstream
   { key: 'at',  flag: '🇦🇹', label: 'BEV',     sublabel: 'Rakousko',           available: false },
   { key: 'de',  flag: '🇩🇪', label: 'BKG',     sublabel: 'Německo',            available: false },
+=======
+  { key: 'de',  flag: '🇩🇪', label: 'Německo',  sublabel: 'všech 16 spolkových zemí', available: true },
+  { key: 'ch',  flag: '🇨🇭', label: 'swisstopo', sublabel: 'Švýcarsko',          available: true  },
+  { key: 'fr',  flag: '🇫🇷', label: 'IGN',      sublabel: 'Francie (LiDAR HD)', available: true  },
+  { key: 'nl',  flag: '🇳🇱', label: 'AHN',      sublabel: 'Nizozemsko',         available: true  },
+  { key: 'at',  flag: '🇦🇹', label: 'Rakousko', sublabel: 'Tyrolsko, Štýrsko (beta)', available: true },
+>>>>>>> Stashed changes
 ];
 
 function CountryDropdown({ country, disabled, onChange }) {
@@ -277,14 +292,14 @@ export default function MapView({ bbox, onBboxChange, onCuzkComplete, onHelp, is
   useEffect(() => { cuzkStateRef.current = cuzkState; }, [cuzkState]);
 
   // Detekovaná/ručně zvolená země
-  const [country, setCountry] = useState('cz');
+  const [country, setCountry] = useState('auto');
 
   // Podkladová vrstva mapy
   const [baseLayer, setBaseLayer] = useState('mapriot');
   const baseLayersRef = useRef({});
 
   useEffect(() => {
-    if (!bbox && cuzkStateRef.current !== 'downloading') setCountry('cz');
+    if (!bbox && cuzkStateRef.current !== 'downloading') setCountry('auto');
   }, [bbox]);
 
   // Init map — přidej polygony hranic
@@ -319,14 +334,13 @@ export default function MapView({ bbox, onBboxChange, onCuzkComplete, onHelp, is
 
     const layersRef = { current: [] };
 
-    const styleAvail      = { color: '#ffffff00', weight: 1.5, dashArray: '4 3', fillColor: '#ffffff00', fillOpacity: 0.0, interactive: true };
-    const styleComingSoon = { color: '#ffffff00',    weight: 1.2, dashArray: '3 4', fillColor: '#ffffff',    fillOpacity: 0.0, interactive: true };
-    const styleOther      = { color: '#ffffff00',    weight: 0.8, dashArray: '2 4', fillColor: '#ffffff',    fillOpacity: 0.0, interactive: false };
+    // Oblasti s daty: neviditelné, jen tooltip. Oblasti BEZ dat: šedý polygon.
+    const styleAvail   = { color: '#ffffff00', weight: 0, fillColor: '#ffffff00', fillOpacity: 0.0, interactive: true };
+    const styleNoData  = { color: '#6b7280', weight: 0.6, opacity: 0.6, fillColor: '#6b7280', fillOpacity: 0.35, interactive: true };
 
     const entries = [
-      ...EUROPE_BORDERS.available.map(e => ({ ...e, style: styleAvail,      tooltip: `${e.iso === 'CZ' ? '🇨🇿 ČÚZK' : '🇵🇱 GUGiK'} — data dostupná` })),
-      ...EUROPE_BORDERS.coming_soon.map(e => ({ ...e, style: styleComingSoon, tooltip: `${e.name} — připravujeme` })),
-      ...EUROPE_BORDERS.other.map(e => ({ ...e, style: styleOther,      tooltip: null })),
+      ...COVERAGE.available.map(e => ({ geometry: e.geometry, style: styleAvail, tooltip: `${e.flag} ${e.label} — data dostupná` })),
+      { geometry: COVERAGE.unavailable, style: styleNoData, tooltip: 'Pro tuto oblast nejsou dostupná výšková data (DMR/DMP)' },
     ];
 
     entries.forEach(({ geometry, style, tooltip }) => {
@@ -678,6 +692,66 @@ export default function MapView({ bbox, onBboxChange, onCuzkComplete, onHelp, is
     cuzkPollRef.current = poll;
   }, [bbox, cuzkState, onCuzkComplete]);
 
+<<<<<<< Updated upstream
+=======
+  // Automatické stahování (podle oblasti / jedné skupiny zdrojů) s pollingem
+  const handleAutoDownload = useCallback(async (group = null) => {
+    if (!bbox || cuzkState === 'downloading') return;
+    setCuzkState('downloading');
+    setCuzkProgress(5);
+    setCuzkMsg('Hledám zdroje pro oblast...');
+    cuzkCountryRef.current = 'auto';
+
+    let dlId = null;
+    try {
+      const { download_id } = await startAutoDownload(bbox, dsmType, group);
+      dlId = download_id;
+      cuzkDlIdRef.current = dlId;
+    } catch (err) {
+      setCuzkMsg(`Chyba: ${err.response?.data?.detail || err.message}`);
+      setCuzkState('error');
+      return;
+    }
+
+    const poll = setInterval(async () => {
+      try {
+        const s = await getAutoStatus(dlId);
+        setCuzkProgress(s.progress || 0);
+        setCuzkMsg(s.step || '');
+
+        if (s.status === 'done') {
+          clearInterval(poll);
+          setCuzkMsg(s.dmp_path ? 'Hotovo!' : 'Hotovo! (bez DSM)');
+          setCuzkState('done');
+          setCuzkProgress(100);
+          if (onCuzkComplete) onCuzkComplete(s.dmr_path, s.dmp_path || null, s.crs, 'server_path');
+        } else if (s.status === 'error') {
+          clearInterval(poll);
+          setCuzkMsg(`Chyba: ${s.error || s.step}`);
+          setCuzkState('error');
+        } else if (s.status === 'cancelled') {
+          clearInterval(poll);
+          setCuzkMsg('Zrušeno.');
+          setCuzkState('idle');
+        }
+      } catch (pollErr) {
+        clearInterval(poll);
+        setCuzkMsg(`Chyba připojení: ${pollErr.message}`);
+        setCuzkState('error');
+      }
+    }, 3000);
+    cuzkPollRef.current = poll;
+  }, [bbox, dsmType, cuzkState, onCuzkComplete]);
+
+  // Spuštění stahování podle zvoleného zdroje
+  const startDownload = () => (
+    country === 'cz' ? handleCuzkDownload() :
+    country === 'pl' ? handlePolandDownload() :
+    country === 'it' ? handleItalyDownload() :
+    handleAutoDownload(country === 'auto' ? null : country)
+  );
+
+>>>>>>> Stashed changes
   // Zrušení probíhajícího stahování DMR/DMP (server přeruší stahování a smaže rozdělané soubory)
   const handleCancelDownload = useCallback(async () => {
     const dlId = cuzkDlIdRef.current;
@@ -687,6 +761,10 @@ export default function MapView({ bbox, onBboxChange, onCuzkComplete, onHelp, is
       if (cuzkCountryRef.current === 'cz') await cancelCuzkDownload(dlId);
       else if (cuzkCountryRef.current === 'pl') await cancelPolandDownload(dlId);
       else if (cuzkCountryRef.current === 'it') await cancelItalyDownload(dlId);
+<<<<<<< Updated upstream
+=======
+      else if (cuzkCountryRef.current === 'auto') await cancelAutoDownload(dlId);
+>>>>>>> Stashed changes
     } catch (err) {
       // Job už mohl mezitím doběhnout / zaniknout — polling to stejně odchytí
       console.warn('Zrušení stahování selhalo:', err.message);
@@ -754,9 +832,9 @@ export default function MapView({ bbox, onBboxChange, onCuzkComplete, onHelp, is
           <div style={{ width: '0.5px', height: 16, background: 'var(--panel-border)', flexShrink: 0 }} />
 
           {/* CZ-specifické: výběr DSM typu */}
-          {country === 'cz' && (
+          {(country === 'cz' || country === 'auto') && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={S.cuzkLabel}>DSM:</span>
+              <span style={S.cuzkLabel}>{country === 'auto' ? 'DSM (ČR):' : 'DSM:'}</span>
               <select
                 style={S.cuzkSelect}
                 value={dsmType}
@@ -779,6 +857,14 @@ export default function MapView({ bbox, onBboxChange, onCuzkComplete, onHelp, is
             <span style={{ ...S.cuzkLabel, fontStyle: 'italic' }}>DTM 2m · EPSG:25833 · bez DSM</span>
           )}
 
+<<<<<<< Updated upstream
+=======
+          {/* Rastrové zdroje: info */}
+          {['de', 'ch', 'fr', 'nl', 'at'].includes(country) && (
+            <span style={{ ...S.cuzkLabel, fontStyle: 'italic' }}>DMR + DMP · 1m · max 25 km²</span>
+          )}
+
+>>>>>>> Stashed changes
           {/* Tlačítko stáhnout */}
           {cuzkState === 'idle' && (
             <button style={{
@@ -786,9 +872,13 @@ export default function MapView({ bbox, onBboxChange, onCuzkComplete, onHelp, is
               width: isMobile ? '100%' : 'auto',
               padding: isMobile ? '8px 12px' : '5px 12px',
             }} onClick={
+<<<<<<< Updated upstream
               country === 'cz' ? handleCuzkDownload :
               country === 'pl' ? handlePolandDownload :
               handleItalyDownload
+=======
+              startDownload
+>>>>>>> Stashed changes
             }>
               ↓ Stáhnout DMR + DMP
             </button>
@@ -816,9 +906,13 @@ export default function MapView({ bbox, onBboxChange, onCuzkComplete, onHelp, is
               <span style={{ ...S.cuzkMsg, color: 'var(--rock)' }}>{cuzkMsg}</span>
               <button style={{ ...S.cuzkBtn, background: 'var(--text-secondary)' }}
                 onClick={
+<<<<<<< Updated upstream
                   country === 'cz' ? handleCuzkDownload :
                   country === 'pl' ? handlePolandDownload :
                   handleItalyDownload
+=======
+                  startDownload
+>>>>>>> Stashed changes
                 }>
                 Zkusit znovu
               </button>

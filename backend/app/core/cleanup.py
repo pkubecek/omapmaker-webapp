@@ -42,7 +42,11 @@ STALE_ACTIVE_SECONDS = 2 * 3600
 
 # Podadresáře JOBS_DIR, které používá routes/download.py (JOBS_BASE + "/<zdroj>").
 # Nejsou to joby, mají vlastní status.json a uklízejí se zvlášť.
+<<<<<<< Updated upstream
 DOWNLOAD_SUBDIRS = ("cuzk", "poland", "austria", "italy")
+=======
+DOWNLOAD_SUBDIRS = ("cuzk", "poland", "austria", "italy", "auto")
+>>>>>>> Stashed changes
 
 ACTIVE_STATUSES = ("queued", "running")
 
@@ -148,7 +152,11 @@ async def cleanup_loop():
 
 
 def _download_dir_of(path: str) -> str | None:
+<<<<<<< Updated upstream
     """Pro soubor uvnitř JOBS_DIR/<cuzk|poland|austria|italy>/<dl_id>/...
+=======
+    """Pro soubor uvnitř JOBS_DIR/<cuzk|poland|austria|italy|auto>/<dl_id>/...
+>>>>>>> Stashed changes
     vrátí cestu k adresáři <dl_id>, jinak None."""
     real = os.path.realpath(path)
     for sub in DOWNLOAD_SUBDIRS:

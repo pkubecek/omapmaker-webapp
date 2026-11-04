@@ -162,4 +162,27 @@ export async function getItalyStatus(downloadId) {
 export async function cancelItalyDownload(downloadId) {
   const res = await api.post(`/api/download/italy/${downloadId}/cancel`);
   return res.data;
+<<<<<<< Updated upstream
+=======
+}
+
+// ---------------------------------------------------------------------------
+// Automaticky podle oblasti — DE, CH, FR, NL, AT + spojení přes hranice
+// group: null = všechny zdroje v oblasti, jinak 'de' | 'ch' | 'fr' | 'nl' | 'at'
+// ---------------------------------------------------------------------------
+
+export async function startAutoDownload(bbox, dsmType = 'DMPOK', group = null) {
+  const res = await api.post('/api/download/auto', { bbox, dsm_type: dsmType, group });
+  return res.data;
+}
+
+export async function getAutoStatus(downloadId) {
+  const res = await api.get(`/api/download/auto/${downloadId}`);
+  return res.data;
+}
+
+export async function cancelAutoDownload(downloadId) {
+  const res = await api.post(`/api/download/auto/${downloadId}/cancel`);
+  return res.data;
+>>>>>>> Stashed changes
 }

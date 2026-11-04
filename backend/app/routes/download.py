@@ -1,5 +1,9 @@
 """
+<<<<<<< Updated upstream
 routes/download.py — stahování dat z ČÚZK, GUGiK (Polsko), BEV (Rakousko) a SITR (Sicílie) jako background job.
+=======
+routes/download.py — stahování dat z ČÚZK, GUGiK (Polsko), BEV (Rakousko), SITR (Sicílie) a automaticky podle oblasti (DE, CH, FR, NL, AT, spojení přes hranice) jako background job.
+>>>>>>> Stashed changes
 """
 import os
 import uuid
@@ -14,6 +18,10 @@ from ..core.downloader import download_cuzk as _download_cuzk
 from ..core.poland_downloader import download_poland as _download_poland
 from ..core.austria_downloader import download_austria as _download_austria
 from ..core.italy_downloader import download_italy as _download_italy
+<<<<<<< Updated upstream
+=======
+from ..core.multi_source import download_auto as _download_auto, sources_for_bbox as _sources_for_bbox
+>>>>>>> Stashed changes
 from ..core.cancellation import DownloadCancelled
 from ..core.memory_utils import release_memory
 
@@ -52,6 +60,10 @@ _cuzk_read, _cuzk_write = _make_status_helpers(JOBS_BASE + "/cuzk")
 _pl_read,   _pl_write   = _make_status_helpers(JOBS_BASE + "/poland")
 _at_read,   _at_write   = _make_status_helpers(JOBS_BASE + "/austria")
 _it_read,   _it_write   = _make_status_helpers(JOBS_BASE + "/italy")
+<<<<<<< Updated upstream
+=======
+_auto_read, _auto_write = _make_status_helpers(JOBS_BASE + "/auto")
+>>>>>>> Stashed changes
 
 # dl_id -> threading.Event; nastavením se běžícímu downloaderu signalizuje zrušení
 _cancel_events: dict[str, threading.Event] = {}
@@ -90,6 +102,14 @@ class AustriaRequest(BaseModel):
 class ItalyRequest(BaseModel):
     bbox: BboxModel
 
+<<<<<<< Updated upstream
+=======
+class AutoRequest(BaseModel):
+    bbox: BboxModel
+    dsm_type: str = "DMPOK"
+    group: str | None = None   # None = všechny zdroje v oblasti, jinak např. "de"
+
+>>>>>>> Stashed changes
 
 # ---------------------------------------------------------------------------
 # Generic background runner
@@ -309,4 +329,53 @@ async def cancel_italy_download(dl_id: str):
         raise HTTPException(status_code=404, detail="Stahování nenalezeno nebo už neběží.")
     return {"status": "cancelling"}
 
+<<<<<<< Updated upstream
 # Pozn.: žádný /dmp endpoint — SITR DSM nepublikuje (viz italy_downloader.py)
+=======
+# Pozn.: žádný /dmp endpoint — SITR DSM nepublikuje (viz italy_downloader.py)
+
+
+# ---------------------------------------------------------------------------
+# Automaticky podle oblasti (i přes hranice) — DE, CH, FR, NL, AT + spojení s CZ/PL/IT
+# ---------------------------------------------------------------------------
+
+@router.get("/download/sources")
+async def get_sources(min_lat: float, min_lon: float, max_lat: float, max_lon: float):
+    """Které zdroje výškopisu pokrývají bbox (pro informaci v UI)."""
+    bbox = {"min_lat": min_lat, "min_lon": min_lon, "max_lat": max_lat, "max_lon": max_lon}
+    return [{"key": k, "label": lbl, "share": round(sh, 3)} for k, lbl, sh in _sources_for_bbox(bbox)]
+
+@router.post("/download/auto")
+async def start_auto_download(req: AutoRequest):
+    dl_id = str(uuid.uuid4())[:8]
+    out_dir = os.path.join(JOBS_BASE, "auto", dl_id)
+    os.makedirs(out_dir, exist_ok=True)
+    _auto_write(dl_id, {"status": "running", "progress": 0, "step": "Hledám zdroje pro oblast...",
+                         "dmr_path": None, "dmp_path": None, "crs": None, "error": None})
+    _run_download(dl_id, _download_auto,
+                  {"bbox": req.bbox.model_dump(), "out_dir": out_dir,
+                   "dsm_type": req.dsm_type, "group": req.group},
+                  _auto_read, _auto_write)
+    return {"download_id": dl_id}
+
+@router.get("/download/auto/{dl_id}")
+async def get_auto_status(dl_id: str):
+    s = _auto_read(dl_id)
+    if s is None:
+        raise HTTPException(status_code=404, detail="Download nenalezen.")
+    return {"download_id": dl_id, **s}
+
+@router.get("/download/auto/{dl_id}/dmr")
+async def get_auto_dmr(dl_id: str):
+    return _file_response(_auto_read, dl_id, "dmr_path", "DTM")
+
+@router.get("/download/auto/{dl_id}/dmp")
+async def get_auto_dmp(dl_id: str):
+    return _file_response(_auto_read, dl_id, "dmp_path", "DSM")
+
+@router.post("/download/auto/{dl_id}/cancel")
+async def cancel_auto_download(dl_id: str):
+    if not _request_cancel(dl_id):
+        raise HTTPException(status_code=404, detail="Stahování nenalezeno nebo už neběží.")
+    return {"status": "cancelling"}
+>>>>>>> Stashed changes
