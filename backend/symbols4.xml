@@ -400,11 +400,14 @@
     </symbol>
 
     <!-- 412: Obdělávaná půda -->
+    <!-- OPRAVENO: žlutá s černými tečkami (rozestup 1.2 mm jako ISOM 412);
+         412b byla type="line" → na polygony se kreslila jako černá plocha.
+         ISSprOM 412 nemá obrys, 412b je proto neviditelná (zůstává kvůli GPKG). -->
     <symbol id="sym412a" type="area">
-        <style facecolor="#ffba35" edgecolor="none" linewidth="0" />
+        <style facecolor="#ffba35" edgecolor="none" linewidth="0" linestyle="solid" dotdistance="3.4016" dotsize="0.85" dotcolor="#000000" />
     </symbol>
-    <symbol id="sym412b" type="line">
-        <style color="#000000" linewidth="0.85" linestyle="(0, (2.5, 2.5, 2.5, 8.5))" />
+    <symbol id="sym412b" type="area">
+        <style facecolor="none" edgecolor="none" linewidth="0" linestyle="solid" />
     </symbol>
 
     <!-- 413: Sad -->
