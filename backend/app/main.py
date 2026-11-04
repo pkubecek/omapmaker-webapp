@@ -30,6 +30,8 @@ ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
     "https://omapmaker.vercel.app",
+    "https://www.omapmaker.cz",
+    "https://omapmaker.cz",
     "https://omapmaker-lro9dvn3t-josef-kubecek-s-projects.vercel.app",
 ] + _EXTRA_ORIGINS
 
