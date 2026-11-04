@@ -3,6 +3,7 @@ downloader.py — stahování LiDAR dlaždic z ČÚZK ATOM feedu a merge do jedn
 Přepsáno z OMapMaker_v7.py bez tkinter závislostí.
 """
 import ssl
+import time
 
 # Windows obcas nema CA certifikat pro CUZK
 _SSL_CTX = ssl.create_default_context()
@@ -63,12 +64,33 @@ def _parse_atom_feed_tiles(atom_url: str) -> list:
     return tiles
 
 
+# ČÚZK ATOM občas vrátí 502/503/504 (přetížená brána) — opakovat s rostoucí pauzou
+_RETRY_PAUSES_S = (2, 5, 15)
+
+
+def _urlopen_retry(url: str, timeout: float) -> bytes:
+    last = None
+    for i in range(len(_RETRY_PAUSES_S) + 1):
+        try:
+            req = urllib.request.Request(url, headers={"User-Agent": "OMapMaker/7"})
+            with urllib.request.urlopen(req, timeout=timeout, context=_SSL_CTX) as resp:
+                return resp.read()
+        except urllib.error.HTTPError as e:
+            last = e
+            if e.code not in (429, 500, 502, 503, 504):
+                raise
+        except (urllib.error.URLError, TimeoutError, ConnectionError) as e:
+            last = e
+        if i < len(_RETRY_PAUSES_S):
+            print(f"[downloader] {url.rsplit('/', 1)[-1]}: {last} — opakuji za {_RETRY_PAUSES_S[i]} s")
+            time.sleep(_RETRY_PAUSES_S[i])
+    raise last
+
+
 def _get_download_url_from_subfeed(sub_feed_url: str) -> str | None:
     """Načte sub-feed dlaždice a vrátí URL ZIP souboru."""
     try:
-        req = urllib.request.Request(sub_feed_url, headers={"User-Agent": "OMapMaker/7"})
-        with urllib.request.urlopen(req, timeout=15, context=_SSL_CTX) as resp:
-            raw = resp.read()
+        raw = _urlopen_retry(sub_feed_url, timeout=15)
         root_el = ET.fromstring(raw)
         for link_el in root_el.iter("{http://www.w3.org/2005/Atom}link"):
             href = link_el.get("href", "")
@@ -80,20 +102,21 @@ def _get_download_url_from_subfeed(sub_feed_url: str) -> str | None:
 
 
 def _download_tile(tile_id: str, sub_url: str, dest_dir: str, file_list: list,
-                   progress_cb=None, cancel_check=None) -> None:
-    """Stáhne jednu dlaždici (ZIP → LAZ/LAS) do dest_dir."""
+                   progress_cb=None, cancel_check=None) -> bool:
+    """Stáhne jednu dlaždici (ZIP → LAZ/LAS) do dest_dir. Vrací True při úspěchu."""
     if cancel_check and cancel_check():
         raise DownloadCancelled()
     zip_url = _get_download_url_from_subfeed(sub_url)
     if not zip_url:
         print(f"[downloader] Nelze najít ZIP pro {tile_id}")
-        return
+        return False
     name = tile_id.split("_")[-1] if "_" in tile_id else tile_id.replace("/", "_")
     zip_path = os.path.join(dest_dir, f"{name}.zip")
     try:
-        req = urllib.request.Request(zip_url, headers={"User-Agent": "OMapMaker/7"})
-        with urllib.request.urlopen(req, timeout=120, context=_SSL_CTX) as r, open(zip_path, "wb") as f:
-            f.write(r.read())
+        data = _urlopen_retry(zip_url, timeout=120)
+        with open(zip_path, "wb") as f:
+            f.write(data)
+        del data
         with zipfile.ZipFile(zip_path) as zf:
             for n2 in zf.namelist():
                 if n2.lower().endswith((".laz", ".las")):
@@ -103,8 +126,10 @@ def _download_tile(tile_id: str, sub_url: str, dest_dir: str, file_list: list,
         print(f"[downloader] OK: {name}")
         if progress_cb:
             progress_cb(f"Staženo: {name}")
+        return True
     except Exception as e:
         print(f"[downloader] Chyba {name}: {e}")
+        return False
 
 
 def merge_laz_files(input_paths: list, output_path: str,
@@ -284,19 +309,26 @@ def download_cuzk(
 
     dmr_files, dmp_files = [], []
 
+    failed = []
     _cb(f"Stahuji {len(dmr_t)} DMR 5G dlaždic...")
     for i, (tid, su) in enumerate(dmr_t, 1):
         if cancel_check and cancel_check():
             raise DownloadCancelled()
         _cb(f"DMR {i}/{len(dmr_t)}: {tid}")
-        _download_tile(tid, su, dmr_raw_dir, dmr_files, cancel_check=cancel_check)
+        if not _download_tile(tid, su, dmr_raw_dir, dmr_files, cancel_check=cancel_check):
+            failed.append("DMR " + tid.rsplit("_", 1)[-1].replace(".xml", ""))
 
     _cb(f"Stahuji {len(dmp_t)} {dsm_type} dlaždic...")
     for i, (tid, su) in enumerate(dmp_t, 1):
         if cancel_check and cancel_check():
             raise DownloadCancelled()
         _cb(f"{dsm_type} {i}/{len(dmp_t)}: {tid}")
-        _download_tile(tid, su, dmp_raw_dir, dmp_files, cancel_check=cancel_check)
+        if not _download_tile(tid, su, dmp_raw_dir, dmp_files, cancel_check=cancel_check):
+            failed.append(f"{dsm_type} " + tid.rsplit("_", 1)[-1].replace(".xml", ""))
+
+    if failed:
+        _cb(f"Varování: nestáhly se dlaždice {', '.join(failed)} (ČÚZK neodpovídá) — "
+            f"v mapě bude díra, zkus stáhnout znovu")
 
     _cb("Mergování DMR dlaždic...")
     dmr_merged = os.path.join(out_dir, "DMR5G_merged.laz")

@@ -579,21 +579,28 @@ def run_pipeline(job_id: str, params: dict, file_paths: dict,
             # instance za overpass-api.de; kumi.systems = private.coffee.
             # overpass.osm.ch (jen data Švýcarska) a overpass.openstreetmap.ru
             # (nefunkční) vyřazeny. Výpadky bývají krátké → dvě kola.
+            # z./lz4./overpass-api.de jsou JEDEN cluster — když je "at capacity"
+            # (502), padají všechny tři najednou. Proto se střídá s nezávislými
+            # servery a mezi koly se čeká (server sám radí exponenciální backoff).
             OVERPASS_MIRRORS = [
                 "https://z.overpass-api.de/api",
-                "https://lz4.overpass-api.de/api",
-                "https://overpass-api.de/api",
                 "https://overpass.private.coffee/api",
                 "https://maps.mail.ru/osm/tools/overpass/api",
+                "https://lz4.overpass-api.de/api",
+                "https://overpass-api.de/api",
             ]
+            OVERPASS_ROUND_PAUSE_S = (0, 20, 60)   # pauza před 1., 2. a 3. kolem
             try:
                 from osmnx._errors import InsufficientResponseError
             except Exception:
                 InsufficientResponseError = ()
-            cb(7, f"OSM bbox: {mn_lat:.4f}N {mn_lon:.4f}E .. {mx_lat:.4f}N {mx_lon:.4f}E "
-                  f"(z {CURRENT_CRS})")
             last_err = None
-            for mirror in OVERPASS_MIRRORS * 2:
+            attempts = [(r, m) for r in range(len(OVERPASS_ROUND_PAUSE_S)) for m in OVERPASS_MIRRORS]
+            for round_i, mirror in attempts:
+                if mirror == OVERPASS_MIRRORS[0] and OVERPASS_ROUND_PAUSE_S[round_i]:
+                    cb(7, f"OSM: všechna zrcadla přetížená, čekám {OVERPASS_ROUND_PAUSE_S[round_i]} s "
+                          f"a zkusím znovu (kolo {round_i + 1}/{len(OVERPASS_ROUND_PAUSE_S)})...")
+                    time.sleep(OVERPASS_ROUND_PAUSE_S[round_i])
                 ox.settings.overpass_url = mirror
                 try:
                     cb(7, f"OSM: zkouším {mirror} ...")
@@ -603,7 +610,7 @@ def run_pipeline(job_id: str, params: dict, file_paths: dict,
                     break
                 except InsufficientResponseError as empty_err:
                     # Platná odpověď bez prvků — jiné zrcadlo vrátí totéž.
-                    cb(8, f"OSM: v oblasti nejsou žádné prvky ({empty_err}) — zkontroluj bbox/CRS výše")
+                    cb(8, f"OSM: v oblasti nejsou žádné prvky ({empty_err})")
                     gdf_osm = None
                     last_err = None
                     break
@@ -619,10 +626,7 @@ def run_pipeline(job_id: str, params: dict, file_paths: dict,
                     return None
                 raise last_err
 
-            cb(8, f"OSM bbox WGS84: {mn_lat:.4f}N {mn_lon:.4f}E .. {mx_lat:.4f}N {mx_lon:.4f}E")
             gdf_osm = gdf_osm.to_crs(CURRENT_CRS)
-            cb(8, f"OSM bounds po to_crs({CURRENT_CRS}): {gdf_osm.total_bounds}")
-            cb(8, f"LiDAR extent: minx={global_minx:.0f}, maxx={global_maxx:.0f}, miny={global_miny:.0f}, maxy={global_maxy:.0f}")
         except Exception as e:
             cb(8, f"Varování OSM: {e}")
 
@@ -736,8 +740,6 @@ def run_pipeline(job_id: str, params: dict, file_paths: dict,
         except Exception as e:
             cb(9, f"ZABAGED chyba {fname}: {e}")
 
-    cb(9, f"ZABAGED celkem klíče: {list(zabaged_gdfs.keys())}")
-    cb(9, f"ZABAGED file_paths: {file_paths.get('zabaged', [])}")
 
     # ISOM
     isom_gdfs = {}
