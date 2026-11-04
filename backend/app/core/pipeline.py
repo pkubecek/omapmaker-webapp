@@ -550,9 +550,11 @@ def run_pipeline(job_id: str, params: dict, file_paths: dict,
             # Bez cache — dřív se odpovědi Overpass ukládaly do /tmp/OMapMaker_OSM
             # a nikdo je nemazal (rostlo to s každým jobem navždy).
             ox.settings.use_cache = False
-            ox.settings.user_agent = "OMapMaker-Web-v7"
+            # osmnx 2.x: názvy jsou http_user_agent / requests_timeout — staré
+            # user_agent / timeout se tiše ignorovaly (výchozí UA + 180 s na zrcadlo)
+            ox.settings.http_user_agent = "OMapMaker (+https://www.omapmaker.cz)"
             # 90 s — zaseknuté zrcadlo nesmí blokovat job dlouho
-            ox.settings.timeout = 90
+            ox.settings.requests_timeout = 90
             # osmnx se před každým dotazem ptá na /api/status kvůli rate limitu;
             # u nedostupného zrcadla tam zbytečně čeká (default až 60 s)
             ox.settings.overpass_rate_limit = False
@@ -584,6 +586,12 @@ def run_pipeline(job_id: str, params: dict, file_paths: dict,
                 "https://overpass.private.coffee/api",
                 "https://maps.mail.ru/osm/tools/overpass/api",
             ]
+            try:
+                from osmnx._errors import InsufficientResponseError
+            except Exception:
+                InsufficientResponseError = ()
+            cb(7, f"OSM bbox: {mn_lat:.4f}N {mn_lon:.4f}E .. {mx_lat:.4f}N {mx_lon:.4f}E "
+                  f"(z {CURRENT_CRS})")
             last_err = None
             for mirror in OVERPASS_MIRRORS * 2:
                 ox.settings.overpass_url = mirror
@@ -593,14 +601,23 @@ def run_pipeline(job_id: str, params: dict, file_paths: dict,
                     cb(8, f"OSM staženo přes {mirror}: {len(gdf_osm)} prvků")
                     last_err = None
                     break
+                except InsufficientResponseError as empty_err:
+                    # Platná odpověď bez prvků — jiné zrcadlo vrátí totéž.
+                    cb(8, f"OSM: v oblasti nejsou žádné prvky ({empty_err}) — zkontroluj bbox/CRS výše")
+                    gdf_osm = None
+                    last_err = None
+                    break
                 except Exception as mirror_err:
                     last_err = mirror_err
-                    cb(7, f"OSM: {mirror} selhalo ({mirror_err}), zkouším další zrcadlo...")
+                    cb(7, f"OSM: {mirror} selhalo ({type(mirror_err).__name__}: {mirror_err}), "
+                          f"zkouším další zrcadlo...")
                     gdf_osm = None
                     continue
 
             if gdf_osm is None:
-                raise last_err if last_err is not None else RuntimeError("OSM: všechna zrcadla selhala")
+                if last_err is None:
+                    return None
+                raise last_err
 
             cb(8, f"OSM bbox WGS84: {mn_lat:.4f}N {mn_lon:.4f}E .. {mx_lat:.4f}N {mx_lon:.4f}E")
             gdf_osm = gdf_osm.to_crs(CURRENT_CRS)

@@ -6,6 +6,9 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
+# Výpis z podprocesů jobů hned do logu Railway (jinak se bufferuje a při
+# zabití jobu ztratí)
+ENV PYTHONUNBUFFERED=1
 COPY requirements.txt .
 RUN python3.11 -m pip install --no-cache-dir -r requirements.txt
 
