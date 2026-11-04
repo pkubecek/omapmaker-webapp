@@ -255,7 +255,8 @@ export default function App() {
       addLog(`DTM načteno: ${dmrPath.split('/').pop()}`, 'ok');
       if (dmpPath) addLog(`DSM načteno: ${dmpPath.split('/').pop()}`, 'ok');
       else addLog('DSM nedostupný (pipeline použije jen DTM)', 'warn');
-      setFiles(prev => ({ ...prev, dtm: { serverPath: dmrPath, name: dmrPath.split('/').pop() }, dsm: dmpPath ? { serverPath: dmpPath, name: dmpPath.split('/').pop() } : prev.dsm }));
+      // Bez DSM nové oblasti nesmí zůstat DSM z předchozího stahování (jiná oblast)
+      setFiles(prev => ({ ...prev, dtm: { serverPath: dmrPath, name: dmrPath.split('/').pop() }, dsm: dmpPath ? { serverPath: dmpPath, name: dmpPath.split('/').pop() } : null }));
     } else {
       // Fallback: File objekty (ruční upload)
       addLog(`DTM načteno: ${dmrPath.name} (${(dmrPath.size / 1e6).toFixed(1)} MB)`, 'ok');
@@ -263,9 +264,10 @@ export default function App() {
       else addLog('DSM nedostupný (pipeline použije jen DTM)', 'warn');
       setFiles(prev => ({ ...prev, dtm: dmrPath, dsm: dmpPath || prev.dsm }));
     }
-    if (crs && crs !== 'EPSG:5514') {
+    // CRS nastavit vždy — po stahování mimo ČR se jinak nevrátí zpět na EPSG:5514
+    if (crs) {
       setSettings(prev => ({ ...prev, crs }));
-      addLog(`CRS nastaveno na ${crs}`, 'info');
+      if (crs !== 'EPSG:5514') addLog(`CRS nastaveno na ${crs}`, 'info');
     }
   }, [addLog]);
 

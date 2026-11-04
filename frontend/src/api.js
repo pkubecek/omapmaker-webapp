@@ -191,20 +191,21 @@ export async function cancelItalyDownload(downloadId) {
 }
 
 // ---------------------------------------------------------------------------
-// Německo — Bavorsko (LDBV) + Sasko (GeoSN)
+// Automaticky podle oblasti — DE, CH, FR, NL, AT + spojení přes hranice
+// group: null = všechny zdroje v oblasti, jinak 'de' | 'ch' | 'fr' | 'nl' | 'at'
 // ---------------------------------------------------------------------------
 
-export async function startGermanyDownload(bbox) {
-  const res = await api.post('/api/download/germany', { bbox });
+export async function startAutoDownload(bbox, dsmType = 'DMPOK', group = null) {
+  const res = await api.post('/api/download/auto', { bbox, dsm_type: dsmType, group });
   return res.data;
 }
 
-export async function getGermanyStatus(downloadId) {
-  const res = await api.get(`/api/download/germany/${downloadId}`);
+export async function getAutoStatus(downloadId) {
+  const res = await api.get(`/api/download/auto/${downloadId}`);
   return res.data;
 }
 
-export async function cancelGermanyDownload(downloadId) {
-  const res = await api.post(`/api/download/germany/${downloadId}/cancel`);
+export async function cancelAutoDownload(downloadId) {
+  const res = await api.post(`/api/download/auto/${downloadId}/cancel`);
   return res.data;
 }
