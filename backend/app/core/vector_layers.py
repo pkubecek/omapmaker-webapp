@@ -16,6 +16,35 @@ def _get_col(df, col):
     return pd.Series([""] * len(df), index=df.index)
 
 
+def _merge_touching(gdf, snap_m=0.05):
+    """Sloučí polygony, které se dotýkají nebo překrývají (typicky řadové
+    domy / bloky budov z OSM i ZABAGED), do jednoho polygonu. Mezery do
+    `snap_m` metrů (nepřesná digitalizace sousedních budov) se zacelí
+    buffer(+snap) → union → buffer(-snap) s mitre spoji, aby rohy zůstaly ostré.
+    Budovy dotýkající se jen v jednom bodě zůstanou samostatné.
+    Vrací GeoDataFrame jen s geometrií (atributy se pro 521 nepoužívají)."""
+    if gdf is None or gdf.empty:
+        return gdf
+    polys = gdf[gdf.geometry.geom_type.isin(["Polygon", "MultiPolygon"])]
+    if polys.empty:
+        return gdf
+    geoms = polys.geometry.make_valid() if hasattr(polys.geometry, "make_valid") else polys.geometry.buffer(0)
+    projected = gdf.crs is not None and gdf.crs.is_projected
+    try:
+        if projected and snap_m > 0:
+            merged = geoms.buffer(snap_m, join_style=2).union_all() \
+                if hasattr(geoms, "union_all") else geoms.buffer(snap_m, join_style=2).unary_union
+            merged = merged.buffer(-snap_m, join_style=2)
+        else:
+            merged = geoms.union_all() if hasattr(geoms, "union_all") else geoms.unary_union
+    except Exception:
+        return gdf
+    out = gpd.GeoDataFrame(geometry=[merged], crs=gdf.crs).explode(index_parts=False)
+    out = out[out.geometry.geom_type == "Polygon"]
+    out = out[~out.geometry.is_empty & (out.geometry.area > 0)]
+    return out.reset_index(drop=True)
+
+
 def _clip(gdf, extent):
     if gdf is None or gdf.empty:
         return gdf
@@ -850,15 +879,16 @@ def add_vector_layers(
 
         # 521 - Budova
         if _section("buildings"):
+            # Dotýkající se budovy se slučují do bloků (ISOM/ISSprOM 521)
             cgdf = isom("521")
             if cgdf is not None:
-                pm("sym521", 49, None, cgdf, to_mask=False)
+                pm("sym521", 49, None, _merge_touching(cgdf), to_mask=False)
             elif zab("BudovaJednotlivaNeboBlokBudov") is not None:
-                pm("sym521", 49, None, zab("BudovaJednotlivaNeboBlokBudov"), to_mask=False)
-            else:
-                pm("sym521", 49,
-                   c("building").notna() & (c("building") != "") & ~c("building").isin(["roof"]),
-                   gdf_polys)
+                pm("sym521", 49, None, _merge_touching(zab("BudovaJednotlivaNeboBlokBudov")), to_mask=False)
+            elif not gdf_polys.empty:
+                bmask = (c("building").notna() & (c("building") != "") &
+                         ~c("building").isin(["roof"])).reindex(gdf_polys.index).fillna(False)
+                pm("sym521", 49, None, _merge_touching(gdf_polys[bmask]), to_mask=False)
 
         # 522 - Zastřešení
         cgdf = isom("522")
