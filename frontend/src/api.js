@@ -189,3 +189,22 @@ export async function cancelItalyDownload(downloadId) {
   const res = await api.post(`/api/download/italy/${downloadId}/cancel`);
   return res.data;
 }
+
+// ---------------------------------------------------------------------------
+// Německo — Bavorsko (LDBV) + Sasko (GeoSN)
+// ---------------------------------------------------------------------------
+
+export async function startGermanyDownload(bbox) {
+  const res = await api.post('/api/download/germany', { bbox });
+  return res.data;
+}
+
+export async function getGermanyStatus(downloadId) {
+  const res = await api.get(`/api/download/germany/${downloadId}`);
+  return res.data;
+}
+
+export async function cancelGermanyDownload(downloadId) {
+  const res = await api.post(`/api/download/germany/${downloadId}/cancel`);
+  return res.data;
+}

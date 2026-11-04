@@ -2,7 +2,8 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { startCuzkDownload, getCuzkStatus, cancelCuzkDownload, startPolandDownload, getPolandStatus, cancelPolandDownload,
-  startItalyDownload, getItalyStatus, cancelItalyDownload } from '../api';
+  startItalyDownload, getItalyStatus, cancelItalyDownload,
+  startGermanyDownload, getGermanyStatus, cancelGermanyDownload } from '../api';
 import EUROPE_BORDERS from './europeBorders';
 
 // Tooltip styl pro country polygony
@@ -145,7 +146,7 @@ const DATA_SOURCES = [
   { key: 'it',  flag: '🇮🇹', label: 'SITR',    sublabel: 'Sicílie (pouze DMR)',available: true  },
   { key: 'sk',  flag: '🇸🇰', label: 'ÚGKK SR', sublabel: 'Slovensko',          available: false },
   { key: 'at',  flag: '🇦🇹', label: 'BEV',     sublabel: 'Rakousko',           available: false },
-  { key: 'de',  flag: '🇩🇪', label: 'BKG',     sublabel: 'Německo',            available: false },
+  { key: 'de',  flag: '🇩🇪', label: 'LDBV / GeoSN', sublabel: 'Bavorsko + Sasko', available: true  },
 ];
 
 function CountryDropdown({ country, disabled, onChange }) {
@@ -678,6 +679,56 @@ export default function MapView({ bbox, onBboxChange, onCuzkComplete, onHelp, is
     cuzkPollRef.current = poll;
   }, [bbox, cuzkState, onCuzkComplete]);
 
+  // Německo (Bavorsko + Sasko) stahování s pollingem
+  const handleGermanyDownload = useCallback(async () => {
+    if (!bbox || cuzkState === 'downloading') return;
+    setCuzkState('downloading');
+    setCuzkProgress(5);
+    setCuzkMsg('Spouštím stahování (Bavorsko / Sasko)...');
+    cuzkCountryRef.current = 'de';
+
+    let dlId = null;
+    try {
+      const { download_id } = await startGermanyDownload(bbox);
+      dlId = download_id;
+      cuzkDlIdRef.current = dlId;
+    } catch (err) {
+      setCuzkMsg(`Chyba: ${err.response?.data?.detail || err.message}`);
+      setCuzkState('error');
+      return;
+    }
+
+    const poll = setInterval(async () => {
+      try {
+        const s = await getGermanyStatus(dlId);
+        setCuzkProgress(s.progress || 0);
+        setCuzkMsg(s.step || '');
+
+        if (s.status === 'done') {
+          clearInterval(poll);
+          setCuzkMsg(s.dmp_path ? 'Hotovo!' : 'Hotovo! (bez DSM)');
+          setCuzkState('done');
+          setCuzkProgress(100);
+          const crs = s.crs || 'EPSG:25833';
+          if (onCuzkComplete) onCuzkComplete(s.dmr_path, s.dmp_path || null, crs, 'server_path');
+        } else if (s.status === 'error') {
+          clearInterval(poll);
+          setCuzkMsg(`Chyba: ${s.error || s.step}`);
+          setCuzkState('error');
+        } else if (s.status === 'cancelled') {
+          clearInterval(poll);
+          setCuzkMsg('Zrušeno.');
+          setCuzkState('idle');
+        }
+      } catch (pollErr) {
+        clearInterval(poll);
+        setCuzkMsg(`Chyba připojení: ${pollErr.message}`);
+        setCuzkState('error');
+      }
+    }, 3000);
+    cuzkPollRef.current = poll;
+  }, [bbox, cuzkState, onCuzkComplete]);
+
   // Zrušení probíhajícího stahování DMR/DMP (server přeruší stahování a smaže rozdělané soubory)
   const handleCancelDownload = useCallback(async () => {
     const dlId = cuzkDlIdRef.current;
@@ -687,6 +738,7 @@ export default function MapView({ bbox, onBboxChange, onCuzkComplete, onHelp, is
       if (cuzkCountryRef.current === 'cz') await cancelCuzkDownload(dlId);
       else if (cuzkCountryRef.current === 'pl') await cancelPolandDownload(dlId);
       else if (cuzkCountryRef.current === 'it') await cancelItalyDownload(dlId);
+      else if (cuzkCountryRef.current === 'de') await cancelGermanyDownload(dlId);
     } catch (err) {
       // Job už mohl mezitím doběhnout / zaniknout — polling to stejně odchytí
       console.warn('Zrušení stahování selhalo:', err.message);
@@ -779,6 +831,11 @@ export default function MapView({ bbox, onBboxChange, onCuzkComplete, onHelp, is
             <span style={{ ...S.cuzkLabel, fontStyle: 'italic' }}>DTM 2m · EPSG:25833 · bez DSM</span>
           )}
 
+          {/* DE-specifické: info */}
+          {country === 'de' && (
+            <span style={{ ...S.cuzkLabel, fontStyle: 'italic' }}>DGM1 + DOM · 1m · max 25 km²</span>
+          )}
+
           {/* Tlačítko stáhnout */}
           {cuzkState === 'idle' && (
             <button style={{
@@ -787,7 +844,7 @@ export default function MapView({ bbox, onBboxChange, onCuzkComplete, onHelp, is
               padding: isMobile ? '8px 12px' : '5px 12px',
             }} onClick={
               country === 'cz' ? handleCuzkDownload :
-              country === 'pl' ? handlePolandDownload :
+              country === 'pl' ? handlePolandDownload : country === 'de' ? handleGermanyDownload :
               handleItalyDownload
             }>
               ↓ Stáhnout DMR + DMP
@@ -817,7 +874,7 @@ export default function MapView({ bbox, onBboxChange, onCuzkComplete, onHelp, is
               <button style={{ ...S.cuzkBtn, background: 'var(--text-secondary)' }}
                 onClick={
                   country === 'cz' ? handleCuzkDownload :
-                  country === 'pl' ? handlePolandDownload :
+                  country === 'pl' ? handlePolandDownload : country === 'de' ? handleGermanyDownload :
                   handleItalyDownload
                 }>
                 Zkusit znovu
