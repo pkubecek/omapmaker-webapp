@@ -178,14 +178,12 @@ const S = {
 };
 
 const TOOLTIPS = {
-  crs: 'Souřadnicový systém výstupu. pokud chcete magnetické poledníky, nastavte mag. deklinaci vůči tomuto CRS',
   lidar: 'Nahrajte data ze zařízení nebo vyberte oblast tažením v mapě a stáhněte.',
   scale: 'Měřítko výsledné mapy. 1:10 000 pro detailní mapy, 1:15 000 pro větší oblasti.',
   paper: 'Formát výstupního PNG. Pokud je vybrán "Extent dat" mapa se ořízne přesně na rozsah dat.',
   contourInterval: 'Základní interval vrstevnic v metrech. Hlavní vrstevnice se kreslí po 5násobku tohoto intervalu, pomocné po jeho polovině. Výchozí 5 m.',
   sigma: 'Míra vyhlazení vrstevnic. Vyšší hodnota = hladší vrstevnice, ale méně detailní. Doporučeno 3–6.',
   slopeThreshold: 'Minimální sklon terénu (ve stupních) aby byl prvek klasifikován jako skála. Nižší = více skal, ale budou více splývat.',
-  northRotation: 'Odchylka mag. severu od zvoleného souřadnicového systému.',
   bin1: 'Výška do které je vegetace považována za otevřený prostor (znaky 401 a 403).',
   bin2: 'Výška do které je vegetace klasifikována jako znak (znak 410).',
   bin3: 'Výška do které je vegetace klasifikována jako chůze (znak 408).',
@@ -280,14 +278,6 @@ function CollapsibleSection({ label, defaultOpen = false, children }) {
     </div>
   );
 }
-
-const CRS_OPTIONS = [
-  { label: 'S-JTSK (ČR) EPSG:5514', value: 'EPSG:5514' },
-  { label: 'UTM 33N EPSG:32633', value: 'EPSG:32633' },
-  { label: 'UTM 32N EPSG:32632', value: 'EPSG:32632' },
-  { label: 'UTM 34N EPSG:32634', value: 'EPSG:32634' },
-  { label: 'S-JTSK/03 EPSG:2065', value: 'EPSG:2065' },
-];
 
 const PAPER_OPTIONS = ['A4 na šířku', 'A4 na výšku', 'A3 na šířku', 'A3 na výšku', 'Extent dat'];
 
@@ -408,15 +398,6 @@ export default function SettingsPanel({ settings, onSettings, files, onFiles, is
       <div data-tour="settings" style={S.section}>
         <div style={S.label}>Nastavení mapy</div>
         <div style={S.row}>
-          <span style={S.settingLabel}>Souřadnicový systém</span>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            <Tooltip text={TOOLTIPS.crs} />
-            <select style={S.select} value={settings.crs} onChange={(e) => set('crs', e.target.value)}>
-              {CRS_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-            </select>
-          </div>
-        </div>
-        <div style={S.row}>
           <span style={S.settingLabel}>Měřítko</span>
           <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
             <Tooltip text={TOOLTIPS.scale} />
@@ -458,14 +439,6 @@ export default function SettingsPanel({ settings, onSettings, files, onFiles, is
             <Tooltip text={TOOLTIPS.slopeThreshold} />
             <input style={S.numInput} type="number" step="1" min="20" max="80"
               value={settings.slopeThreshold} onChange={(e) => set('slopeThreshold', e.target.value)} />
-          </div>
-        </div>
-        <div style={S.row}>
-          <span style={S.settingLabel}>Mag. deklinace (°)</span>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            <Tooltip text={TOOLTIPS.northRotation} />
-            <input style={S.numInput} type="number" step="0.1"
-              value={settings.northRotation} onChange={(e) => set('northRotation', e.target.value)} />
           </div>
         </div>
       </div>
@@ -658,13 +631,11 @@ export default function SettingsPanel({ settings, onSettings, files, onFiles, is
 }
 
 export const DEFAULT_SETTINGS = {
-  crs: 'EPSG:5514',
   scale: '10000',
   paper: 'A4 na šířku',
   contourInterval: 5,
   sigma: 4,
   slopeThreshold: 45,
-  northRotation: 5.0,
   bin1: 1, bin2: 2, bin3: 6, bin4: 12,
   depMinDiameter: 2, depMaxDiameter: 5, depMinDepth: 0.7,
   knoMinDiameter: 1.5, knoMaxDiameter: 10, knoMinHeight: 0.5,

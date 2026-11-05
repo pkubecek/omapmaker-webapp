@@ -60,9 +60,13 @@ class OomCollector:
     navíc sloupec `code` (kód z výběru vrstev), podle kterého se dá GPKG
     později vyfiltrovat (filter_gpkg)."""
 
-    def __init__(self, current_crs: str = "EPSG:5514", scale=10_000):
+    def __init__(self, current_crs: str = "EPSG:5514", scale=10_000, export_crs=None):
         self._entries: list = []   # (sym_key, code, kind, GeoDataFrame)
         self._crs = current_crs
+        # CRS zapsaný do GPKG — stejné souřadnice jako `current_crs`, ale
+        # případně jako BoundCRS s TOWGS84 (geo_ref.crs_for_oom), aby ho OOM
+        # při importu rozpoznal včetně posunu na WGS84
+        self._export_crs = export_crs if export_crs is not None else current_crs
         self._standard = standard_for_scale(scale)
         self._geojson_rows: list = []
 
@@ -137,6 +141,7 @@ class OomCollector:
                             continue
                     merged = merged.drop_duplicates(subset=["geometry"])
                     merged = merged[["code", "geometry"]].copy()
+                    merged = merged.set_crs(self._export_crs, allow_override=True)
                     merged["Layer"] = layer_name
                     merged.to_file(output_path, layer=layer_name, driver="GPKG")
                     print(f"[exporter] {layer_name}: {len(merged)} prvků [{kind}]")
@@ -190,6 +195,23 @@ def export_gpkg(layers: dict, output_path: str, current_crs: str = "EPSG:5514",
     collector.export(output_path)
 
 
+def _gpkg_layer_srs(gpkg_path: str, layer_name: str) -> str | None:
+    """WKT definice SRS vrstvy přímo z gpkg_spatial_ref_sys."""
+    import sqlite3
+    try:
+        con = sqlite3.connect(gpkg_path)
+        try:
+            row = con.execute(
+                "SELECT s.definition FROM gpkg_geometry_columns g "
+                "JOIN gpkg_spatial_ref_sys s ON s.srs_id = g.srs_id "
+                "WHERE g.table_name = ?", (layer_name,)).fetchone()
+        finally:
+            con.close()
+        return row[0] if row and row[0] and row[0] != "undefined" else None
+    except Exception:
+        return None
+
+
 def filter_gpkg(src_path: str, dst_path: str, codes) -> int:
     """Zkopíruje z plného GPKG jen prvky, jejichž `code` je ve výběru
     vrstev (stejné kódy jako LayerSelector / selected_codes). Vrátí počet
@@ -212,6 +234,11 @@ def filter_gpkg(src_path: str, dst_path: str, codes) -> int:
         gdf = gdf[gdf["code"].astype(str).isin(codes)]
         if gdf.empty:
             continue
+        # read_file CRS zjednoduší na čisté EPSG (bez TOWGS84) — převezmi
+        # původní definici, ať filtrovaný GPKG v OOM sedí stejně jako plný
+        srs_wkt = _gpkg_layer_srs(src_path, layer_name)
+        if srs_wkt:
+            gdf = gdf.set_crs(srs_wkt, allow_override=True)
         gdf.to_file(dst_path, layer=layer_name, driver="GPKG")
         written += 1
     return written

@@ -40,6 +40,7 @@ from .processor import (
 from .renderer import generate_contour_layers, setup_map_figure
 from .symbols import SymbolLibrary
 from .exporter import OomCollector
+from .geo_ref import horizontal_crs, crs_label, crs_for_oom, magnetic_north_rotation
 from .zabaged_wfs import download_zabaged_wfs
 from .ortho_surface import fetch_ortho, ortho_surface_gdf
 
@@ -411,7 +412,9 @@ def run_pipeline(job_id: str, params: dict, file_paths: dict,
     PAPER_FORMAT = params.get("paper_format", "A4 (Landscape)")
     SIGMA = float(params.get("sigma", 4))
     SLOPE_THRESHOLD = float(params.get("slope_threshold", 45.0))
-    NORTH_ROTATION = float(params.get("north_rotation", 5.0))
+    # Jen záložní hodnota — normálně se odklon mag. poledníků počítá z polohy
+    # mapy (WMM deklinace + sbíhavost poledníků CRS), viz níže
+    NORTH_ROTATION = float(params.get("north_rotation", 0.0))
     CONTOUR_INTERVAL = float(params.get("contour_interval", 5))
     BINS = [float(b) for b in params.get("bins", [1, 2, 6, 12])]
     LAYER_VISIBILITY = params.get("layers", {
@@ -481,21 +484,18 @@ def run_pipeline(job_id: str, params: dict, file_paths: dict,
         raw_minx, raw_maxx = float(hdr.x_min), float(hdr.x_max)
         raw_miny, raw_maxy = float(hdr.y_min), float(hdr.y_max)
 
-    # Detekce CRS z rozsahu souřadnic — polské LAZ nemají CRS v headeru
+    # CRS výstupu = vždy CRS dat (hlavička LAZ), uživatel ho nevolí.
+    # Bez CRS v hlavičce rozhoduje rozsah souřadnic stejně jako
+    # processor._source_crs_of — polské LAZ nemají CRS v headeru:
     # EPSG:5514 (S-JTSK): záporné souřadnice
     # EPSG:2180 (PL-1992): kladné souřadnice ~140k-900k
-    params_crs = CRS.from_string(CURRENT_CRS)
+    src_crs = horizontal_crs(src_crs)
     if src_crs.equals(CRS.from_epsg(5514)) and raw_minx > 0 and raw_miny > 0:
         cb(3, f"Detekován EPSG:2180 (PL) z rozsahu souřadnic ({raw_minx:.0f}, {raw_miny:.0f})")
         src_crs = CRS.from_epsg(2180)
-        CURRENT_CRS = "EPSG:2180"
-        tile_params["crs"] = CURRENT_CRS
-    elif src_crs != params_crs and not src_crs.equals(CRS.from_epsg(5514)):
-        detected = src_crs.to_epsg()
-        if detected:
-            cb(3, f"CRS z LAZ headeru: EPSG:{detected} → přepínám z {CURRENT_CRS}")
-            CURRENT_CRS = f"EPSG:{detected}"
-            tile_params["crs"] = CURRENT_CRS
+    CURRENT_CRS = crs_label(src_crs)
+    tile_params["crs"] = CURRENT_CRS
+    cb(3, f"Souřadnicový systém z dat: {src_crs.name} ({CURRENT_CRS if CURRENT_CRS.startswith('EPSG:') else 'bez EPSG kódu'})")
 
     try:
         dst_crs = CRS.from_string(CURRENT_CRS)
@@ -535,6 +535,19 @@ def run_pipeline(job_id: str, params: dict, file_paths: dict,
             cb(4, f"Oblast (bbox): {(global_maxx-global_minx)/1000:.1f} × {(global_maxy-global_miny)/1000:.1f} km (~{area_km2:.1f} km²)")
         except Exception as e:
             cb(4, f"Varování: bbox transformace selhala ({e}), použiju LAZ header")
+
+    # Magnetické poledníky: deklinace (WMM) ve středu mapy + úhel zeměpisného
+    # severu vůči síti CRS (sbíhavost poledníků) → odklon od severu sítě
+    CENTER_LON = CENTER_LAT = None
+    try:
+        to_wgs_c = Transformer.from_crs(CURRENT_CRS, "EPSG:4326", always_xy=True)
+        CENTER_LON, CENTER_LAT = to_wgs_c.transform((global_minx + global_maxx) / 2,
+                                                    (global_miny + global_maxy) / 2)
+        NORTH_ROTATION, _decl, _tn = magnetic_north_rotation(CURRENT_CRS, CENTER_LON, CENTER_LAT)
+        cb(4, f"Mag. deklinace {_decl:+.2f}°, zeměpisný sever vůči síti {_tn:+.2f}° "
+              f"→ mag. poledníky {NORTH_ROTATION:+.2f}° od severu sítě")
+    except Exception as e:
+        cb(4, f"Varování: výpočet mag. deklinace selhal ({e}), poledníky {NORTH_ROTATION:+.1f}°")
 
     # Výpočet dlaždic
     tiles = _compute_tiles(global_minx, global_maxx, global_miny, global_maxy,
@@ -819,7 +832,15 @@ def run_pipeline(job_id: str, params: dict, file_paths: dict,
     # mohl naplnit ve stejném průchodu jako kreslí PNG. Díky tomu GPKG
     # obsahuje přesně to samé, co se vykreslí (žádná oddělená/neúplná
     # kopie OSM+ZABAGED+ISOM logiky).
-    collector = OomCollector(current_crs=CURRENT_CRS, scale=SCALE)
+    # Do GPKG jde CRS i s posunem na WGS84 (TOWGS84), ať ho OOM při importu
+    # rozpozná a nepřesouvá data vůči OSM/GPS podkladům
+    export_crs = None
+    if CENTER_LON is not None:
+        try:
+            export_crs = crs_for_oom(CURRENT_CRS, CENTER_LON, CENTER_LAT)
+        except Exception as e:
+            print(f"[pipeline] CRS pro OOM: {e}")
+    collector = OomCollector(current_crs=CURRENT_CRS, scale=SCALE, export_crs=export_crs)
 
     # Vrstevnice
     for sym_key, layer_key in [

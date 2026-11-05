@@ -12,13 +12,11 @@ import { useBreakpoint } from './hooks/useBreakpoint';
 import { startJob, getJobStatus, cancelJob, heartbeatJob, releaseJob } from './api';
 
 const DEFAULT_SETTINGS = {
-  crs: 'EPSG:5514',
   scale: '10000',
   paper: 'A4 na šířku',
   contourInterval: '5',
   sigma: '4',
   slopeThreshold: '45',
-  northRotation: '5',
   bin1: '1',
   bin2: '2',
   bin3: '6',
@@ -193,14 +191,13 @@ export default function App() {
       }
     });
 
+    // CRS i odklon mag. poledníků určuje backend z dat (hlavička LAZ + poloha)
     const params = {
-      crs: settings.crs,
       scale: parseInt(settings.scale),
       paper_format: PAPER_MAP[settings.paper] || settings.paper,
       contour_interval: parseFloat(settings.contourInterval),
       sigma: parseFloat(settings.sigma),
       slope_threshold: parseFloat(settings.slopeThreshold),
-      north_rotation: parseFloat(settings.northRotation),
       bins: [
         parseFloat(settings.bin1),
         parseFloat(settings.bin2),
@@ -264,11 +261,8 @@ export default function App() {
       else addLog('DSM nedostupný (pipeline použije jen DTM)', 'warn');
       setFiles(prev => ({ ...prev, dtm: dmrPath, dsm: dmpPath || prev.dsm }));
     }
-    // CRS nastavit vždy — po stahování mimo ČR se jinak nevrátí zpět na EPSG:5514
-    if (crs) {
-      setSettings(prev => ({ ...prev, crs }));
-      if (crs !== 'EPSG:5514') addLog(`CRS nastaveno na ${crs}`, 'info');
-    }
+    // CRS výstupu se bere z dat (backend čte hlavičku LAZ) — jen informace
+    if (crs) addLog(`Souřadnicový systém dat: ${crs}`, 'info');
   }, [addLog]);
 
   const canRun = Boolean(files.dtm);

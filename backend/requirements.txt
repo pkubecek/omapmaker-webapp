@@ -12,6 +12,7 @@ geopandas>=0.14.0
 shapely>=2.0.0
 fiona>=1.9.0
 pyproj>=3.6.0
+pygeomag>=1.1.0       # magnetická deklinace (WMM 2025, offline)
 geokachel==0.2.1        # výškopis všech 16 německých spolkových zemí (MIT)
 osmnx>=1.9.0
 scikit-image>=0.22.0
